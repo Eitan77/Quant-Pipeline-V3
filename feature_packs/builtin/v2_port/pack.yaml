@@ -1,0 +1,9 @@
+pack_id: builtin_v2_port
+pack_version: 1
+description: Byte-parity port of the authoritative V2 feature registry and implementations.
+registry: quant_pipeline.alpha_discovery.registry:compile_registry
+implementation: quant_pipeline.alpha_discovery.features.base:FeatureBuilder
+availability_semantics: explicit_decision_timestamp
+price_basis: split_consistent
+canonical_mapping: configured_scale_anchors
+

@@ -1,0 +1,16 @@
+run_name: v3_discovery
+mode: full-canonical
+fixture: null
+periods:
+  discovery: {start: '2025-05-01', end: '2026-04-30'}
+  replication: {start: '2026-05-01', end: '2026-08-31', sealed: true}
+  final_holdout: {start: '2026-09-01', end: null, sealed: true}
+allow_replication_access: false
+allow_final_holdout_access: false
+resolutions: [3, 5, 10]
+feature_packs: [builtin_v2_port]
+discovery: {canonical_duals: exhaustive_compatible, single_parent_gate: false, retain_negative_effects: true}
+forensics:
+  enabled: true
+  candidate_policy: {min_active_n: 250, min_abs_edge_bps: 1.0, keep_top_k_per_target_resolution: 250}
+

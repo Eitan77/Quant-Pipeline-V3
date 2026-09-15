@@ -1,0 +1,2 @@
+[console_scripts]
+quant-v3 = quant_pipeline.__main__:main

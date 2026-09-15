@@ -1,0 +1,18 @@
+run_name: smoke_v3
+mode: full-canonical
+fixture: deterministic_smoke
+periods:
+  discovery: {start: '2025-05-01', end: '2026-04-30'}
+  replication: {start: '2026-05-01', end: '2026-08-31', sealed: true}
+  final_holdout: {start: '2026-09-01', end: null, sealed: true}
+allow_replication_access: false
+allow_final_holdout_access: false
+resolutions: [3, 5, 10]
+discovery:
+  canonical_duals: exhaustive_compatible
+  single_parent_gate: false
+  retain_negative_effects: true
+forensics:
+  enabled: true
+  candidate_policy: {min_active_n: 8, min_abs_edge_bps: 0.5, keep_top_k_per_target_resolution: 20}
+

@@ -1,0 +1,100 @@
+{
+  "all_module_hashes_match": true,
+  "created_at_utc": "2026-09-15T20:06:43.753414+00:00",
+  "module_parity": [
+    {
+      "match": true,
+      "module": "models.py",
+      "v2_sha256": "b2949abb4e516bdeb274f8ac550ddc5af17337e23e1b09cd1bdb0a8a56977228",
+      "v3_sha256": "b2949abb4e516bdeb274f8ac550ddc5af17337e23e1b09cd1bdb0a8a56977228"
+    },
+    {
+      "match": true,
+      "module": "registry.py",
+      "v2_sha256": "a2057da28137a4568b8a428c19d45501c51388e4370c751dcbe1e18f9bfd455a",
+      "v3_sha256": "a2057da28137a4568b8a428c19d45501c51388e4370c751dcbe1e18f9bfd455a"
+    },
+    {
+      "match": true,
+      "module": "config.py",
+      "v2_sha256": "8c65370f733908868fc882be28975449b9c1b2b49324b32eeb511f97c01fdaa7",
+      "v3_sha256": "8c65370f733908868fc882be28975449b9c1b2b49324b32eeb511f97c01fdaa7"
+    },
+    {
+      "match": true,
+      "module": "data/universe.py",
+      "v2_sha256": "8756b95ea8f14e341da48f86b5ebbc11c1890e6913efdaf7a0c056e844b77907",
+      "v3_sha256": "8756b95ea8f14e341da48f86b5ebbc11c1890e6913efdaf7a0c056e844b77907"
+    },
+    {
+      "match": true,
+      "module": "data/corporate_actions.py",
+      "v2_sha256": "7cf33ed36a934f49e015b10d1dd242fa48728b9d7fddd2efa365505315169600",
+      "v3_sha256": "7cf33ed36a934f49e015b10d1dd242fa48728b9d7fddd2efa365505315169600"
+    },
+    {
+      "match": true,
+      "module": "data/panel.py",
+      "v2_sha256": "aeaef399108ac2fd72d3c39eecd12e8144740a213aa52a2f433a6a5cd2a81041",
+      "v3_sha256": "aeaef399108ac2fd72d3c39eecd12e8144740a213aa52a2f433a6a5cd2a81041"
+    },
+    {
+      "match": true,
+      "module": "data/source.py",
+      "v2_sha256": "7c0a37afe12110f58a46789627febbd4049a7b0da5d352f3bc1313c815a4b912",
+      "v3_sha256": "7c0a37afe12110f58a46789627febbd4049a7b0da5d352f3bc1313c815a4b912"
+    },
+    {
+      "match": true,
+      "module": "data/snapshot.py",
+      "v2_sha256": "3a072953d98439dca708d55f5538f35961cbc181dd9fc9e42a12253b13f4be33",
+      "v3_sha256": "3a072953d98439dca708d55f5538f35961cbc181dd9fc9e42a12253b13f4be33"
+    },
+    {
+      "match": true,
+      "module": "features/base.py",
+      "v2_sha256": "299ec6a4aa8d3caa330aae4e910e78984a214a110ad29eb49eaaf93843852a57",
+      "v3_sha256": "299ec6a4aa8d3caa330aae4e910e78984a214a110ad29eb49eaaf93843852a57"
+    },
+    {
+      "match": true,
+      "module": "features/formulas.py",
+      "v2_sha256": "a516542fbd9187107dfcbe09c0a1851e609202dbfa9c10601f5c6682aa29b525",
+      "v3_sha256": "a516542fbd9187107dfcbe09c0a1851e609202dbfa9c10601f5c6682aa29b525"
+    },
+    {
+      "match": true,
+      "module": "targets/builder.py",
+      "v2_sha256": "7ab2121229d1166d86d288e964be1bf47a9b0fd8a335062af650b9544e20b346",
+      "v3_sha256": "7ab2121229d1166d86d288e964be1bf47a9b0fd8a335062af650b9544e20b346"
+    },
+    {
+      "match": true,
+      "module": "cache/rank_store.py",
+      "v2_sha256": "f1e3fcf6e7c0db44125c8c23a9b903b731fefedea503d9a10ecc17ed21936ff5",
+      "v3_sha256": "f1e3fcf6e7c0db44125c8c23a9b903b731fefedea503d9a10ecc17ed21936ff5"
+    },
+    {
+      "match": true,
+      "module": "scan/dual_coarse.py",
+      "v2_sha256": "67e0717b3b1b7f76b0bfe3e1944a1898dabf2735aa9fad12fc5382d9312db3dd",
+      "v3_sha256": "67e0717b3b1b7f76b0bfe3e1944a1898dabf2735aa9fad12fc5382d9312db3dd"
+    },
+    {
+      "match": true,
+      "module": "governance/access.py",
+      "v2_sha256": "22598aedc9adadbd58dd2c174e9c0be6776d9695d9fcf00b58a601cc02777a4f",
+      "v3_sha256": "22598aedc9adadbd58dd2c174e9c0be6776d9695d9fcf00b58a601cc02777a4f"
+    },
+    {
+      "match": true,
+      "module": "execution/quote_replay.py",
+      "v2_sha256": "ad3d2cef1c3e7343d8eaf9b27293d37a1d9432dfcc27949d2d711d67cb72f5a0",
+      "v3_sha256": "ad3d2cef1c3e7343d8eaf9b27293d37a1d9432dfcc27949d2d711d67cb72f5a0"
+    }
+  ],
+  "runtime_dependency_on_v2": false,
+  "test_command": "C:\\Users\\decla\\Desktop\\AlgoResearch\\Quant-Pipeline-V3\\.venv\\Scripts\\python.exe -m pytest tests/parity tests/ported_v2 -q",
+  "test_exit_code": 0,
+  "v2_read_only_root": "C:\\Users\\decla\\Desktop\\AlgoResearch\\Quant Pipeline V2"
+}

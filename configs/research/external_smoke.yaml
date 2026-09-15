@@ -1,0 +1,20 @@
+run_name: v3_external_smoke
+mode: full-canonical
+fixture: external_port
+periods:
+  discovery: {start: '2026-04-20', end: '2026-04-30'}
+  replication: {start: '2026-05-01', end: '2026-08-31', sealed: true}
+  final_holdout: {start: '2026-09-01', end: null, sealed: true}
+allow_replication_access: false
+allow_final_holdout_access: false
+resolutions: [3, 5, 10]
+discovery: {canonical_duals: exhaustive_compatible, single_parent_gate: false, retain_negative_effects: true}
+external_smoke:
+  decision_grids: {intraday_5m: true, daily_close: false, preclose_1555: false, intraday_1m: false}
+  feature_windows: {intraday: [5m, 15m], daily: [1d, 2d]}
+  targets: {intraday: [5m], interday: [1d], overnight: false, bases: [raw], intraday_entry_delay_minutes: 1, daily_entry_delay_minutes: 1}
+  universe: {smoke_symbol_limit: 5, smoke_feature_limit: 24}
+  warmup: {auto_derive_transitive_history: false, safety_margin_sessions: 0, fail_if_full_coverage_warmup_missing: false, snapshot_start: '2026-03-02'}
+  folds: 2
+  stages: [validate-config, snapshot, build-panel, compile-registry, build-features, build-targets, scan-singles, scan-duals-coarse, build-stability, audit-exhaustiveness, build-report]
+

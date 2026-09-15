@@ -1,0 +1,9 @@
+from typing import Protocol,Sequence
+from quant_pipeline.context import RunContext
+from quant_pipeline.contracts import ArtifactKey,StageResult
+class PipelineStage(Protocol):
+    name:str
+    def required_artifacts(self,ctx:RunContext)->Sequence[ArtifactKey]:...
+    def planned_outputs(self,ctx:RunContext)->Sequence[ArtifactKey]:...
+    def run(self,ctx:RunContext)->StageResult:...
+

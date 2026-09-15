@@ -1,0 +1,11 @@
+.venv/
+__pycache__/
+.pytest_cache/
+*.py[cod]
+configs/machines/local.yaml
+cache/
+runs/
+scratch/
+*.duckdb.wal
+*.partial
+
