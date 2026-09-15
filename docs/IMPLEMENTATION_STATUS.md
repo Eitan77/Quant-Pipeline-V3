@@ -15,20 +15,26 @@ Implemented contracts include the canonical CLI/DAG, split research/machine
 configuration, immutable observation IDs, feature-pack loader, exact V2 tie/bin
 semantics, exhaustive canonical pair planner without a singles gate, independent
 r3/r5/r10 surfaces, direction-neutral selection, active-vs-weighted effects,
-trial reconciliation, specialist probe, hierarchical variant request planning,
+trial reconciliation, specialist/global-cancellation probes, executed and
+trial-accounted hierarchical variant expansion,
 candidate identity/lifecycle, episode/independent-opportunity counting,
-cluster-aware diagnostics, interaction decomposition, content-addressed atomic
-artifacts, telemetry, compact Parquet/DuckDB bundles and SIP signal export.
+cluster-aware diagnostics, interaction decomposition, complete frozen-rule
+dossiers, cross-run content-addressed atomic artifacts, telemetry, bounded
+resource recovery/stall diagnostics, compact Parquet/DuckDB bundles and SIP
+signal export. Replication promotion requires an exact explicit authorization
+record and preserves the frozen definition hash.
 
 Validation artifacts:
 
 - `V2_PARITY.json`: module hashes and focused copied-port tests.
 - `BENCHMARKS.json`: cold/warm smoke, real external replay and GPU throughput.
-- `D:/AlgoResearch/Quant-Pipeline-V3/runs/smoke_v3`: deterministic end-to-end run.
+- `D:/AlgoResearch/Quant-Pipeline-V3/runs/v3_readiness_smoke`: current
+  deterministic end-to-end run with variant, dossier and cache evidence.
 - `D:/AlgoResearch/Quant-Pipeline-V3/runs/v3_external_smoke`: bounded real-data
   V2 replay with CUDA and reconciled trial coverage.
 
-The full one-year canonical run is intentionally not executed as a build test;
-it is the long research workload started by the documented `v3_discovery.yaml`
-command after the bounded smoke/parity gates are green.
-
+Readiness is not yet claimed. The required full discovery-year replay is active
+at `D:/AlgoResearch/Quant-Pipeline-V3/runs/v3_discovery`; its completion,
+exhaustiveness audit and final bundle validation remain pending. Sealed
+replication cannot be evaluated without a later explicit candidate-specific
+authorization, by design.

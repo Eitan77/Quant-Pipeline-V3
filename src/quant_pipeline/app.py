@@ -5,13 +5,15 @@ from datetime import datetime, timezone
 from pathlib import Path
 import numpy as np, pandas as pd, pyarrow as pa, pyarrow.parquet as pq, yaml
 from quant_pipeline.analysis_bundle import AnalysisBundleBuilder
+from quant_pipeline.cache import ArtifactStore
 from quant_pipeline.candidates import make_candidate
-from quant_pipeline.contracts import FeatureSpec,TargetSpec
+from quant_pipeline.contracts import ArtifactKey,FeatureSpec,TargetSpec
 from quant_pipeline.discovery import plan_pairs,scan_surface_cpu,summarize_surface
 from quant_pipeline.discovery.specialist import specialist_probe
 from quant_pipeline.forensics.distribution import distribution_stats,contribution_concentration
 from quant_pipeline.forensics.interaction import interaction_decomposition
 from quant_pipeline.forensics.opportunities import build_episodes,independent_entries_fixed_hold
+from quant_pipeline.forensics.redundancy import signal_jaccard
 from quant_pipeline.hashing import content_hash
 from quant_pipeline.telemetry import Telemetry
 
@@ -56,18 +58,18 @@ def run_pipeline(*,research,machine,resume=False):
     for p in (machine["cache_root"],machine["scratch_root"],machine["duckdb_temp"]): Path(p).mkdir(parents=True,exist_ok=True)
     if research.get("fixture")=="external_port":
         from quant_pipeline.ported_pipeline import run_ported_pipeline
-        results=run_ported_pipeline(research,machine,Path(__file__).resolve().parents[2])
+        results=run_ported_pipeline(research,machine,Path(__file__).resolve().parents[2],telemetry)
         telemetry.status.update({"stage":"complete","completed":len(results),"expected":len(results),"elapsed_seconds":time.perf_counter()-start,"replication_accessed":False,"final_holdout_accessed":False})
         telemetry.event("run_complete",stage="complete",elapsed_seconds=time.perf_counter()-start)
         return run_id
     if research.get("fixture") is None:
         from quant_pipeline.ported_pipeline import run_ported_pipeline
-        results=run_ported_pipeline(research,machine,Path(__file__).resolve().parents[2])
+        results=run_ported_pipeline(research,machine,Path(__file__).resolve().parents[2],telemetry)
         telemetry.status.update({"stage":"complete","completed":len(results),"expected":len(results),"elapsed_seconds":time.perf_counter()-start,"replication_accessed":False,"final_holdout_accessed":False})
         telemetry.event("run_complete",stage="complete",elapsed_seconds=time.perf_counter()-start)
         return run_id
     if research.get("fixture")!="deterministic_smoke": raise RuntimeError("Unknown fixture")
-    index,features,targets,rank10,target_values=smoke_fixture(); source_hash=content_hash({"fixture":"deterministic_smoke","rows":len(index)})
+    index,features,targets,rank10,target_values=smoke_fixture(); source_hash=content_hash({"fixture":"deterministic_smoke","rows":len(index)}); artifact_store=ArtifactStore(Path(machine["cache_root"])/"artifacts")
     def stage(name,fn):
         if _done(run_dir,name): reused.append(name); telemetry.event("stage_reused",stage=name); return
         telemetry.event("stage_start",stage=name); m=fn() or {}; _mark(run_dir,name,m); telemetry.event("stage_complete",stage=name,metrics=m)
@@ -77,21 +79,36 @@ def run_pipeline(*,research,machine,resume=False):
         _write_table(run_dir/"feature_registry.parquet",[asdict(x) for x in features]); _write_table(run_dir/"target_registry.parquet",[asdict(x) for x in targets]); return {"features":len(features),"canonical_features":sum(x.canonical for x in features),"targets":len(targets)}
     stage("registry_compile",registry)
     def feature_stage():
-        d=run_dir/"feature_values"; d.mkdir(exist_ok=True)
-        for k,v in rank10.items(): np.save(d/f"{k}.npy",v)
-        return {"features":len(rank10),"obs":len(index)}
+        d=run_dir/"feature_values"; d.mkdir(exist_ok=True); hits=0
+        for k,v in rank10.items():
+            key=ArtifactKey("feature",k,content_hash({"source":source_hash,"feature":k,"values":v.tolist()}))
+            if artifact_store.has_complete(key,".npy"): cached=artifact_store.validate_file(key,".npy"); hits+=1
+            else:
+                partial=artifact_store.begin_file(key,".npy"); np.save(partial,v); cached=artifact_store.commit_file(key,partial,".npy",{"rows":len(v),"dtype":str(v.dtype)})
+            shutil.copy2(cached,d/f"{k}.npy")
+        return {"features":len(rank10),"obs":len(index),"cache_hits":hits,"cache_misses":len(rank10)-hits}
     stage("features",feature_stage)
     def target_stage():
-        d=run_dir/"target_values"; d.mkdir(exist_ok=True)
-        for k,v in target_values.items(): np.save(d/f"{k}.npy",v)
-        return {"targets":len(target_values)}
+        d=run_dir/"target_values"; d.mkdir(exist_ok=True); hits=0
+        for k,v in target_values.items():
+            key=ArtifactKey("target",k,content_hash({"source":source_hash,"target":k,"values":v.tolist()}))
+            if artifact_store.has_complete(key,".npy"): cached=artifact_store.validate_file(key,".npy"); hits+=1
+            else:
+                partial=artifact_store.begin_file(key,".npy"); np.save(partial,v); cached=artifact_store.commit_file(key,partial,".npy",{"rows":len(v),"dtype":str(v.dtype)})
+            shutil.copy2(cached,d/f"{k}.npy")
+        return {"targets":len(target_values),"cache_hits":hits,"cache_misses":len(target_values)-hits}
     stage("targets",target_stage)
     def bins_stage():
-        d=run_dir/"canonical_states"; d.mkdir(exist_ok=True)
+        d=run_dir/"canonical_states"; d.mkdir(exist_ok=True); hits=0; total=0
         for f in features:
             if f.canonical:
-                for r in research["resolutions"]: np.save(d/f"{f.feature_id}__r{r}.npy",_states(rank10[f.feature_id],r))
-        return {"artifacts":sum(x.canonical for x in features)*3}
+                for r in research["resolutions"]:
+                    total+=1; values=_states(rank10[f.feature_id],r); semantic=f"{f.feature_id}__r{r}"; key=ArtifactKey("canonical_state",semantic,content_hash({"source":source_hash,"feature_hash":f.definition_hash,"resolution":r}))
+                    if artifact_store.has_complete(key,".npy"): cached=artifact_store.validate_file(key,".npy"); hits+=1
+                    else:
+                        partial=artifact_store.begin_file(key,".npy"); np.save(partial,values); cached=artifact_store.commit_file(key,partial,".npy",{"rows":len(values),"dtype":str(values.dtype)})
+                    shutil.copy2(cached,d/f"{semantic}.npy")
+        return {"artifacts":total,"cache_hits":hits,"cache_misses":total-hits}
     stage("canonical_bins",bins_stage)
     def singles_stage():
         rows=[]
@@ -123,10 +140,28 @@ def run_pipeline(*,research,machine,resume=False):
         dual=pq.read_table(run_dir/"dual_summary.parquet").to_pylist(); rows=[]
         for d in dual:
             a=_states(rank10[d["feature_a_id"]],d["resolution"]); b=_states(rank10[d["feature_b_id"]],d["resolution"]); active=(a==d["selected_a"])&(b==d["selected_b"])
-            rows.append({"trial_id":d["trial_id"],"pair_id":d["pair_id"],"target_id":d["target_id"],"resolution":d["resolution"],**specialist_probe(security_id=index.security_id.to_numpy(),active=active,returns_bps=target_values[d["target_id"]],min_local_n=2)})
+            probe=specialist_probe(security_id=index.security_id.to_numpy(),active=active,returns_bps=target_values[d["target_id"]],min_local_n=2); global_effect=float(d["active_edge_bps"]); majority_sign=1 if probe.get("fraction_positive",0)>=probe.get("fraction_negative",0) else -1
+            rows.append({"trial_id":d["trial_id"],"pair_id":d["pair_id"],"target_id":d["target_id"],"resolution":d["resolution"],"global_effect_bps":global_effect,"global_weak":abs(global_effect)<1.0,"specialist_majority_sign":majority_sign,"global_cancellation_flag":abs(global_effect)<1.0 and probe.get("effect_dispersion_bps",0)>1.0,**probe})
         _write_table(run_dir/"specialist_summary.parquet",rows); return {"rows":len(rows)}
     stage("specialist_probe",specialist_stage)
-    stage("variant_expansion",lambda:{"queued":0,"trial_family":"variant_expansion","reason":"smoke fixture validates planner contract only"})
+    def variant_stage():
+        dual=pq.read_table(run_dir/"dual_summary.parquet").to_pylist(); ledger=pq.read_table(run_dir/"trial_ledger.parquet").to_pylist(); variants={f.concept_id:[x for x in features if x.concept_id==f.concept_id and not x.canonical] for f in features if f.canonical}; selected=[]
+        for row in sorted(dual,key=lambda x:abs(x["active_edge_bps"]),reverse=True):
+            if len(selected)>=2: break
+            if variants.get(next(x.concept_id for x in features if x.feature_id==row["feature_a_id"])) or variants.get(next(x.concept_id for x in features if x.feature_id==row["feature_b_id"])): selected.append(row)
+        rows=[]
+        byid={x.feature_id:x for x in features}
+        for parent in selected:
+            fa,fb=byid[parent["feature_a_id"]],byid[parent["feature_b_id"]]; left=[fa,*variants.get(fa.concept_id,[])]; right=[fb,*variants.get(fb.concept_id,[])]
+            for va in left:
+                for vb in right:
+                    if va.canonical and vb.canonical: continue
+                    for target in targets:
+                        for r in research["resolutions"]:
+                            trial=f"variant__{parent['pair_id']}__{va.feature_id}__{vb.feature_id}__{target.target_id}__r{r}"; a=_states(rank10[va.feature_id],r); b=_states(rank10[vb.feature_id],r); st=scan_surface_cpu(state_a=a,state_b=b,target_bps=target_values[target.target_id],target_valid=np.isfinite(target_values[target.target_id]),resolution=r); sm=summarize_surface(counts=st.counts,sums_bps=st.sums_bps,min_cell_n=3); chosen=sm["best_cell"] if abs(sm["best_mean_bps"])>=abs(sm["worst_mean_bps"]) else sm["worst_cell"]; edge=sm["best_mean_bps"] if chosen==sm["best_cell"] else sm["worst_mean_bps"]
+                            rows.append({"trial_id":trial,"trial_family_id":"variant_expansion","parent_trial_id":parent["trial_id"],"reason_codes":["strong_canonical_parent"],"feature_a_id":va.feature_id,"feature_b_id":vb.feature_id,"target_id":target.target_id,"resolution":r,"selected_a":int(chosen[0]),"selected_b":int(chosen[1]),"active_edge_bps":float(edge),"best_worst_spread_bps":float(sm["spread_bps"]),"status":"executed"}); ledger.append({"trial_id":trial,"trial_family_id":"variant_expansion","run_id":run_id,"trial_type":"hierarchical_variant_dual","status":"executed","feature_a_id":va.feature_id,"feature_b_id":vb.feature_id,"target_id":target.target_id,"resolution":r,"reason":"strong_canonical_parent"})
+        _write_table(run_dir/"variant_summary.parquet",rows); _write_table(run_dir/"trial_ledger.parquet",ledger); return {"parents":len(selected),"executed":len(rows),"trial_family":"variant_expansion","hierarchical":True}
+    stage("variant_expansion",variant_stage)
     def candidates_stage():
         dual=pq.read_table(run_dir/"dual_summary.parquet").to_pylist(); byid={x.feature_id:x for x in features}; tid={x.target_id:x for x in targets}; selected=sorted(dual,key=lambda x:abs(x["active_edge_bps"]),reverse=True)[:6]; rows=[]
         for d in selected:
@@ -136,8 +171,18 @@ def run_pipeline(*,research,machine,resume=False):
     stage("candidate_materialization",candidates_stage)
     def forensics_stage():
         cands=pq.read_table(run_dir/"edge_registry.parquet").to_pylist(); dual={x["trial_id"]:x for x in pq.read_table(run_dir/"dual_summary.parquet").to_pylist()}; out=run_dir/"dossiers"; out.mkdir(exist_ok=True)
+        masks={}
         for c in cands:
-            d=dual[c["selection_trial_id"]]; r=d["resolution"]; a=_states(rank10[d["feature_a_id"]],r); b=_states(rank10[d["feature_b_id"]],r); active=(a==d["selected_a"])&(b==d["selected_b"]); eps=build_episodes(obs_id=index.obs_id.to_numpy(),security_id=index.security_id.to_numpy(),session_id=index.session_id.to_numpy(),security_session_seq=index.security_session_seq.to_numpy(),decision_ts_ns=index.decision_ts_utc.astype("int64").to_numpy(),active=active); opp=independent_entries_fixed_hold(episodes=eps,hold_ns=int(targets[[x.target_id for x in targets].index(d["target_id"])].horizon_minutes*60e9)); pos=np.array([e.start_obs_id for e in opp],dtype=int); y=target_values[d["target_id"]]; returns=y[pos] if len(pos) else np.array([]); payload={"candidate_id":c["candidate_id"],"definition_hash":c["definition_hash"],"return_basis":c["return_basis"],"evidence_label":"discovery_diagnostic","active_observations":int(active.sum()),"episode_count":len(eps),"independent_opportunity_count":len(opp),"opportunities_per_day":len(opp)/10,**distribution_stats(returns),**contribution_concentration(returns),**interaction_decomposition(target_bps=y,active_a=a==d["selected_a"],active_b=b==d["selected_b"])}; _write_json(out/c["candidate_id"]/"summary.json",payload)
+            d=dual[c["selection_trial_id"]]; r=d["resolution"]; a=_states(rank10[d["feature_a_id"]],r); b=_states(rank10[d["feature_b_id"]],r); active=(a==d["selected_a"])&(b==d["selected_b"]); masks[c["candidate_id"]]=active; eps=build_episodes(obs_id=index.obs_id.to_numpy(),security_id=index.security_id.to_numpy(),session_id=index.session_id.to_numpy(),security_session_seq=index.security_session_seq.to_numpy(),decision_ts_ns=index.decision_ts_utc.astype("int64").to_numpy(),active=active); horizon=targets[[x.target_id for x in targets].index(d["target_id"])].horizon_minutes; opp=independent_entries_fixed_hold(episodes=eps,hold_ns=int(horizon*60e9)); pos=np.array([e.start_obs_id for e in opp],dtype=int); y=target_values[d["target_id"]]; returns=y[pos] if len(pos) else np.array([]); cdir=out/c["candidate_id"]; cdir.mkdir(parents=True,exist_ok=True)
+            dist={**distribution_stats(returns),**contribution_concentration(returns)}; interaction=interaction_decomposition(target_bps=y,active_a=a==d["selected_a"],active_b=b==d["selected_b"]); payload={"candidate_id":c["candidate_id"],"definition_hash":c["definition_hash"],"return_basis":c["return_basis"],"evidence_label":"discovery_diagnostic","active_observations":int(active.sum()),"episode_count":len(eps),"independent_opportunity_count":len(opp),"opportunities_per_day":len(opp)/10,**dist,**interaction}; _write_json(cdir/"summary.json",payload); _write_json(cdir/"distribution.json",dist); _write_json(cdir/"interaction.json",interaction)
+            _write_table(cdir/"episodes.parquet",[asdict(e) for e in eps]); _write_table(cdir/"symbol_breakdown.parquet",[{"security_id":int(s),"symbol":str(index.loc[index.security_id==s,"symbol"].iloc[0]),"opportunities":int(np.sum(index.iloc[pos].security_id.to_numpy()==s)) if len(pos) else 0,"mean_bps":float(y[pos[index.iloc[pos].security_id.to_numpy()==s]].mean()) if len(pos) and np.any(index.iloc[pos].security_id.to_numpy()==s) else None} for s in np.unique(index.security_id)])
+            chronological=[]
+            for sid in sorted(index.session_id.unique()):
+                p=pos[index.iloc[pos].session_id.to_numpy()==sid] if len(pos) else np.array([],dtype=int); chronological.append({"session_id":int(sid),"period_label":"discovery_diagnostic","n":len(p),"mean_bps":float(y[p].mean()) if len(p) else None})
+            _write_table(cdir/"chronological_diagnostics.parquet",chronological); ranked=np.sort(returns)[::-1] if len(returns) else returns; _write_table(cdir/"tail_ladder.parquet",[{"tail_percent":p,"n":max(1,int(np.ceil(len(ranked)*p/100))) if len(ranked) else 0,"contribution_bps":float(ranked[:max(1,int(np.ceil(len(ranked)*p/100)))].sum()) if len(ranked) else 0.0} for p in (20,10,5,2,1)]); _write_table(cdir/"horizon_ladder.parquet",[{"target_id":t.target_id,"horizon_minutes":t.horizon_minutes,"n":int(active.sum()),"mean_bps":float(target_values[t.target_id][active].mean())} for t in targets]); _write_table(cdir/"event_path.parquet",[{"offset_bars":k,"mean_bps":float(target_values[t.target_id][active].mean()),"target_id":t.target_id} for k,t in enumerate(targets,1)]); surface=pq.read_table(run_dir/"surface_cells.parquet").to_pylist(); _write_table(cdir/"surface_cells.parquet",[x for x in surface if x["trial_id"]==d["trial_id"]]); sym=index.iloc[pos].security_id.to_numpy() if len(pos) else np.array([]); shares=pd.Series(sym).value_counts(normalize=True) if len(sym) else pd.Series(dtype=float); _write_json(cdir/"robustness.json",{"leave_best_symbol_n":int(len(returns)-np.sum(sym==shares.index[0])) if len(shares) else 0,"top_symbol_share":float(shares.iloc[0]) if len(shares) else None,"top5_symbol_share":float(shares.iloc[:5].sum()) if len(shares) else None,"discovery_only":True})
+        for c in cands:
+            peers=[{"candidate_id":other["candidate_id"],"signal_jaccard":signal_jaccard(masks[c["candidate_id"]],masks[other["candidate_id"]])} for other in cands if other["candidate_id"]!=c["candidate_id"]]; _write_json(out/c["candidate_id"]/"redundancy.json",{"candidate_id":c["candidate_id"],"peers":peers})
+        _write_table(run_dir/"edge_registry.parquet",[{**c,"status":"dossier_complete","dossier_status":"complete"} for c in cands])
         return {"dossiers":len(cands),"discovery_diagnostic":True,"replication_accessed":False}
     stage("forensics",forensics_stage)
     def bundle_stage():

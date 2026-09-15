@@ -25,10 +25,16 @@ def ported_config(research,machine,repo_root:Path):
       warmup=warmup if smoke else {"auto_derive_transitive_history":True,"safety_margin_sessions":5,"fail_if_full_coverage_warmup_missing":True},
       context_expansion={"enabled":True,"only_from_stable_base_structures":True,"variant_neighbors_per_side":3,"require_new_confirmation":True},formula_factory={"enabled":False,"max_expression_depth":3,"max_binary_operators":2},ml={"enabled":False,"purged_chronological_folds":True,"symbol_embeddings":False},edge_autopsy={"enabled":True,"mandatory_before_replication":True,"max_candidates":8,"threshold_tails":[.2,.1,.05,.02,.01],"cost_bps_per_side":[0,1,2,3,5,10],"entry_delay_minutes":[1,2,5,10],"placebo_runs":100},governance={"enforce_state_machine":True,"require_candidate_freeze_manifest":True,"require_portfolio_freeze_manifest":True,"require_exhaustiveness_pass_for_freeze":True})
 
-def run_ported_pipeline(research,machine,repo_root:Path):
+def run_ported_pipeline(research,machine,repo_root:Path,telemetry=None):
     cfg=ported_config(research,machine,repo_root); cfg.validate(); run=AlphaDiscoveryRun(cfg)
     stages=research.get("external_smoke",{}).get("stages",["validate-config","snapshot","build-panel","compile-registry","build-features","build-targets","scan-singles","scan-duals-coarse","build-stability","expand-context","run-edge-autopsy","audit-exhaustiveness","build-report"])
-    results=[run.execute(stage) for stage in stages]; build_ported_analysis_bundle(run.root); return results
+    results=[]
+    for index,stage in enumerate(stages):
+        if telemetry: telemetry.progress(stage,index,len(stages))
+        results.append(run.execute(stage))
+        if telemetry: telemetry.progress(stage,index+1,len(stages))
+    build_ported_analysis_bundle(run.root)
+    return results
 
 def build_ported_analysis_bundle(run_root:Path):
     run_root=Path(run_root); out=run_root/"analysis_bundle"; out.mkdir(exist_ok=True); db=out/"research.duckdb"; db.unlink(missing_ok=True); con=duckdb.connect(str(db))

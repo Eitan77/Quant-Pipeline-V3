@@ -18,7 +18,10 @@ def main():
         req=Path(m["run_root"])/a.run_id/"request.yaml"
         if not req.exists(): req=Path("configs/research/smoke.yaml")
         print(run_pipeline(research=load_research_config(req),machine=m,resume=True)); return 0
-    if a.command=="replicate": raise SealedDataViolation("Replication requires a separate signed authorization record and is intentionally unavailable to discovery CLI")
-    if a.command=="export-sip": raise RuntimeError("Use a frozen candidate from a completed run; export service requires candidate run context")
+    if a.command=="replicate":
+        from quant_pipeline.candidates.service import promote_replication
+        print(promote_replication(a.candidate_id,m)); return 0
+    if a.command=="export-sip":
+        from quant_pipeline.candidates.service import export_candidate_sip
+        print(export_candidate_sip(a.candidate_id,m)); return 0
 if __name__=="__main__": raise SystemExit(main())
-
