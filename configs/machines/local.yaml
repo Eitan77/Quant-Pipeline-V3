@@ -1,0 +1,13 @@
+data_root: D:/AlgoResearch/data
+source_catalog: D:/AlgoResearch/data/catalog.duckdb
+cache_root: D:/AlgoResearch/Quant-Pipeline-V3/cache
+run_root: D:/AlgoResearch/Quant-Pipeline-V3/runs
+scratch_root: D:/AlgoResearch/Quant-Pipeline-V3/scratch
+duckdb_temp: D:/AlgoResearch/Quant-Pipeline-V3/scratch/duckdb
+gpu_device: cuda:0
+resource_budget: {ram_gb: 32, reserve_ram_gb: 6, vram_soft_limit_gb: 10.0}
+feature_workers: 6
+duckdb_threads: 5
+duckdb_memory_limit_gb: 18
+blas_threads_per_worker: 1
+omp_threads_per_worker: 1
