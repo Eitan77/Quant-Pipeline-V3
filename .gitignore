@@ -1,6 +1,7 @@
 .venv/
 __pycache__/
 .pytest_cache/
+*.egg-info/
 *.py[cod]
 configs/machines/local.yaml
 cache/
@@ -8,4 +9,3 @@ runs/
 scratch/
 *.duckdb.wal
 *.partial
-
