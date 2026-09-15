@@ -28,13 +28,10 @@ Validation artifacts:
 
 - `V2_PARITY.json`: module hashes and focused copied-port tests.
 - `BENCHMARKS.json`: cold/warm smoke, real external replay and GPU throughput.
-- `D:/AlgoResearch/Quant-Pipeline-V3/runs/v3_readiness_smoke`: current
-  deterministic end-to-end run with variant, dossier and cache evidence.
-- `D:/AlgoResearch/Quant-Pipeline-V3/runs/v3_external_smoke`: bounded real-data
-  V2 replay with CUDA and reconciled trial coverage.
+- Generated run directories are intentionally absent from the clean project.
+  The deterministic smoke and bounded real-data replay can be regenerated with
+  the documented commands.
 
-Readiness is not yet claimed. The required full discovery-year replay is active
-at `D:/AlgoResearch/Quant-Pipeline-V3/runs/v3_discovery`; its completion,
-exhaustiveness audit and final bundle validation remain pending. Sealed
-replication cannot be evaluated without a later explicit candidate-specific
-authorization, by design.
+No full discovery-year workload is running or required as part of the clean
+build handoff. Sealed replication cannot be evaluated without a later explicit
+candidate-specific authorization, by design.
