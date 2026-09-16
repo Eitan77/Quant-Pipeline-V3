@@ -225,7 +225,7 @@ class AlphaDiscoveryRun:
         bundle=self.compile_registry(); scoped=[]
         for grid,enabled in self.config.decision_grids.items():
             if enabled: scoped.extend(_initial_feature_scope([item for item in bundle.features if item.decision_grid==grid],self.config)[0])
-        required=max((int(item.minimum_history) for item in scoped),default=0)+int(self.config.warmup.get("safety_margin_sessions",5))
+        required=(max((int(item.minimum_history) for item in scoped),default=0)+int(self.config.warmup.get("safety_margin_sessions",5))+20)
         import duckdb
         with duckdb.connect(self.config.source.duckdb_path,read_only=True) as connection:
             sessions=[row[0] for row in connection.execute(f"SELECT DISTINCT session_date FROM {self.config.source.bars_1m_raw_table} WHERE session_date < DATE '{self.config.research_periods.discovery_start}' ORDER BY session_date DESC LIMIT {required}").fetchall()]
@@ -380,7 +380,8 @@ class AlphaDiscoveryRun:
                     ), eligibility AS (
                     SELECT security_id,session_date,
                       lag(session_close,1) OVER (PARTITION BY security_id ORDER BY session_date) AS prior_close,
-                      median(dollar_volume) OVER (PARTITION BY security_id ORDER BY session_date ROWS BETWEEN 20 PRECEDING AND 1 PRECEDING) AS prior_20d_median_dollar_volume
+                      median(dollar_volume) OVER (PARTITION BY security_id ORDER BY session_date ROWS BETWEEN 20 PRECEDING AND 1 PRECEDING) AS prior_20d_median_dollar_volume,
+                      count(dollar_volume) OVER (PARTITION BY security_id ORDER BY session_date ROWS BETWEEN 20 PRECEDING AND 1 PRECEDING) AS prior_20d_count
                     FROM daily
                     )
                     SELECT r.security_id,r.symbol,r.session_date,r.bar_start_ts_utc,r.bar_end_ts_utc,r.availability_ts_utc,
@@ -393,7 +394,8 @@ class AlphaDiscoveryRun:
                     LEFT JOIN {source.membership_table} m ON m.security_id=r.security_id AND m.session_date=r.session_date
                     LEFT JOIN eligibility e ON e.security_id=r.security_id AND e.session_date=r.session_date
                     WHERE r.symbol IN ({benchmark_sql}) OR (coalesce(m.in_universe,false)
-                      AND e.prior_close>={minimum_price} AND e.prior_20d_median_dollar_volume>={minimum_prior_volume}))
+                      AND e.prior_close>={minimum_price} AND e.prior_20d_median_dollar_volume>={minimum_prior_volume}
+                      AND e.prior_20d_count=20))
                     TO '{joined_temp_sql}' (FORMAT PARQUET,COMPRESSION ZSTD,ROW_GROUP_SIZE 250000)""")
                 joined_temp.replace(joined_path)
             for grid, enabled in self.config.decision_grids.items():
