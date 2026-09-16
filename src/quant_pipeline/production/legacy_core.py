@@ -34,7 +34,7 @@ class LegacyCoreAdapter:
                     elif target.exists():target.unlink()
             for target in (run.root/"checkpoints",run.root/"v3_checkpoints",run.root/"v3_diagnostics",run.root/"candidates",run.root/"analysis_bundle",run.root/"variant_results"):
                 if target.is_dir():shutil.rmtree(target)
-            for name in ("specialist_summary.parquet","variant_summary.parquet","variant_trial_ledger.parquet","variant_metrics.json","edge_registry.parquet","candidate_summary.parquet","trial_ledger.parquet"):(run.root/name).unlink(missing_ok=True)
+            for name in ("specialist_summary.parquet","cell_specialist_summary.parquet","cell_temporal_summary.parquet","variant_summary.parquet","variant_trial_ledger.parquet","variant_metrics.json","edge_registry.parquet","candidate_summary.parquet","trial_ledger.parquet","EVIDENCE_COMPLETE.json"):(run.root/name).unlink(missing_ok=True)
         source_marker.write_text(json.dumps({"source_manifest_hash":self.source_manifest_hash},sort_keys=True),encoding="utf-8"); results=[]; cache=SharedStageCache(Path(self.machine["cache_root"])); keys={}; abort=threading.Event(); run.abort_requested=abort
         if self.telemetry: run.progress_callback=lambda unit,completed,expected:self.telemetry.progress(f"core:{unit}",completed,expected)
         for index,stage in enumerate(LOW_LEVEL_STAGES):

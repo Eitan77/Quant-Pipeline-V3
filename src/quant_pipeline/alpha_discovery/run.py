@@ -1110,7 +1110,8 @@ class AlphaDiscoveryRun:
         self._atomic_json("cache/fused_dual_scan.json",manifest)
         return {"bins":3,"fused_resolutions":list(resolutions),"backend":backend,"attempted_pair_target_tests":attempted,
                 "excluded_pair_target_tests":excluded,"result_chunks":chunks,"wall_seconds":elapsed,
-                "tests_per_second":attempted*len(resolutions)/max(elapsed,1e-9)}
+                "pair_targets_per_second":attempted/max(elapsed,1e-9),
+                "resolution_tests_per_second":attempted*len(resolutions)/max(elapsed,1e-9)}
 
     @staticmethod
     def _write_fused_dual_tile(scanner,batch,feature_bins,targets,output_roots,grid,part,cluster_codes,fold_codes,target_ids) -> int:

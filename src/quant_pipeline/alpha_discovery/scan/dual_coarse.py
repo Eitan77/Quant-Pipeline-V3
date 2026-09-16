@@ -73,6 +73,9 @@ def _summarize_arrays(c: np.ndarray, s: np.ndarray, ss: np.ndarray, bins: int,
     result["weighted_state_contribution"]=selected_state_return*selected_frequency; result["weighted_state_contribution_bps"]=result["weighted_state_contribution"]*10_000.0
     result["weighted_interaction_contribution"]=selected_interaction_lift*selected_frequency; result["weighted_interaction_contribution_bps"]=result["weighted_interaction_contribution"]*10_000.0
     result["selected_direction"]=np.sign(selected_state_return).astype(np.int8); result["legacy_incremental_cell_effect"]=result["selected_cell_effect"]; result["selection_test_effect"]=np.nan
+    result["surface_counts"]=[row.astype(np.uint32,copy=False).tolist() for row in c]
+    result["surface_sums"]=[row.astype(np.float64,copy=False).tolist() for row in s]
+    result["surface_sumsq"]=[row.astype(np.float64,copy=False).tolist() for row in ss]
     return result
 
 
@@ -245,7 +248,9 @@ class DualTileScanner:
                 result["fold_sign_consistency"] = np.abs(np.sign(stacked).mean(1)) if stacked.shape[1] else np.nan
                 result["fold_magnitude_ratio"] = np.nanmin(np.abs(stacked), axis=1) / np.maximum(np.nanmax(np.abs(stacked), axis=1), 1e-15) if stacked.shape[1] else np.nan
         if include_surfaces:
-            result["surface_counts"] = list(c); result["surface_means"] = list(means); result["incremental_surface"] = list(flat_inc)
+            result["surface_counts"]=[row.astype(np.uint32,copy=False).tolist() for row in c]
+            result["surface_sums"]=[row.astype(np.float64,copy=False).tolist() for row in s]
+            result["surface_sumsq"]=[row.astype(np.float64,copy=False).tolist() for row in ss]
         if target_count == 1: result.drop(columns="target_index", inplace=True)
         if self.device.type == "cuda": t.cuda.synchronize(self.device)
         return result

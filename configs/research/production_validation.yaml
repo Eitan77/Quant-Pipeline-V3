@@ -14,7 +14,9 @@ forensics:
   enabled: true
   candidate_policy: {min_active_n: 100, min_abs_edge_bps: 0.5, keep_top_k_per_target_resolution: 50}
 specialist: {min_local_n: 20, min_selected_n: 100}
-variant_expansion: {parent_limit: 12, neighbors_per_side: 3, rejected_audit_count: 2}
+cell_evidence: {pair_block_max: 64, observation_chunk: 250000}
+variant_expansion: {parent_limit: 12, neighbors_per_side: 3, rejected_audit_count: 0}
+zoom: {enabled: false}
 external_smoke:
   decision_grids: {intraday_5m: true, daily_close: false, preclose_1555: false, intraday_1m: false}
   feature_windows: {intraday: [5m, 15m, 30m], daily: [1d, 2d, 5d]}

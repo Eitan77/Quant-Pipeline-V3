@@ -114,7 +114,7 @@ def test_rank_bins_and_dual_cpu_surface():
     scanner = DualTileScanner(bins=3, prefer_cuda=False)
     result = scanner.scan(labels[:, [0]].astype(int), labels[:, [1]].astype(int), np.array([0., 1., 2., 3.]), valid[:, [0]], valid[:, [1]])
     assert scanner.backend == "torch:cpu"
-    assert result.n_obs.iloc[0] == 4 and len(result.surface_means.iloc[0]) == 9
+    assert result.n_obs.iloc[0] == 4 and len(result.surface_counts.iloc[0]) == 9 and len(result.surface_sums.iloc[0])==9 and len(result.surface_sumsq.iloc[0])==9
 
 
 def test_dual_cuda_matches_cpu_when_available():

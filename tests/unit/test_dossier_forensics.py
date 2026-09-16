@@ -2,6 +2,7 @@ import numpy as np
 from quant_pipeline.forensics.distribution import contribution_concentration,distribution_stats
 from quant_pipeline.forensics.path import direction_aware_excursions,event_path_metrics
 from quant_pipeline.forensics.tails import build_tail_mask
+from quant_pipeline.production.surface_math import reconstruct_surface
 
 def test_tail_membership_is_state_defined_not_outcome_defined():
     ranks=np.array([.01,.10,.19,.21,.80,.99]); state=np.array([0,0,0,1,4,4]); other=np.full(6,2)
@@ -24,3 +25,7 @@ def test_event_path_and_short_excursions_are_direction_correct():
     import pandas as pd
     raw=pd.DataFrame({"mfe":[.20],"mae":[-.05],"time_to_mfe":[3],"time_to_mae":[2],"terminal_return":[-.02]}); short=direction_aware_excursions(raw,-1)
     assert short.directional_mfe.iloc[0]==.05 and short.time_to_directional_mfe.iloc[0]==2
+
+def test_surface_reconstruction_uses_sufficient_statistics():
+    got=reconstruct_surface(counts=[2,1,1,2],sums=[3.,4.,5.,13.],sumsq=[5.,16.,25.,85.],resolution=2)
+    np.testing.assert_allclose(got["mean"],[1.5,4.,5.,6.5]); assert len(got["interaction"])==4 and np.isfinite(got["se"][[0,3]]).all()
