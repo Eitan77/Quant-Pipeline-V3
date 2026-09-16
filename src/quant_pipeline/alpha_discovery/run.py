@@ -357,6 +357,8 @@ class AlphaDiscoveryRun:
         calculation_root = self.root / "cache" / "calculation_panels"; calculation_root.mkdir(parents=True, exist_ok=True)
         benchmark_sql = ",".join(f"'{symbol}'" for symbol in self.config.source.benchmark_symbols)
         symbol_filter=self._symbol_filter("r.")
+        minimum_price=float(self.config.universe["minimum_price"])
+        minimum_prior_volume=float(self.config.universe["minimum_prior_20d_median_dollar_volume"])
         total = 0; built = 0
         with duckdb.connect(source.duckdb_path, read_only=True) as connection:
             connection.execute(f"SET threads={workers}")
@@ -368,16 +370,30 @@ class AlphaDiscoveryRun:
             joined_path=self.root/"cache"/"panel_base_joined.parquet"; joined_sql=joined_path.as_posix().replace("'","''")
             if not joined_path.exists():
                 joined_temp=joined_path.with_suffix(".tmp.parquet"); joined_temp_sql=joined_temp.as_posix().replace("'","''")
-                connection.execute(f"""COPY (SELECT r.security_id,r.symbol,r.session_date,r.bar_start_ts_utc,r.bar_end_ts_utc,r.availability_ts_utc,
+                connection.execute(f"""COPY (WITH raw_bars AS (
+                    SELECT r.* FROM {source.bars_1m_raw_table} r
+                    WHERE r.session_date BETWEEN DATE '{start}' AND DATE '{end}' {symbol_filter}
+                    ), daily AS (
+                    SELECT security_id,session_date,arg_max(close,bar_start_ts_utc) AS session_close,
+                      sum(coalesce(vwap,close)*volume) AS dollar_volume
+                    FROM raw_bars GROUP BY security_id,session_date
+                    ), eligibility AS (
+                    SELECT security_id,session_date,
+                      lag(session_close,1) OVER (PARTITION BY security_id ORDER BY session_date) AS prior_close,
+                      median(dollar_volume) OVER (PARTITION BY security_id ORDER BY session_date ROWS BETWEEN 20 PRECEDING AND 1 PRECEDING) AS prior_20d_median_dollar_volume
+                    FROM daily
+                    )
+                    SELECT r.security_id,r.symbol,r.session_date,r.bar_start_ts_utc,r.bar_end_ts_utc,r.availability_ts_utc,
                     q.research_open AS open,q.research_high AS high,q.research_low AS low,q.research_close AS close,
                     r.open AS execution_open,r.high AS execution_high,r.low AS execution_low,r.close AS execution_close,
                     r.volume,r.vwap/coalesce(nullif(q.split_factor,0),1) AS vwap,r.trade_count,q.split_factor,q.price_basis,
                     coalesce(m.in_universe,false) AS in_universe
-                    FROM {source.bars_1m_raw_table} r JOIN {source.bars_1m_research_table} q
+                    FROM raw_bars r JOIN {source.bars_1m_research_table} q
                       ON q.security_id=r.security_id AND q.bar_start_ts_utc=r.bar_start_ts_utc
                     LEFT JOIN {source.membership_table} m ON m.security_id=r.security_id AND m.session_date=r.session_date
-                    WHERE r.session_date BETWEEN DATE '{start}' AND DATE '{end}'
-                      AND (coalesce(m.in_universe,false) OR r.symbol IN ({benchmark_sql})) {symbol_filter})
+                    LEFT JOIN eligibility e ON e.security_id=r.security_id AND e.session_date=r.session_date
+                    WHERE r.symbol IN ({benchmark_sql}) OR (coalesce(m.in_universe,false)
+                      AND e.prior_close>={minimum_price} AND e.prior_20d_median_dollar_volume>={minimum_prior_volume}))
                     TO '{joined_temp_sql}' (FORMAT PARQUET,COMPRESSION ZSTD,ROW_GROUP_SIZE 250000)""")
                 joined_temp.replace(joined_path)
             for grid, enabled in self.config.decision_grids.items():
