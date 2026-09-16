@@ -25,8 +25,8 @@ function Clear-Watcher {
 do {
     try {
         $status = Get-Content -LiteralPath $statusPath -Raw | ConvertFrom-Json
-        $completed = [double]($status.completed ?? 0)
-        $expected = [double]($status.expected ?? 0)
+        $completed = if ($null -ne $status.completed) { [double]$status.completed } else { 0.0 }
+        $expected = if ($null -ne $status.expected) { [double]$status.expected } else { 0.0 }
         $percent = if ($expected -gt 0) { [math]::Min(100.0, 100.0 * $completed / $expected) } else { 0.0 }
 
         Clear-Watcher
