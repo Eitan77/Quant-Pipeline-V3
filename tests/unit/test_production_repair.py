@@ -1,0 +1,59 @@
+from pathlib import Path
+from types import SimpleNamespace
+import numpy as np,pandas as pd,pytest
+from quant_pipeline.alpha_discovery.scan.dual_coarse import DualTileScanner
+from quant_pipeline.data.source_manifest import build_source_manifest
+from quant_pipeline.discovery.specialist import specialist_probe
+from quant_pipeline.production.cache_keys import SharedStageCache,core_stage_key
+from quant_pipeline.production.legacy_core import LOW_LEVEL_STAGES
+from quant_pipeline.production.materialization import materialization_pool
+from quant_pipeline.production.runner import V3ProductionRunner
+from quant_pipeline.production.resolution_diagnostics import build_resolution_diagnostics
+from quant_pipeline.production.variant_scan import execute_variant_expansion
+
+def duals():
+    return pd.DataFrame([
+        {"pair_id":"p","target_id":"t","v3_resolution":5,"selected_n":500,"selected_state_bps":5.0,"selected_interaction_lift_bps":2.0},
+        {"pair_id":"p","target_id":"t","v3_resolution":10,"selected_n":500,"selected_state_bps":-0.1,"selected_interaction_lift_bps":-0.1},
+        {"pair_id":"n","target_id":"t","v3_resolution":3,"selected_n":500,"selected_state_bps":-4.0,"selected_interaction_lift_bps":-3.0},
+    ])
+
+def test_resolution_independence_and_negative_retention():
+    got=materialization_pool(duals(),min_active_n=100,min_abs_edge_bps=1,top_k=10)
+    assert set(zip(got.pair_id,got.v3_resolution))=={("p",5),("n",3)}
+    assert got.loc[got.pair_id.eq("n"),"selected_state_bps"].iloc[0]<0
+
+def test_scanner_persists_separate_economic_fields():
+    rng=np.random.default_rng(2); a=rng.integers(0,5,(200,1),dtype=np.int8); b=rng.integers(0,5,(200,1),dtype=np.int8); y=rng.normal(0,.01,200)
+    row=DualTileScanner(bins=5,prefer_cuda=False).scan(a,b,y).iloc[0]
+    for name in ("selected_state_bps","selected_interaction_lift_bps","selected_frequency","selected_n","weighted_state_contribution_bps","weighted_interaction_contribution_bps"): assert name in row.index
+    assert row.selected_direction==np.sign(row.selected_state_return)
+
+def test_specialist_cancellation_is_visible():
+    security=np.repeat(np.arange(10),20); returns=np.where(security<5,10.0,-10.0); got=specialist_probe(security_id=security,active=np.ones(len(security),bool),returns_bps=returns,min_local_n=20)
+    assert got["fraction_positive"]==.5 and got["fraction_negative"]==.5 and got["effect_dispersion_bps"]>9
+
+def test_source_manifest_changes_cache_identity(tmp_path):
+    source=tmp_path/"data"; source.mkdir(); part=source/"part.parquet"; part.write_bytes(b"one"); first=build_source_manifest(source); part.write_bytes(b"two-two"); second=build_source_manifest(source); assert first["source_manifest_hash"]!=second["source_manifest_hash"]
+    assert core_stage_key(stage="features",source_manifest_hash=first["source_manifest_hash"],semantic_config={},implementation_hash="x")!=core_stage_key(stage="features",source_manifest_hash=second["source_manifest_hash"],semantic_config={},implementation_hash="x")
+
+def test_shared_stage_cache_materializes_compatible_artifacts(tmp_path):
+    first=tmp_path/"run-a"; artifact=first/"cache/features/g/observations.parquet"; artifact.parent.mkdir(parents=True); artifact.write_bytes(b"immutable"); store=SharedStageCache(tmp_path/"shared"); store.publish("build-features","key",first,{"rows":1}); second=tmp_path/"run-b"; result=store.restore("build-features","key",second); assert result["rows"]==1 and (second/"cache/features/g/observations.parquet").read_bytes()==b"immutable"
+
+def test_production_boundary_and_oos_seal(tmp_path):
+    assert not {"build-stability","expand-context","run-edge-autopsy","build-report"}&set(LOW_LEVEL_STAGES)
+    research={"periods":{"discovery":{"start":"2025-05-01","end":"2026-05-01"}}}; runner=V3ProductionRunner(research=research,machine={"data_root":str(tmp_path)},repo_root=tmp_path,telemetry=None)
+    with pytest.raises(PermissionError): runner.run()
+
+def test_resolution_bundle_keeps_three_independent_rows(tmp_path):
+    for resolution,tree in ((3,"dual_coarse_results"),(5,"dual_fine_results"),(10,"dual_exact_results")):
+        root=tmp_path/tree/"grid"/"target"; root.mkdir(parents=True); pd.DataFrame([{"pair_id":"p","target_id":"t","resolution":resolution}]).to_parquet(root/"part.parquet",index=False)
+    result=pd.read_parquet(build_resolution_diagnostics(run_root=tmp_path,research={"resolutions":[3,5,10]})); assert set(result.v3_resolution)=={3,5,10}
+
+def test_variant_is_planned_scanned_and_trial_accounted(tmp_path,monkeypatch):
+    features=[SimpleNamespace(feature_id="a30",concept_id="a",decision_grid="g",minimum_history=30),SimpleNamespace(feature_id="a15",concept_id="a",decision_grid="g",minimum_history=15),SimpleNamespace(feature_id="b30",concept_id="b",decision_grid="g",minimum_history=30)]
+    fake=SimpleNamespace(root=tmp_path,compile_registry=lambda:SimpleNamespace(features=features),config=SimpleNamespace())
+    frame=pd.DataFrame([{"pair_id":"p","feature_a":"a30","feature_b":"b30","target_id":"t","v3_resolution":5,"selected_n":500,"selected_state_bps":4.0,"selected_interaction_lift_bps":2.0}])
+    monkeypatch.setattr("quant_pipeline.production.variant_scan._scan_one",lambda *a,**k:[{"selected_state_bps":3.0,"selected_interaction_lift_bps":1.0,"selected_n":100,"selected_frequency":.1,"selected_state_return":.0003,"selected_cell":0,"surface_counts":[100],"surface_means":[.0003],"incremental_surface":[.0001],"best_cell_effect":.0003,"worst_cell_effect":-.0001,"neighbor_effect_retention":.5,"plateau_area":2,"weighted_state_contribution_bps":.3,"weighted_interaction_contribution_bps":.1,"selected_direction":1,"pair_id":"x","feature_a":"a15","feature_b":"b30","target_id":"t","resolution":r,"v3_resolution":r} for r in (3,5,10)])
+    summary,trials,metrics=execute_variant_expansion(legacy_run=fake,duals=frame,research={"resolutions":[3,5,10],"forensics":{"candidate_policy":{"min_active_n":100,"min_abs_edge_bps":1,"keep_top_k_per_target_resolution":10}},"variant_expansion":{"parent_limit":1,"neighbors_per_side":2,"rejected_audit_count":0}})
+    assert len(summary)==3 and set(trials.status)=={"executed"} and metrics["planned"]==1

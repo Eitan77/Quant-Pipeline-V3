@@ -65,7 +65,14 @@ def _summarize_arrays(c: np.ndarray, s: np.ndarray, ss: np.ndarray, bins: int,
         "max_abs_incremental_cell":np.max(safe,axis=1),"best_cell_effect":best,"worst_cell_effect":worst,
         "neighbor_effect_retention":retention,"plateau_area":plateau,
         "surface_interaction_energy":np.nansum(np.square(inc)*c3,axis=(1,2))/np.maximum(c.sum(1),1),"cell_min_count":c.min(1)})
-    result.attrs["frequency"]=c[np.arange(rows),selected]/np.maximum(c.sum(1),1)
+    selected_n=c[np.arange(rows),selected]; selected_frequency=selected_n/np.maximum(c.sum(1),1)
+    selected_state_return=means[np.arange(rows),selected]; selected_interaction_lift=flat_inc[np.arange(rows),selected]
+    result["selected_n"]=selected_n; result["selected_frequency"]=selected_frequency
+    result["selected_state_return"]=selected_state_return; result["selected_state_bps"]=selected_state_return*10_000.0
+    result["selected_interaction_lift"]=selected_interaction_lift; result["selected_interaction_lift_bps"]=selected_interaction_lift*10_000.0
+    result["weighted_state_contribution"]=selected_state_return*selected_frequency; result["weighted_state_contribution_bps"]=result["weighted_state_contribution"]*10_000.0
+    result["weighted_interaction_contribution"]=selected_interaction_lift*selected_frequency; result["weighted_interaction_contribution_bps"]=result["weighted_interaction_contribution"]*10_000.0
+    result["selected_direction"]=np.sign(selected_state_return).astype(np.int8); result["legacy_incremental_cell_effect"]=result["selected_cell_effect"]; result["selection_test_effect"]=np.nan
     return result
 
 
@@ -99,9 +106,6 @@ class DualTileScanner:
     def recommended_shape(self, observations: int, targets: int = 1, minimum_pairs: int = 1,
                           maximum_pairs: int = 8192) -> tuple[int, int]:
         if self.device.type == "cuda":
-            # Prior tiles leave reusable blocks in PyTorch's allocator. Release
-            # those blocks before measuring free VRAM for the next emitted tile.
-            self.torch.cuda.empty_cache()
             budget = int(self.torch.cuda.mem_get_info(self.device)[0] * self.memory_fraction)
         else:
             budget = 1 << 30
@@ -196,6 +200,14 @@ class DualTileScanner:
             "best_cell_effect":best,"worst_cell_effect":worst,
             "neighbor_effect_retention": neighbor_retention, "plateau_area": plateau_area,
             "surface_interaction_energy": np.nansum(np.square(inc) * c3, axis=(1, 2)) / np.maximum(c.sum(1), 1), "cell_min_count": c.min(1)})
+        selected_n=c[np.arange(result_pairs),selected_cell]; selected_frequency=selected_n/np.maximum(c.sum(1),1)
+        selected_state_return=means[np.arange(result_pairs),selected_cell]
+        result["selected_n"]=selected_n; result["selected_frequency"]=selected_frequency
+        result["selected_state_return"]=selected_state_return; result["selected_state_bps"]=selected_state_return*10_000.0
+        result["selected_interaction_lift"]=selected_effect; result["selected_interaction_lift_bps"]=selected_effect*10_000.0
+        result["weighted_state_contribution"]=selected_state_return*selected_frequency; result["weighted_state_contribution_bps"]=result["weighted_state_contribution"]*10_000.0
+        result["weighted_interaction_contribution"]=selected_effect*selected_frequency; result["weighted_interaction_contribution_bps"]=result["weighted_interaction_contribution"]*10_000.0
+        result["selected_direction"]=np.sign(selected_state_return).astype(np.int8); result["legacy_incremental_cell_effect"]=result["selected_cell_effect"]; result["selection_test_effect"]=np.nan
         if cluster_codes is not None:
             from scipy.stats import norm
             codes = np.asarray(cluster_codes, dtype=np.int64); groups = int(codes.max()) + 1 if len(codes) else 0
@@ -219,7 +231,7 @@ class DualTileScanner:
             correction = groups / max(groups - 1, 1); se = np.sqrt(correction * np.square(residual).sum(1)) / n
             z = np.divide(mean, se, out=np.full(result_pairs, np.nan), where=se > 0)
             raw_p = 2 * norm.sf(np.abs(z)); adjusted_for_cell_selection = np.minimum(1.0, raw_p * cells)
-            result["candidate_effect"] = mean; result["cluster_se"] = se; result["test_statistic"] = z
+            result["candidate_effect"] = mean; result["selection_test_effect"]=mean; result["cluster_se"] = se; result["test_statistic"] = z
             result["p_value"] = adjusted_for_cell_selection; result["cluster_count"] = groups
             result["outlier_cluster_share"] = np.max(np.abs(cluster_sum), axis=1) / np.maximum(np.sum(np.abs(cluster_sum), axis=1), 1e-15)
             if fold_codes is not None:
@@ -304,7 +316,7 @@ class DualTileScanner:
                 cluster_device={bins:[t.zeros((pairs,target_count,groups),dtype=t.float64,device=self.device),
                                       t.zeros((pairs,target_count,groups),dtype=t.int64,device=self.device)] for bins in resolutions}
                 selected_device={bins:t.as_tensor(results[bins].selected_cell.to_numpy(np.int64).reshape(pairs,target_count),device=self.device) for bins in resolutions}
-                frequency_device={bins:t.as_tensor(results[bins].attrs["frequency"].reshape(pairs,target_count),dtype=t.float64,device=self.device) for bins in resolutions}
+                frequency_device={bins:t.as_tensor(results[bins].selected_frequency.to_numpy(copy=True).reshape(pairs,target_count),dtype=t.float64,device=self.device) for bins in resolutions}
                 inference_chunk=self.recommended_shape(observations,targets=1,maximum_pairs=max(1,pairs))[0]
                 for start in range(0,observations,inference_chunk):
                     end=min(start+inference_chunk,observations); payload=reader(start,end)
@@ -350,7 +362,7 @@ class DualTileScanner:
                     for bins in resolutions:
                         from ..cache.rank_store import unpack_bins
                         ah=unpack_bins(pa,bins).astype(np.int16); bh=unpack_bins(pb,bins).astype(np.int16); cells_now=ah*bins+bh
-                        result=results[bins]; selected=result.selected_cell.to_numpy(np.int16); frequency=result.attrs["frequency"]
+                        result=results[bins]; selected=result.selected_cell.to_numpy(np.int16); frequency=result.selected_frequency.to_numpy()
                         cluster_sum,cluster_count=cluster[bins]; bin_valid=(ah>=0)&(bh>=0)
                         for target_index in range(target_count):
                             rows=np.arange(pairs)*target_count+target_index; valid=np.isfinite(yh[:,target_index])[:,None]&bin_valid
@@ -362,7 +374,7 @@ class DualTileScanner:
                 cluster_sum,cluster_count=cluster[bins]; n=np.maximum(cluster_count.sum(1),1); mean=cluster_sum.sum(1)/n
                 residual=cluster_sum-mean[:,None]*cluster_count; correction=groups/max(groups-1,1)
                 se=np.sqrt(correction*np.square(residual).sum(1))/n; z=np.divide(mean,se,out=np.full(len(mean),np.nan),where=se>0)
-                result["candidate_effect"]=mean; result["cluster_se"]=se; result["test_statistic"]=z
+                result["candidate_effect"]=mean; result["selection_test_effect"]=mean; result["cluster_se"]=se; result["test_statistic"]=z
                 result["p_value"]=np.minimum(1.0,2*norm.sf(np.abs(z))*bins*bins); result["cluster_count"]=groups
                 result["outlier_cluster_share"]=np.max(np.abs(cluster_sum),axis=1)/np.maximum(np.sum(np.abs(cluster_sum),axis=1),1e-15)
                 if fold_codes is not None:

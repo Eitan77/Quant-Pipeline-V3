@@ -76,12 +76,6 @@
     },
     {
       "match": true,
-      "module": "scan/dual_coarse.py",
-      "v2_sha256": "67e0717b3b1b7f76b0bfe3e1944a1898dabf2735aa9fad12fc5382d9312db3dd",
-      "v3_sha256": "67e0717b3b1b7f76b0bfe3e1944a1898dabf2735aa9fad12fc5382d9312db3dd"
-    },
-    {
-      "match": true,
       "module": "governance/access.py",
       "v2_sha256": "22598aedc9adadbd58dd2c174e9c0be6776d9695d9fcf00b58a601cc02777a4f",
       "v3_sha256": "22598aedc9adadbd58dd2c174e9c0be6776d9695d9fcf00b58a601cc02777a4f"
@@ -93,8 +87,9 @@
       "v3_sha256": "ad3d2cef1c3e7343d8eaf9b27293d37a1d9432dfcc27949d2d711d67cb72f5a0"
     }
   ],
+  "scanner_parity": "behavioral CPU/GPU parity; V3 adds persisted economic fields",
   "runtime_dependency_on_v2": false,
   "test_command": "C:\\Users\\decla\\Desktop\\AlgoResearch\\Quant-Pipeline-V3\\.venv\\Scripts\\python.exe -m pytest tests/parity tests/ported_v2 -q",
   "test_exit_code": 0,
-  "v2_read_only_root": "C:\\Users\\decla\\Desktop\\AlgoResearch\\Quant Pipeline V2"
+  "v2_read_only_root": "QP_V2_REFERENCE_ROOT"
 }

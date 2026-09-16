@@ -56,16 +56,10 @@ def run_pipeline(*,research,machine,resume=False):
     request_path=run_dir/"request.yaml"
     if not request_path.exists(): request_path.write_text(yaml.safe_dump(research,sort_keys=False),encoding="utf-8")
     for p in (machine["cache_root"],machine["scratch_root"],machine["duckdb_temp"]): Path(p).mkdir(parents=True,exist_ok=True)
-    if research.get("fixture")=="external_port":
-        from quant_pipeline.ported_pipeline import run_ported_pipeline
-        results=run_ported_pipeline(research,machine,Path(__file__).resolve().parents[2],telemetry)
-        telemetry.status.update({"stage":"complete","completed":len(results),"expected":len(results),"elapsed_seconds":time.perf_counter()-start,"replication_accessed":False,"final_holdout_accessed":False})
-        telemetry.event("run_complete",stage="complete",elapsed_seconds=time.perf_counter()-start)
-        return run_id
-    if research.get("fixture") is None:
-        from quant_pipeline.ported_pipeline import run_ported_pipeline
-        results=run_ported_pipeline(research,machine,Path(__file__).resolve().parents[2],telemetry)
-        telemetry.status.update({"stage":"complete","completed":len(results),"expected":len(results),"elapsed_seconds":time.perf_counter()-start,"replication_accessed":False,"final_holdout_accessed":False})
+    if research.get("fixture") in ("external_port",None):
+        from quant_pipeline.production.runner import V3ProductionRunner
+        result=V3ProductionRunner(research=research,machine=machine,repo_root=Path(__file__).resolve().parents[2],telemetry=telemetry).run()
+        telemetry.status.update({"stage":"complete","completed":1,"expected":1,"elapsed_seconds":time.perf_counter()-start,"replication_accessed":False,"final_holdout_accessed":False,"production_result":result})
         telemetry.event("run_complete",stage="complete",elapsed_seconds=time.perf_counter()-start)
         return run_id
     if research.get("fixture")!="deterministic_smoke": raise RuntimeError("Unknown fixture")
@@ -140,8 +134,8 @@ def run_pipeline(*,research,machine,resume=False):
         dual=pq.read_table(run_dir/"dual_summary.parquet").to_pylist(); rows=[]
         for d in dual:
             a=_states(rank10[d["feature_a_id"]],d["resolution"]); b=_states(rank10[d["feature_b_id"]],d["resolution"]); active=(a==d["selected_a"])&(b==d["selected_b"])
-            probe=specialist_probe(security_id=index.security_id.to_numpy(),active=active,returns_bps=target_values[d["target_id"]],min_local_n=2); global_effect=float(d["active_edge_bps"]); majority_sign=1 if probe.get("fraction_positive",0)>=probe.get("fraction_negative",0) else -1
-            rows.append({"trial_id":d["trial_id"],"pair_id":d["pair_id"],"target_id":d["target_id"],"resolution":d["resolution"],"global_effect_bps":global_effect,"global_weak":abs(global_effect)<1.0,"specialist_majority_sign":majority_sign,"global_cancellation_flag":abs(global_effect)<1.0 and probe.get("effect_dispersion_bps",0)>1.0,**probe})
+            probe=specialist_probe(security_id=index.security_id.to_numpy(),active=active,returns_bps=target_values[d["target_id"]],min_local_n=2); global_effect=float(d["active_edge_bps"]); positive=probe.get("fraction_positive") or 0.0; negative=probe.get("fraction_negative") or 0.0; majority_sign=1 if positive>=negative else -1
+            rows.append({"trial_id":d["trial_id"],"pair_id":d["pair_id"],"target_id":d["target_id"],"resolution":d["resolution"],"global_effect_bps":global_effect,"global_weak":abs(global_effect)<1.0,"specialist_majority_sign":majority_sign,"global_cancellation_flag":abs(global_effect)<1.0 and (probe.get("effect_dispersion_bps") or 0.0)>1.0,**probe})
         _write_table(run_dir/"specialist_summary.parquet",rows); return {"rows":len(rows)}
     stage("specialist_probe",specialist_stage)
     def variant_stage():

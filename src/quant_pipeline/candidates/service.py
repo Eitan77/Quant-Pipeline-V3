@@ -15,6 +15,10 @@ def find_candidate(candidate_id:str,machine:dict):
 
 def export_candidate_sip(candidate_id:str,machine:dict)->Path:
     run,row=find_candidate(candidate_id,machine); payload=row["state_payload"]
+    if int(row["direction"])==0: raise ValueError("Descriptive zero-direction candidate cannot be exported as a SIP signal")
+    production_signals=run/"candidates"/candidate_id/"dossier"/"signals.parquet"
+    if production_signals.exists():
+        frame=pq.read_table(production_signals).to_pandas(); rows=[{"candidate_id":candidate_id,"security_id":x.security_id,"symbol":x.symbol,"signal_ts_utc":x.signal_timestamp,"signal_timestamp":x.signal_timestamp,"direction":int(x.direction),"reference_exit_ts_utc":x.reference_exit_timestamp,"reference_exit_timestamp":x.reference_exit_timestamp,"state_definition":row["state_definition"],"resolution":int(row["resolution"]),"state_payload":row["state_payload"]} for x in frame.itertuples(index=False)]; out=run/"execution_data"/f"{candidate_id}.parquet"; out.parent.mkdir(exist_ok=True); return write_sip_signal_export(candidate=type("C",(),{"candidate_id":candidate_id})(),rows=rows,output_path=out)
     cells=payload.get("cells") if isinstance(payload,dict) else None
     if not cells:raise ValueError("Candidate has no structured cells")
     a=np.load(run/"canonical_states"/f"{row['feature_a_id']}__r{row['resolution']}.npy",mmap_mode="r")
@@ -24,7 +28,7 @@ def export_candidate_sip(candidate_id:str,machine:dict)->Path:
     index=pq.read_table(run/"observation_index.parquet").to_pandas(); index=index.loc[active]
     horizon=int(row["target_id"].split("_")[1].removesuffix("m")); rows=[]
     for x in index.itertuples(index=False):
-        rows.append({"candidate_id":candidate_id,"security_id":int(x.security_id),"symbol":str(x.symbol),"signal_ts_utc":x.decision_ts_utc,"direction":int(row["direction"]),"reference_exit_ts_utc":x.decision_ts_utc+__import__('pandas').Timedelta(minutes=horizon),"state_definition":row["state_definition"],"resolution":int(row["resolution"])})
+        exit_ts=x.decision_ts_utc+__import__('pandas').Timedelta(minutes=horizon); rows.append({"candidate_id":candidate_id,"security_id":int(x.security_id),"symbol":str(x.symbol),"signal_ts_utc":x.decision_ts_utc,"signal_timestamp":x.decision_ts_utc,"direction":int(row["direction"]),"reference_exit_ts_utc":exit_ts,"reference_exit_timestamp":exit_ts,"state_definition":row["state_definition"],"state_payload":row["state_payload"],"resolution":int(row["resolution"])})
     out=run/"execution_data"/f"{candidate_id}.parquet";out.parent.mkdir(exist_ok=True);return write_sip_signal_export(candidate=type("C",(),{"candidate_id":candidate_id})(),rows=rows,output_path=out)
 
 def promote_replication(candidate_id:str,machine:dict)->Path:

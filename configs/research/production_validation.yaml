@@ -1,0 +1,24 @@
+run_name: v3_production_validation
+mode: full-canonical
+fixture: null
+periods:
+  discovery: {start: '2026-02-01', end: '2026-04-30'}
+  replication: {start: '2026-05-01', end: '2026-08-31', sealed: true}
+  final_holdout: {start: '2026-09-01', end: null, sealed: true}
+allow_replication_access: false
+allow_final_holdout_access: false
+resolutions: [3, 5, 10]
+feature_packs: [builtin_v2_port]
+discovery: {canonical_duals: exhaustive_compatible, single_parent_gate: false, retain_negative_effects: true}
+forensics:
+  enabled: true
+  candidate_policy: {min_active_n: 100, min_abs_edge_bps: 0.5, keep_top_k_per_target_resolution: 50}
+specialist: {min_local_n: 20, min_selected_n: 100}
+variant_expansion: {parent_limit: 12, neighbors_per_side: 3, rejected_audit_count: 2}
+external_smoke:
+  decision_grids: {intraday_5m: true, daily_close: false, preclose_1555: false, intraday_1m: false}
+  feature_windows: {intraday: [5m, 15m, 30m], daily: [1d, 2d, 5d]}
+  targets: {intraday: [5m, 15m], interday: [1d], overnight: false, bases: [raw], intraday_entry_delay_minutes: 1, daily_entry_delay_minutes: 1}
+  universe: {smoke_symbol_limit: 12, smoke_feature_limit: 48}
+  warmup: {auto_derive_transitive_history: false, safety_margin_sessions: 0, fail_if_full_coverage_warmup_missing: false, snapshot_start: '2025-11-03'}
+  folds: 3
