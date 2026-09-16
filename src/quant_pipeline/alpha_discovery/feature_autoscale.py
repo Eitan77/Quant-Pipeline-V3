@@ -35,7 +35,8 @@ class AdaptiveFeatureConcurrency:
         self.best=self.current
 
     def begin_wave(self,now:float)->None:
-        self.current=min(self.maximum,max(self.minimum,self.best)); self.previous_level=None; self.previous_rate=None
+        self.current=min(self.maximum,max(self.minimum,self.best)); self.best_rate=0.0
+        self.previous_level=None; self.previous_rate=None
         self._stop_upward=False; self._small_gain_holds=0; self._reset_epoch(now)
 
     def _reset_epoch(self,now:float)->None:
