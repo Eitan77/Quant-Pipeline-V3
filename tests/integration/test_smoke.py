@@ -1,12 +1,13 @@
-import json
+import json,subprocess,sys
 from pathlib import Path
 import duckdb,pyarrow.parquet as pq,yaml
 from quant_pipeline.app import run_pipeline
-from quant_pipeline.config import load_research_config,load_machine_config
+from quant_pipeline.config import load_research_config
+from tests.conftest import make_test_machine
 ROOT=Path(__file__).resolve().parents[2]
 def test_end_to_end_and_resume(tmp_path):
     r=load_research_config(ROOT/"configs/research/smoke.yaml"); r["run_name"]="pytest_smoke"
-    m=load_machine_config(ROOT/"configs/machines/local.yaml"); m={**m,"cache_root":str(tmp_path/"cache"),"run_root":str(tmp_path/"runs"),"scratch_root":str(tmp_path/"scratch"),"duckdb_temp":str(tmp_path/"scratch/duckdb")}
+    m=make_test_machine(tmp_path)
     run_pipeline(research=r,machine=m); d=Path(m["run_root"])/r["run_name"]
     manifest=json.loads((d/"run_manifest.json").read_text()); assert not manifest["replication_accessed"] and manifest["canonical_trial_coverage"]=="reconciled"
     dual=pq.read_table(d/"dual_summary.parquet").to_pandas(); assert set(dual.resolution)=={3,5,10}; assert (dual.direction<0).any() and (dual.direction>0).any()
@@ -17,3 +18,8 @@ def test_end_to_end_and_resume(tmp_path):
     r2={**r,"run_name":"pytest_smoke_second"}; run_pipeline(research=r2,machine=m); d2=Path(m["run_root"])/r2["run_name"]
     for stage,expected in (("features",4),("targets",3),("canonical_bins",9)):
         metrics=json.loads((d2/"stages"/f"{stage}.complete.json").read_text())["metrics"]; assert metrics["cache_hits"]==expected and metrics["cache_misses"]==0
+
+def test_cli_smoke_uses_temporary_machine(tmp_path):
+    machine=make_test_machine(tmp_path); path=tmp_path/"machine.yaml"; path.write_text(yaml.safe_dump(machine),encoding="utf-8")
+    result=subprocess.run([sys.executable,"-m","quant_pipeline","run","--request",str(ROOT/"configs/research/smoke.yaml"),"--machine",str(path)],cwd=ROOT)
+    assert result.returncode==0

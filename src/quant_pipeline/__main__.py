@@ -16,8 +16,10 @@ def main():
     if a.command=="status": print(json.dumps(status(a.run_id,m),indent=2)); return 0
     if a.command=="resume":
         req=Path(m["run_root"])/a.run_id/"request.yaml"
-        if not req.exists(): req=Path("configs/research/smoke.yaml")
-        print(run_pipeline(research=load_research_config(req),machine=m,resume=True)); return 0
+        if not req.exists(): raise FileNotFoundError(f"Stored run request is missing: {req}")
+        research=load_research_config(req)
+        if research["run_name"]!=a.run_id: raise RuntimeError(f"Stored request run_name {research['run_name']!r} does not match {a.run_id!r}")
+        print(run_pipeline(research=research,machine=m,resume=True)); return 0
     if a.command=="replicate":
         from quant_pipeline.candidates.service import promote_replication
         print(promote_replication(a.candidate_id,m)); return 0

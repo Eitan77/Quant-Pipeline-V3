@@ -13,4 +13,5 @@ discovery: {canonical_duals: exhaustive_compatible, single_parent_gate: false, r
 forensics:
   enabled: true
   candidate_policy: {min_active_n: 250, min_abs_edge_bps: 1.0, keep_top_k_per_target_resolution: 250}
-
+specialist: {min_local_n: 20, min_selected_n: 250}
+variant_expansion: {parent_limit: null, neighbors_per_side: 3, rejected_audit_count: 2}

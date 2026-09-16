@@ -25,7 +25,8 @@ def code_readiness(config: AlphaDiscoveryConfig) -> dict:
     bundle = compile_registry(config)
     mapped_families = set(FAMILIES)
     unexplained = sorted({concept.builder_key for concept in bundle.concepts if concept.active} - mapped_families)
-    return {"standalone_project": Path(config.project_root).name == "Quant Pipeline V2", "required_modules_pass": not missing,
+    root=Path(config.project_root).resolve(); import os; reference=os.getenv("QP_V2_REFERENCE_ROOT"); standalone=root.exists() and (root/"src/quant_pipeline").exists() and (root/"configs").exists() and (not reference or not root.is_relative_to(Path(reference).resolve()))
+    return {"standalone_project": standalone, "required_modules_pass": not missing,
             "missing_modules": missing, "compiled_concepts": len(bundle.concepts), "compiled_features": len(bundle.features),
             "compiled_targets": len(bundle.targets), "unexplained_builder_keys": unexplained,
             "registry_mapping_pass": not unexplained, "data_ready": False, "smoke_run_complete": False,

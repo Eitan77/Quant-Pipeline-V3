@@ -12,7 +12,7 @@ from .models import stable_hash
 
 @dataclass(frozen=True)
 class SourceConfig:
-    duckdb_path: str = "D:/AlgoResearch/data/catalog.duckdb"
+    duckdb_path: str = "data/catalog.duckdb"
     bars_1m_raw_table: str = "bars_1m_raw"
     bars_1m_research_table: str = "bars_1m_research"
     alpaca_feed_required: str = "sip"
@@ -47,7 +47,7 @@ class ComputeConfig:
     cpu_workers: int | str = "auto"
     host_memory_fraction: float = 0.90
     duckdb_memory_limit: str = "auto"
-    duckdb_temp_directory: str = "D:/AlgoResearch/Quant Pipeline V2/temp"
+    duckdb_temp_directory: str = "scratch/duckdb"
 
 
 @dataclass(frozen=True)
@@ -158,9 +158,9 @@ class AlphaDiscoveryConfig:
         if self.feature_search.get("initial_scope", "canonical_concepts") not in {"canonical_concepts", "all_features"}:
             raise ValueError("feature_search.initial_scope must be 'canonical_concepts' or 'all_features'")
         root = Path(self.project_root).resolve()
-        old = Path("D:/AlgoResearch/Quant Pipeline").resolve()
-        if root == old:
-            raise ValueError("V2 project_root may not be the legacy Quant Pipeline")
+        import os
+        reference=os.getenv("QP_V2_REFERENCE_ROOT")
+        if reference and root.is_relative_to(Path(reference).resolve()): raise ValueError("V3 project_root may not be inside QP_V2_REFERENCE_ROOT")
 
     def resolve_path(self, value: str) -> Path:
         path = Path(value)

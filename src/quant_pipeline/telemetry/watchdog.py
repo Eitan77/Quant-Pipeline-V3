@@ -4,6 +4,7 @@ import json
 from dataclasses import dataclass, replace
 from datetime import datetime, timezone
 from pathlib import Path
+import threading,time
 
 
 FATAL_MARKERS=("causality", "schema", "corrupt", "parity", "invalid feature")
@@ -46,3 +47,15 @@ class StallWatchdog:
         if result["stalled"]:
             path=self.run_dir/"diagnostics"/f"stall-{now.strftime('%Y%m%dT%H%M%SZ')}.json"; path.parent.mkdir(parents=True,exist_ok=True); path.write_text(json.dumps({**result,"status":status},indent=2,sort_keys=True),encoding="utf-8"); result["diagnostic_path"]=str(path)
         return result
+
+    def run(self,operation,*,abort_event:threading.Event,on_stall=None,poll_seconds:float=30.0):
+        finished=threading.Event()
+        def monitor():
+            while not finished.wait(poll_seconds):
+                result=self.inspect()
+                if result.get("stalled"):
+                    if on_stall:on_stall(result)
+                    abort_event.set(); return
+        thread=threading.Thread(target=monitor,name="v3-stall-watchdog",daemon=True); thread.start()
+        try:return operation()
+        finally:finished.set(); thread.join(timeout=max(1.0,poll_seconds*2))

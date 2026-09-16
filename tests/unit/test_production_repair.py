@@ -2,9 +2,9 @@ from pathlib import Path
 from types import SimpleNamespace
 import numpy as np,pandas as pd,pytest
 from quant_pipeline.alpha_discovery.scan.dual_coarse import DualTileScanner
-from quant_pipeline.data.source_manifest import build_source_manifest
+from quant_pipeline.data.source_manifest import build_production_source_manifest,build_source_manifest
 from quant_pipeline.discovery.specialist import specialist_probe
-from quant_pipeline.production.cache_keys import SharedStageCache,core_stage_key
+from quant_pipeline.production.cache_keys import SharedStageCache,core_stage_key,stage_implementation_hash
 from quant_pipeline.production.legacy_core import LOW_LEVEL_STAGES
 from quant_pipeline.production.materialization import materialization_pool
 from quant_pipeline.production.runner import V3ProductionRunner
@@ -36,6 +36,16 @@ def test_specialist_cancellation_is_visible():
 def test_source_manifest_changes_cache_identity(tmp_path):
     source=tmp_path/"data"; source.mkdir(); part=source/"part.parquet"; part.write_bytes(b"one"); first=build_source_manifest(source); part.write_bytes(b"two-two"); second=build_source_manifest(source); assert first["source_manifest_hash"]!=second["source_manifest_hash"]
     assert core_stage_key(stage="features",source_manifest_hash=first["source_manifest_hash"],semantic_config={},implementation_hash="x")!=core_stage_key(stage="features",source_manifest_hash=second["source_manifest_hash"],semantic_config={},implementation_hash="x")
+
+def test_production_source_hash_includes_reference_identity(tmp_path):
+    data=tmp_path/"data"; data.mkdir(); (data/"part.parquet").write_bytes(b"raw"); repo=tmp_path/"repo"; refs=repo/"reference"; refs.mkdir(parents=True)
+    for name in ("security_master.parquet","sp500_pit_membership_daily.parquet","corporate_actions.parquet"): (refs/name).write_bytes(name.encode())
+    first=build_production_source_manifest(data_root=data,repo_root=repo); (refs/"security_master.parquet").write_bytes(b"changed"); second=build_production_source_manifest(data_root=data,repo_root=repo)
+    assert first["source_manifest_hash"]!=second["source_manifest_hash"] and not Path(first["reference_files"][0]["relative_path"]).is_absolute()
+
+def test_component_hashes_are_stage_scoped():
+    root=Path(__file__).resolve().parents[2]
+    assert stage_implementation_hash("build-features",root)!=stage_implementation_hash("scan-duals-coarse",root)
 
 def test_shared_stage_cache_materializes_compatible_artifacts(tmp_path):
     first=tmp_path/"run-a"; artifact=first/"cache/features/g/observations.parquet"; artifact.parent.mkdir(parents=True); artifact.write_bytes(b"immutable"); store=SharedStageCache(tmp_path/"shared"); store.publish("build-features","key",first,{"rows":1}); second=tmp_path/"run-b"; result=store.restore("build-features","key",second); assert result["rows"]==1 and (second/"cache/features/g/observations.parquet").read_bytes()==b"immutable"

@@ -142,6 +142,14 @@ class AlphaDiscoveryRun:
         self.implementation_hash = digest.hexdigest()
         self._observation_cache: dict[str, pd.DataFrame] = {}
         self._feature_column_cache: dict[tuple[str, str], np.ndarray] = {}
+        self.runtime_pair_cap = None
+        self.runtime_worker_cap = None
+        self.progress_callback = None
+        self.abort_requested = None
+
+    def _useful_progress(self,unit:str,completed:int=0,expected:int=0)->None:
+        if self.abort_requested is not None and self.abort_requested.is_set(): raise TimeoutError(f"Stall watchdog aborted {unit}")
+        if self.progress_callback is not None: self.progress_callback(unit,completed,expected)
 
     def initialize(self) -> None:
         for directory in ("single_results", "dual_trial_ledger", "dual_coarse_results", "dual_fine_results",
@@ -343,7 +351,7 @@ class AlphaDiscoveryRun:
         start = self._snapshot_start()
         end = self.config.research_periods.discovery_end
         from .resources import calibrated_resources
-        workers,memory_limit,_=calibrated_resources(self.config.compute)
+        workers,memory_limit,_=calibrated_resources(self.config.compute); workers=min(workers,self.runtime_worker_cap) if self.runtime_worker_cap else workers
         temp = Path(self.config.compute.duckdb_temp_directory); temp.mkdir(parents=True, exist_ok=True)
         panel_root = self.root / "cache" / "panels"; panel_root.mkdir(parents=True, exist_ok=True)
         calculation_root = self.root / "cache" / "calculation_panels"; calculation_root.mkdir(parents=True, exist_ok=True)
@@ -480,7 +488,7 @@ class AlphaDiscoveryRun:
                 connection.execute(f"COPY (SELECT c.* EXCLUDE(observation_id),coalesce(m.observation_id,-1) AS observation_id FROM read_parquet('{calculation_destination}') c LEFT JOIN observation_map m USING(security_id,decision_ts)) TO '{remapped}' (FORMAT PARQUET, COMPRESSION ZSTD, ROW_GROUP_SIZE 250000)")
                 Path(remapped).replace(Path(calculation_destination))
                 count = int(connection.execute(f"SELECT count(*) FROM read_parquet('{panel_destination}')").fetchone()[0])
-                total += count; built += 1
+                total += count; built += 1; self._useful_progress(f"panel:{grid}",built,sum(bool(x) for x in self.config.decision_grids.values()))
                 self._write_reusable_indexes(grid,Path(panel_destination))
             joined_path.unlink(missing_ok=True)
         return {"panel_rows": total, "enabled_grids": built, "mode": "duckdb_out_of_core",
@@ -506,7 +514,7 @@ class AlphaDiscoveryRun:
         global_telemetry=[]
         panel_root = self.root / "cache" / "panels"; feature_root = self.root / "cache" / "features"
         from .resources import calibrated_resources, host_memory_headroom
-        workers,memory_limit,resource_telemetry=calibrated_resources(self.config.compute)
+        workers,memory_limit,resource_telemetry=calibrated_resources(self.config.compute); workers=min(workers,self.runtime_worker_cap) if self.runtime_worker_cap else workers
         configured_block = self.config.compute.feature_block_size
         block_size = min(8,workers) if configured_block == "auto" else int(configured_block)
         for grid, enabled in self.config.decision_grids.items():
@@ -561,6 +569,7 @@ class AlphaDiscoveryRun:
                 wave_size=8
                 with ProcessPoolExecutor(max_workers=workers) as process_pool:
                     for wave_index,wave_start in enumerate(range(0,len(pending),wave_size)):
+                        self._useful_progress(f"feature:{grid}",wave_start,len(pending))
                         wave=pending[wave_start:wave_start+wave_size]; outputs={}
                         progress_path=part_root/f"progress-{wave_index:04d}.json"
                         progress_key={"blocks":[name for name,_ in wave],"observation_count":observation_count}; completed_security={}
@@ -600,6 +609,7 @@ class AlphaDiscoveryRun:
                                     outputs[name][0][dense_ids,:]=part_values; written[name]+=len(dense_ids)
                                     del ids,part_values; Path(ids_path).unlink(); Path(values_path).unlink()
                                 uncommitted[security_id]=int(row_count or 0)
+                                self._useful_progress(f"feature:{grid}:security",len(completed_security)+len(uncommitted),len(security_ids))
                                 if len(uncommitted)>=8: commit_progress()
                         commit_progress()
                         for name,(values,temporary,target,batch) in outputs.items():
@@ -795,7 +805,7 @@ class AlphaDiscoveryRun:
         source = self.config.source
         output = self.root / "cache" / "targets"; output.mkdir(parents=True, exist_ok=True)
         from .resources import calibrated_resources
-        workers,memory_limit,_=calibrated_resources(self.config.compute)
+        workers,memory_limit,_=calibrated_resources(self.config.compute); workers=min(workers,self.runtime_worker_cap) if self.runtime_worker_cap else workers
         total_rows = 0; target_ids: set[str] = set(); benchmark_symbol = source.benchmark_symbols[0]
         temp_directory = Path(self.config.compute.duckdb_temp_directory)
         temp_directory.mkdir(parents=True, exist_ok=True)
@@ -883,6 +893,7 @@ class AlphaDiscoveryRun:
                 connection.execute(f"COPY ({query}) TO '{destination}' (FORMAT PARQUET,COMPRESSION ZSTD,ROW_GROUP_SIZE 250000)")
                 count, ids = connection.execute(f"SELECT count(*),list(DISTINCT target_id) FROM read_parquet('{destination}')").fetchone()
                 total_rows += int(count); target_ids.update(ids or [])
+                self._useful_progress(f"targets:{grid}",total_rows,total_rows)
         return {"target_rows": total_rows, "target_ids": len(target_ids), "mode": "duckdb_out_of_core", "cpu_workers": workers}
 
     def _target_ids_and_vector(self, grid: str, observations: pd.DataFrame, target_id: str | None = None):
@@ -1073,7 +1084,7 @@ class AlphaDiscoveryRun:
             plan=PairPlan.compile([item.feature_id for item in specs],alias_hashes); plan.write(self.root/"cache"/"pair_plans"/f"{grid}.npz")
             scanner=DualTileScanner(bins=10,device_name=self.config.compute.gpu_device,prefer_cuda=self.config.compute.prefer_cuda,
                                     memory_fraction=self.config.compute.dynamic_memory_fraction)
-            backend=scanner.backend; block=scanner.recommended_shape(len(observations),targets=max(1,len(target_ids)))[1]
+            backend=scanner.backend; maximum_pairs=self.runtime_pair_cap or 8192; block=scanner.recommended_shape(len(observations),targets=max(1,len(target_ids)),maximum_pairs=maximum_pairs)[1]
             full_pairs=len(all_specs)*(len(all_specs)-1)//2; canonical_pairs=len(specs)*(len(specs)-1)//2
             excluded+=((full_pairs-canonical_pairs)+(canonical_pairs-len(plan.left)))*len(target_ids)
             exclusions=[{"pair_id":None,"feature_a":alias,"feature_b":canonical,"target_id":None,"eligible":False,"reason":"noncanonical_concept_variant"} for alias,canonical in structural_aliases.items()]
@@ -1086,10 +1097,11 @@ class AlphaDiscoveryRun:
                 batch.append((plan.pair_ids[index],plan.feature_ids[left_index],plan.feature_ids[right_index]))
                 if len(batch)<block: continue
                 chunks+=self._write_fused_dual_tile(scanner,batch,feature_bins,target_matrix,output_roots,grid,part,cluster_codes,fold_codes,target_ids)
-                attempted+=len(batch)*len(target_ids); part+=1; batch=[]
+                attempted+=len(batch)*len(target_ids); part+=1; self._useful_progress(f"duals:{grid}",attempted,len(plan.left)*len(target_ids)); batch=[]
             if batch:
                 chunks+=self._write_fused_dual_tile(scanner,batch,feature_bins,target_matrix,output_roots,grid,part,cluster_codes,fold_codes,target_ids)
                 attempted+=len(batch)*len(target_ids)
+                self._useful_progress(f"duals:{grid}",attempted,len(plan.left)*len(target_ids))
         elapsed=time.perf_counter()-started
         manifest={"config_hash":self.config.definition_hash,"implementation_hash":self.implementation_hash,"resolutions":list(resolutions),
                   "search_scope":self.config.duals.get("search_scope","canonical_concepts"),
@@ -1309,35 +1321,43 @@ class AlphaDiscoveryRun:
             if not needed: break
         missing = [name for name in requested if name not in columns]
         if missing:
-            cache_name=sha256(json.dumps(sorted(missing)).encode()).hexdigest()[:20]
-            finalist_store=ArrayStore(self.root/"cache"/"finalist_features"/grid)
-            try: recomputed,names=finalist_store.read(cache_name)
-            except (FileNotFoundError,ValueError,KeyError):
-                feature_map={item.feature_id:item for item in self.compile_registry().features}
-                specs=[feature_map[name] for name in missing]
-                if any(_alpha_feature_is_global(item) for item in specs):
-                    raise RuntimeError(f"Global finalist cache was unexpectedly pruned: {missing}")
-                recomputed=np.full((len(observations),len(specs)),np.nan,dtype=np.float32)
-                calculation=self.root/"cache"/"calculation_panels"/f"{grid}.parquet"
-                partitions=self._ensure_finalist_partitions(grid,calculation,16)
-                from concurrent.futures import ProcessPoolExecutor, as_completed
-                part_root=finalist_store.root/".parts"/cache_name; part_root.mkdir(parents=True,exist_ok=True)
-                with ProcessPoolExecutor(max_workers=min(16,len(partitions))) as pool:
-                    futures=[pool.submit(_build_alpha_symbol_part,str(partition),specs,None,
-                                         str(part_root/f"part-{index:05d}"))
-                             for index,partition in enumerate(partitions)]
-                    for future in as_completed(futures):
-                        ids_path,values_path=future.result()
-                        ids=np.load(ids_path,mmap_mode="r"); values=np.load(values_path,mmap_mode="r")
-                        recomputed[np.asarray(ids,dtype=np.int64),:]=values
-                        del ids,values
-                        Path(ids_path).unlink(); Path(values_path).unlink()
-                finalist_store.write(cache_name,recomputed,missing); names=missing
+            self._materialize_missing_feature_columns(grid,missing)
+            cache_name=sha256(json.dumps(sorted(missing)).encode()).hexdigest()[:20]; finalist_store=ArrayStore(self.root/"cache"/"finalist_features"/grid)
+            recomputed,names=finalist_store.read(cache_name)
             for index,name in enumerate(names):
                 columns[name]=np.asarray(recomputed[:,index])
                 self._feature_column_cache[(grid, name)] = columns[name]
         matrix = columns[requested[0]].reshape(-1, 1) if len(requested) == 1 else np.column_stack([columns[name] for name in requested])
         return observations, matrix
+
+    def _materialize_missing_feature_columns(self,grid:str,feature_ids:list[str])->None:
+        """Build only requested compiled features, including global variants."""
+        from .cache.feature_store import ArrayStore
+        from .features.base import FeatureBuilder
+        names=sorted(set(feature_ids)); cache_name=sha256(json.dumps(names).encode()).hexdigest()[:20]; store=ArrayStore(self.root/"cache"/"finalist_features"/grid)
+        try: store.read(cache_name); return
+        except (FileNotFoundError,ValueError,KeyError): pass
+        feature_map={item.feature_id:item for item in self.compile_registry().features}; specs=[feature_map[name] for name in names]
+        observations=self._observation_cache.get(grid)
+        if observations is None: observations=pd.read_parquet(self.root/"cache"/"features"/grid/"observations.parquet")
+        output=np.full((len(observations),len(specs)),np.nan,dtype=np.float32); calculation=self.root/"cache"/"calculation_panels"/f"{grid}.parquet"
+        local=[(i,s) for i,s in enumerate(specs) if not _alpha_feature_is_global(s)]; global_specs=[(i,s) for i,s in enumerate(specs) if _alpha_feature_is_global(s)]
+        if local:
+            worker_cap=min(16,self.runtime_worker_cap) if self.runtime_worker_cap else 16; partitions=self._ensure_finalist_partitions(grid,calculation,worker_cap)
+            from concurrent.futures import ProcessPoolExecutor,as_completed
+            part_root=store.root/".parts"/cache_name; part_root.mkdir(parents=True,exist_ok=True); selected=[s for _,s in local]
+            with ProcessPoolExecutor(max_workers=min(worker_cap,len(partitions))) as pool:
+                futures=[pool.submit(_build_alpha_symbol_part,str(partition),selected,None,str(part_root/f"part-{index:05d}")) for index,partition in enumerate(partitions)]
+                for future in as_completed(futures):
+                    ids_path,values_path=future.result(); ids=np.load(ids_path,mmap_mode="r"); values=np.load(values_path,mmap_mode="r"); output[np.asarray(ids,dtype=np.int64)[:,None],[i for i,_ in local]]=values; del ids,values; Path(ids_path).unlink(); Path(values_path).unlink()
+        if global_specs:
+            indexes=[i for i,_ in global_specs]; selected=[s for _,s in global_specs]
+            if grid.startswith("intraday"):
+                temp=store.root/f".{cache_name}.global.npy"; values=np.lib.format.open_memmap(temp,mode="w+",dtype=np.float32,shape=(len(observations),len(selected))); values[:]=np.nan
+                self._build_global_feature_chunks(calculation,[(cache_name,selected,values)]); output[:,indexes]=values; del values; temp.unlink(missing_ok=True)
+            else:
+                frame=pd.read_parquet(calculation); self._compact_feature_frame(frame); builder=FeatureBuilder(frame); emit=builder.frame.emit.to_numpy(bool)&~builder.frame.observation_id.duplicated().to_numpy(); ids=builder.frame.loc[emit,"observation_id"].to_numpy(np.int64); output[np.asarray(ids,dtype=np.int64)[:,None],indexes]=builder.build_many(selected).to_numpy(dtype=np.float32,na_value=np.nan)[emit]
+        store.write(cache_name,output,names)
 
     def _ensure_finalist_partitions(self, grid: str, calculation: Path, buckets: int) -> list[Path]:
         """Scan the large calculation panel once and persist 16 independent worker buckets."""
@@ -1388,67 +1408,10 @@ class AlphaDiscoveryRun:
     def _actual_trade_path_diagnostics(self, windows: pd.DataFrame, memory_limit: str = "512MB",
                                        temp_directory: Path | None = None) -> pd.DataFrame:
         """Compute exact finalist paths in DuckDB and return one row per window."""
-        entry_ts=pd.to_datetime(windows.entry_ts,utc=True,errors="coerce")
-        exit_ts=pd.to_datetime(windows.exit_ts,utc=True,errors="coerce")
-        if len(windows) and ((exit_ts-entry_ts)<=pd.Timedelta(minutes=1)).fillna(False).all():
-            entry=pd.to_numeric(windows.entry_price,errors="coerce").to_numpy(float)
-            exit_price=pd.to_numeric(windows.exit_price,errors="coerce").to_numpy(float)
-            valid=np.isfinite(entry)&(entry>0)&np.isfinite(exit_price)
-            maximum=np.maximum(entry,exit_price); minimum=np.minimum(entry,exit_price)
-            return pd.DataFrame({
-                "path_count":np.where(valid,2,1),
-                "mfe":np.where(valid,maximum/entry-1,np.nan),
-                "mae":np.where(valid,minimum/entry-1,np.nan),
-                "time_to_mfe":np.where(valid,np.where(exit_price>entry,2,1),np.nan),
-                "time_to_mae":np.where(valid,np.where(exit_price<entry,2,1),np.nan),
-                "terminal_return":np.where(valid,exit_price/entry-1,np.nan),
-                "mfe_minus_terminal":np.where(valid,(maximum-exit_price)/entry,np.nan),
-                "recovery_after_mae":np.where(valid,(exit_price-minimum)/entry,np.nan),
-            },index=windows.index)
-        import duckdb
-        query_windows=windows.reset_index(drop=True).copy(); query_windows["window_id"]=np.arange(len(query_windows),dtype=np.int64)
-        temp_directory=Path(temp_directory or self.config.compute.duckdb_temp_directory); temp_directory.mkdir(parents=True,exist_ok=True)
-        with duckdb.connect(self.config.source.duckdb_path,read_only=True) as connection:
-            connection.execute(f"SET temp_directory='{temp_directory.as_posix().replace(chr(39),chr(39)*2)}'")
-            connection.execute(f"SET memory_limit='{memory_limit}'")
-            connection.register("candidate_windows",query_windows[["window_id","security_id","entry_ts","exit_ts"]])
-            connection.register("window_prices",query_windows[["window_id","entry_price","exit_price"]])
-            result=connection.execute(f"""WITH bar_points AS (
-                  SELECT w.window_id,row_number() OVER(PARTITION BY w.window_id ORDER BY b.bar_start_ts_utc) seq,
-                         b.bar_start_ts_utc,b.close::DOUBLE price
-                  FROM candidate_windows w JOIN {self.config.source.bars_1m_raw_table} b
-                    ON b.security_id=w.security_id AND b.bar_start_ts_utc>=w.entry_ts AND b.bar_start_ts_utc<w.exit_ts
-                  WHERE b.session_date<=DATE '{self.config.research_periods.discovery_end}'
-                ), bar_stats AS (
-                  SELECT window_id,count(*) bar_count,arg_max(price,bar_start_ts_utc) last_price
-                  FROM bar_points GROUP BY window_id
-                ), path_points AS (
-                  SELECT window_id,0::BIGINT seq,entry_price::DOUBLE price FROM window_prices
-                  UNION ALL SELECT window_id,seq,price FROM bar_points
-                  UNION ALL
-                  SELECT w.window_id,coalesce(s.bar_count,0)+1,w.exit_price::DOUBLE
-                  FROM window_prices w LEFT JOIN bar_stats s USING(window_id)
-                  WHERE isfinite(w.exit_price) AND (coalesce(s.bar_count,0)=0 OR s.last_price IS DISTINCT FROM w.exit_price)
-                ), extrema AS (
-                  SELECT *,max(price) OVER(PARTITION BY window_id) max_price,
-                           min(price) OVER(PARTITION BY window_id) min_price
-                  FROM path_points
-                ), reduced AS (
-                  SELECT window_id,count(*) path_count,max(max_price) max_price,min(min_price) min_price,
-                         min(seq) FILTER(WHERE price=max_price)+1 time_to_mfe,
-                         min(seq) FILTER(WHERE price=min_price)+1 time_to_mae,
-                         arg_max(price,seq) terminal_price
-                  FROM extrema GROUP BY window_id
-                )
-                SELECT w.window_id,r.path_count,
-                  CASE WHEN isfinite(w.entry_price) AND w.entry_price>0 THEN r.max_price/w.entry_price-1 END mfe,
-                  CASE WHEN isfinite(w.entry_price) AND w.entry_price>0 THEN r.min_price/w.entry_price-1 END mae,
-                  r.time_to_mfe,r.time_to_mae,
-                  CASE WHEN isfinite(w.entry_price) AND w.entry_price>0 THEN r.terminal_price/w.entry_price-1 END terminal_return,
-                  CASE WHEN isfinite(w.entry_price) AND w.entry_price>0 THEN (r.max_price-r.terminal_price)/w.entry_price END mfe_minus_terminal,
-                  CASE WHEN isfinite(w.entry_price) AND w.entry_price>0 THEN (r.terminal_price-r.min_price)/w.entry_price END recovery_after_mae
-                FROM window_prices w LEFT JOIN reduced r USING(window_id) ORDER BY w.window_id""").fetchdf()
-        return result.drop(columns="window_id").set_axis(windows.index)
+        from .targets.excursions import actual_trade_path_diagnostics
+        return actual_trade_path_diagnostics(windows,duckdb_path=self.config.source.duckdb_path,
+            bars_table=self.config.source.bars_1m_raw_table,discovery_end=self.config.research_periods.discovery_end,
+            temp_directory=Path(temp_directory or self.config.compute.duckdb_temp_directory),memory_limit=memory_limit)
 
     def _edge_autopsy_worker_budget(self, grids: set[str]) -> int:
         largest=0

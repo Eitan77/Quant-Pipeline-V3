@@ -3,8 +3,23 @@ import json,os,shutil
 from pathlib import Path
 from quant_pipeline.hashing import content_hash
 
-def core_stage_key(*,stage:str,source_manifest_hash:str,semantic_config:dict,implementation_hash:str)->str:
-    return content_hash({"stage":stage,"source_manifest_hash":source_manifest_hash,"semantic_config":semantic_config,"implementation_hash":implementation_hash})
+STAGE_IMPLEMENTATION_VERSION={"build-panel":1,"build-features":1,"build-targets":1,"scan-singles":1,"scan-duals-coarse":1}
+STAGE_FILES={
+ "build-panel":["alpha_discovery/data/source.py","alpha_discovery/data/snapshot.py","alpha_discovery/data/universe.py","alpha_discovery/data/corporate_actions.py","alpha_discovery/data/panel.py","alpha_discovery/eligibility.py"],
+ "build-features":["alpha_discovery/registry.py","alpha_discovery/models.py","alpha_discovery/features/*.py","alpha_discovery/cache/feature_store.py"],
+ "build-targets":["alpha_discovery/registry.py","alpha_discovery/models.py","alpha_discovery/targets/*.py","alpha_discovery/cache/target_store.py"],
+ "scan-singles":["alpha_discovery/scan/singles.py","alpha_discovery/cache/rank_store.py","alpha_discovery/cache/bin_store.py"],
+ "scan-duals-coarse":["alpha_discovery/scan/dual_coarse.py","alpha_discovery/scan/pair_plan.py","alpha_discovery/cache/rank_store.py","alpha_discovery/cache/bin_store.py"]}
+
+def stage_implementation_hash(stage:str,repo_root:Path)->str:
+    base=Path(repo_root)/"src/quant_pipeline"; files=[]
+    for pattern in STAGE_FILES[stage]: files.extend(base.glob(pattern))
+    payload=[]
+    for path in sorted(set(files),key=lambda x:x.relative_to(base).as_posix()): payload.append({"path":path.relative_to(base).as_posix(),"sha256":__import__('hashlib').sha256(path.read_bytes()).hexdigest()})
+    return content_hash({"stage":stage,"version":STAGE_IMPLEMENTATION_VERSION[stage],"files":payload})
+
+def core_stage_key(*,stage:str,source_manifest_hash:str,semantic_config:dict,implementation_hash:str,input_hashes:dict|None=None)->str:
+    return content_hash({"stage":stage,"source_manifest_hash":source_manifest_hash,"semantic_config":semantic_config,"implementation_hash":implementation_hash,"input_hashes":input_hashes or {}})
 
 def _link_tree(source:Path,destination:Path):
     for path in source.rglob("*"):

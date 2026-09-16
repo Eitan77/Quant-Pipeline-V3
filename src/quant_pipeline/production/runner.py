@@ -4,7 +4,7 @@ from hashlib import sha256
 import json,os
 from pathlib import Path
 import pandas as pd
-from quant_pipeline.data.source_manifest import build_source_manifest
+from quant_pipeline.data.source_manifest import build_production_source_manifest
 from quant_pipeline.production.bundle import build_v3_analysis_bundle
 from quant_pipeline.production.dossiers import build_candidate_dossiers
 from quant_pipeline.production.legacy_core import LegacyCoreAdapter
@@ -16,8 +16,9 @@ from quant_pipeline.production.variant_scan import execute_variant_expansion
 
 class V3ProductionRunner:
     def __init__(self,*,research:dict,machine:dict,repo_root:Path,telemetry):
-        self.research=research; self.machine=machine; self.repo_root=Path(repo_root); self.telemetry=telemetry; digest=sha256()
-        for path in sorted((self.repo_root/"src/quant_pipeline/production").glob("*.py")): digest.update(path.name.encode()); digest.update(path.read_bytes())
+        self.research=research; self.machine=machine; self.repo_root=Path(repo_root); self.telemetry=telemetry; digest=sha256(); package=self.repo_root/"src/quant_pipeline"
+        paths=list((package/"production").glob("*.py"))+list((package/"forensics").glob("*.py"))+list((package/"candidates").glob("*.py"))+[package/"alpha_discovery/targets/excursions.py",package/"data/source_manifest.py"]
+        for path in sorted(paths,key=lambda x:x.relative_to(package).as_posix()): digest.update(path.relative_to(package).as_posix().encode()); digest.update(path.read_bytes())
         self.implementation_hash=digest.hexdigest()
     @staticmethod
     def _write_json(path:Path,payload):
@@ -31,7 +32,7 @@ class V3ProductionRunner:
         if self.telemetry:self.telemetry.event("v3_stage_complete",stage=f"v3:{name}",metrics=metrics)
     def run(self):
         if self.research["periods"]["discovery"]["end"]>="2026-05-01": raise PermissionError("Discovery mode cannot request sealed replication rows")
-        source_manifest=build_source_manifest(Path(self.machine["data_root"])); source_hash=source_manifest["source_manifest_hash"]; adapter=LegacyCoreAdapter(self.research,self.machine,self.repo_root,source_hash,self.telemetry); legacy_run,core_results=adapter.execute(); root=legacy_run.root; self._write_json(root/"source_manifest.json",source_manifest)
+        source_manifest=build_production_source_manifest(data_root=Path(self.machine["data_root"]),repo_root=self.repo_root); source_hash=source_manifest["source_manifest_hash"]; adapter=LegacyCoreAdapter(self.research,self.machine,self.repo_root,source_hash,self.telemetry); legacy_run,core_results=adapter.execute(); root=legacy_run.root; self._write_json(root/"source_manifest.json",source_manifest)
         resolution_path=root/"v3_diagnostics/dual_resolution_summary.parquet"
         if not self._reusable(root,"resolution_diagnostics",[resolution_path],source_hash): build_resolution_diagnostics(run_root=root,research=self.research); self._mark(root,"resolution_diagnostics",source_hash,{"resolutions":self.research["resolutions"]})
         duals=pd.read_parquet(resolution_path); specialist_path=root/"specialist_summary.parquet"
@@ -46,11 +47,12 @@ class V3ProductionRunner:
         if not self._reusable(root,"dossiers",[dossier_root],source_hash): dossiers=build_candidate_dossiers(legacy_run=legacy_run,candidates=candidates,candidate_summary=candidate_summary,duals=materialization_input,specialist=specialist); self._mark(root,"dossiers",source_hash,{"dossiers":len(dossiers)})
         else: dossiers=[path.parent.parent.name for path in dossier_root.glob("*/dossier/dossier.json")]
         ledger=root/"trial_ledger.parquet"
-        if not self._reusable(root,"trial_ledger",[ledger],source_hash): build_production_trial_ledger(legacy_run=legacy_run,duals=duals,variant_trials=variant_trials,specialist_count=len(specialist),candidate_count=len(dossiers)); self._mark(root,"trial_ledger",source_hash,{"rows":len(pd.read_parquet(ledger))})
+        if not self._reusable(root,"trial_ledger",[ledger],source_hash): build_production_trial_ledger(legacy_run=legacy_run,duals=duals,core_results=core_results,variant_trials=variant_trials,specialist_count=len(specialist),candidate_count=len(dossiers)); self._mark(root,"trial_ledger",source_hash,{"rows":len(pd.read_parquet(ledger))})
         trials=pd.read_parquet(ledger); coverage={}
         for family,part in trials.groupby("trial_family_id"):
             by=part.groupby("status").work_units.sum().to_dict(); coverage[family]={k:int(by.get(k,0)) for k in ("executed","reused","structurally_excluded","unavailable","failed")}; coverage[family]["expected"]=sum(coverage[family].values())
-        audit=json.loads((root/"exhaustiveness_manifest.json").read_text()); declared={"canonical_singles":int(audit["expected_single_tests"]),**{f"canonical_dual_r{r}":int(audit["expected_pair_target_tests"]) for r in self.research["resolutions"]},"variant_expansion":len(variant_trials),"specialist_followup":len(specialist),"dossiers":len(dossiers)}
+        audit=json.loads((root/"exhaustiveness_manifest.json").read_text()); declared={"canonical_singles":int(audit["expected_single_tests"]),**{f"canonical_dual_r{r}":int(audit["expected_pair_target_tests"]) for r in self.research["resolutions"]},"variant_expansion":len(variant_trials),"specialist_followup":len(specialist),"dossiers":len(dossiers)}; excluded_scope=sum(int(x) for x in audit.get("dual_exclusions_by_reason",{}).values())
+        if excluded_scope: declared["canonical_dual_exclusions"]=excluded_scope
         for family,expected in declared.items():
             actual=sum(coverage.get(family,{}).get(k,0) for k in ("executed","reused","structurally_excluded","unavailable","failed"))
             if actual!=expected: raise RuntimeError(f"Trial reconciliation failed for {family}: expected {expected}, got {actual}")

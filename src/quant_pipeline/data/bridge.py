@@ -1,5 +1,6 @@
 from __future__ import annotations
 import json,os
+from hashlib import sha256
 from pathlib import Path
 import duckdb
 from quant_pipeline.hashing import content_hash
@@ -9,8 +10,8 @@ def build_source_bridge(*,repo_root:Path,machine:dict,start:str="2024-04-01",end
     repo_root=Path(repo_root); tag=f"{start}_{end}".replace("-",""); out=Path(machine["cache_root"])/"source"/tag/"catalog.duckdb"; out.parent.mkdir(parents=True,exist_ok=True)
     source_root=Path(machine["data_root"]).resolve(); raw_glob=(source_root/"raw/alpaca/market/stocks/bars_1m/**/*.parquet").as_posix().replace("'","''")
     refs={n:repo_root/"reference"/f"{n}.parquet" for n in ("security_master","sp500_pit_membership_daily","corporate_actions")}
-    lineage={"raw_glob":raw_glob,"references":{k:{"path":str(v),"size":v.stat().st_size,"mtime_ns":v.stat().st_mtime_ns} for k,v in refs.items()},"start":start,"end":end,"schema":1}
-    manifest=out.with_suffix(".manifest.json"); h=content_hash(lineage)
+    hashed_lineage={"source_pattern":"raw/alpaca/market/stocks/bars_1m/**/*.parquet","references":{k:{"relative_path":v.relative_to(repo_root).as_posix(),"size":v.stat().st_size,"sha256":sha256(v.read_bytes()).hexdigest()} for k,v in refs.items()},"start":start,"end":end,"schema":1}
+    lineage={**hashed_lineage,"runtime":{"raw_glob":raw_glob,"reference_paths":{k:str(v) for k,v in refs.items()}}}; manifest=out.with_suffix(".manifest.json"); h=content_hash(hashed_lineage)
     if out.exists() and manifest.exists() and json.loads(manifest.read_text()).get("content_hash")==h:return out
     partial=out.with_suffix(".partial.duckdb"); partial.unlink(missing_ok=True); con=duckdb.connect(str(partial))
     try:

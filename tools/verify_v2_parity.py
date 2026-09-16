@@ -1,9 +1,11 @@
 from __future__ import annotations
 from datetime import datetime,timezone
 from hashlib import sha256
-import json,subprocess,sys
+import json,subprocess,sys,os
 from pathlib import Path
-ROOT=Path(__file__).resolve().parents[1]; V2=Path(r"C:\Users\decla\Desktop\AlgoResearch\Quant Pipeline V2")
+ROOT=Path(__file__).resolve().parents[1]
+if not os.getenv("QP_V2_REFERENCE_ROOT"): raise RuntimeError("QP_V2_REFERENCE_ROOT is required")
+V2=Path(os.environ["QP_V2_REFERENCE_ROOT"]).resolve()
 MODULES=["models.py","registry.py","config.py","data/universe.py","data/corporate_actions.py","data/panel.py","data/source.py","data/snapshot.py","features/base.py","features/formulas.py","targets/builder.py","cache/rank_store.py","scan/dual_coarse.py","governance/access.py","execution/quote_replay.py"]
 def sha(p):return sha256(p.read_bytes()).hexdigest()
 rows=[]

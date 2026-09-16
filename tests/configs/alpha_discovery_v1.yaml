@@ -1,9 +1,9 @@
 run_name: alpha_discovery_v2_full_20260430_warmup2019
-project_root: C:/Users/decla/Desktop/AlgoResearch/Quant Pipeline V2
-output_root: D:/AlgoResearch/Quant Pipeline V2/runs
+project_root: .
+output_root: runs/test-alpha-discovery
 
 source:
-  duckdb_path: C:/Users/decla/Desktop/AlgoResearch/Quant Pipeline V2/data/catalog.duckdb
+  duckdb_path: data/catalog.duckdb
   bars_1m_raw_table: bars_1m_raw
   bars_1m_research_table: bars_1m_research
   alpaca_feed_required: sip
@@ -11,7 +11,7 @@ source:
   research_price_basis: split_consistent
   security_master_table: security_master
   membership_table: sp500_pit_membership_daily
-  corporate_actions_path: C:/Users/decla/Desktop/AlgoResearch/Quant Pipeline V2/data/reference/corporate_actions.parquet
+  corporate_actions_path: reference/corporate_actions.parquet
   benchmark_symbols: [SPY, QQQ]
 
 research_periods:
@@ -34,7 +34,7 @@ compute:
   cpu_workers: 16
   host_memory_fraction: 0.90
   duckdb_memory_limit: 28GB
-  duckdb_temp_directory: D:/AlgoResearch/Quant Pipeline V2/temp
+  duckdb_temp_directory: scratch/duckdb
 
 decision_grids:
   intraday_5m: true

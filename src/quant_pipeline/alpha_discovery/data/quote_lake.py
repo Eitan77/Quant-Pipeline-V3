@@ -1,16 +1,20 @@
 from __future__ import annotations
 
 from pathlib import Path
+import os
 import duckdb
 import numpy as np
 import pandas as pd
 
 
-DEFAULT_ROOT = Path("D:/AlgoResearch/data/raw/alpaca/market/stocks/quotes_sip/schema_v1")
+def _root(value):
+    chosen=value or os.getenv("QP_QUOTE_LAKE_ROOT")
+    if not chosen: raise ValueError("lake_root or QP_QUOTE_LAKE_ROOT is required")
+    return Path(chosen)
 
 
-def quote_window_coverage(requests: pd.DataFrame, lake_root: str | Path = DEFAULT_ROOT, window_seconds: int = 10) -> pd.Series:
-    result = pd.Series(False, index=requests.index, dtype=bool); catalog = Path(lake_root) / "quote_lake.duckdb"
+def quote_window_coverage(requests: pd.DataFrame, lake_root: str | Path | None = None, window_seconds: int = 10) -> pd.Series:
+    result = pd.Series(False, index=requests.index, dtype=bool); catalog = _root(lake_root) / "quote_lake.duckdb"
     if requests.empty or not catalog.exists(): return result
     req = requests[["session_date", "symbol", "request_ts"]].copy(); req["request_row"] = np.arange(len(req)); req["session_date"] = pd.to_datetime(req.session_date).dt.date
     req["symbol"] = req.symbol.astype(str).str.upper(); req["request_ts"] = pd.to_datetime(req.request_ts, utc=True); req["window_end_ts"] = req.request_ts + pd.Timedelta(seconds=window_seconds)
@@ -20,7 +24,8 @@ def quote_window_coverage(requests: pd.DataFrame, lake_root: str | Path = DEFAUL
     result.iloc[covered] = True; return result
 
 
-def load_quote_windows(requests: pd.DataFrame, lake_root: str | Path = DEFAULT_ROOT, window_seconds: int = 10) -> pd.DataFrame | None:
+def load_quote_windows(requests: pd.DataFrame, lake_root: str | Path | None = None, window_seconds: int = 10) -> pd.DataFrame | None:
+    lake_root=_root(lake_root)
     coverage = quote_window_coverage(requests, lake_root, window_seconds)
     if not coverage.all(): return None
     req = requests[["session_date", "symbol", "request_ts"]].drop_duplicates().copy(); req["session_date"] = pd.to_datetime(req.session_date).dt.date

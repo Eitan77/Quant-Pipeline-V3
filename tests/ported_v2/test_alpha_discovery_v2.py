@@ -47,7 +47,7 @@ def minute_bars(days: int = 2, bars_per_day: int = 10) -> pd.DataFrame:
 
 def test_config_and_registry_are_standalone_and_deterministic():
     config = AlphaDiscoveryConfig.from_yaml(CONFIG); bundle = compile_registry(config); again = compile_registry(config)
-    assert Path(config.project_root).name == "Quant Pipeline V2"
+    assert Path(config.project_root).exists()
     assert 2_000 <= len(bundle.features) <= 8_000
     assert len(bundle.concepts) >= 250 and len(bundle.targets) == 63
     assert [x.definition_hash for x in bundle.features] == [x.definition_hash for x in again.features]
