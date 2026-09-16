@@ -325,7 +325,7 @@ class AlphaDiscoveryRun:
         research_columns = [column for column in research if column not in {"security_id", "bar_start_ts_utc"}]
         bars = raw.merge(research[["security_id", "bar_start_ts_utc", *research_columns]],
                          on=["security_id", "bar_start_ts_utc"], how="left", validate="one_to_one")
-        eligible_bars = apply_point_in_time_universe(bars, membership, security)
+        eligible_bars = apply_point_in_time_universe(bars, membership, security, self.config.universe, bars)
         benchmark_ids = set(security.loc[security.symbol.isin(self.config.source.benchmark_symbols), "security_id"])
         benchmark_bars = bars[bars.security_id.isin(benchmark_ids)].copy(); benchmark_bars["in_universe"] = False
         eligible_bars = pd.concat([eligible_bars, benchmark_bars], ignore_index=True).drop_duplicates(["security_id", "bar_start_ts_utc"])
@@ -1711,7 +1711,7 @@ class AlphaDiscoveryRun:
         bars = raw.merge(research, on=["security_id","bar_start_ts_utc"], how="left", validate="one_to_one")
         bundle = compile_registry(self.config); feature_map = {item.feature_id:item for item in bundle.features}; results=[]
         for grid in sorted({feature_map[candidate["feature_ids"][0]].decision_grid for candidate in candidates}):
-            decision_rows = build_decision_panel(bars, grid, self.config.source.benchmark_symbols[0]); panel = apply_point_in_time_universe(decision_rows, membership, security)
+            decision_rows = build_decision_panel(bars, grid, self.config.source.benchmark_symbols[0]); panel = apply_point_in_time_universe(decision_rows, membership, security, self.config.universe, bars)
             benchmark_ids=set(security.loc[security.symbol.isin(self.config.source.benchmark_symbols),"security_id"]); benchmark=decision_rows[decision_rows.security_id.isin(benchmark_ids)].copy(); benchmark["in_universe"]=False
             panel=pd.concat([panel,benchmark],ignore_index=True).drop_duplicates("observation_id").sort_values(["security_id","decision_ts"],kind="mergesort")
             if grid.startswith("intraday"): targets=build_intraday_targets(panel,raw,tuple(int(x[:-1]) for x in self.config.targets["intraday"] if str(x).endswith("m")),"EOD" in self.config.targets["intraday"])

@@ -2,11 +2,12 @@ from pathlib import Path
 from types import SimpleNamespace
 import numpy as np,pandas as pd,pytest
 from quant_pipeline.alpha_discovery.scan.dual_coarse import DualTileScanner
+from quant_pipeline.alpha_discovery.data.universe import apply_point_in_time_universe
 from quant_pipeline.data.source_manifest import build_production_source_manifest,build_source_manifest
 from quant_pipeline.discovery.specialist import specialist_probe
 from quant_pipeline.production.cache_keys import SharedStageCache,core_stage_key,stage_implementation_hash
 from quant_pipeline.production.legacy_core import LOW_LEVEL_STAGES
-from quant_pipeline.production.materialization import materialization_pool
+from quant_pipeline.production.materialization import materialization_pool,materialize_candidates
 from quant_pipeline.production.runner import V3ProductionRunner
 from quant_pipeline.production.resolution_diagnostics import build_resolution_diagnostics
 from quant_pipeline.production.variant_scan import execute_variant_expansion
@@ -67,3 +68,19 @@ def test_variant_is_planned_scanned_and_trial_accounted(tmp_path,monkeypatch):
     monkeypatch.setattr("quant_pipeline.production.variant_scan._scan_one",lambda *a,**k:[{"selected_state_bps":3.0,"selected_interaction_lift_bps":1.0,"selected_n":100,"selected_frequency":.1,"selected_state_return":.0003,"selected_cell":0,"surface_counts":[100],"surface_sums":[.03],"surface_sumsq":[.000009],"best_cell_effect":.0003,"worst_cell_effect":-.0001,"neighbor_effect_retention":.5,"plateau_area":2,"weighted_state_contribution_bps":.3,"weighted_interaction_contribution_bps":.1,"selected_direction":1,"pair_id":"x","feature_a":"a15","feature_b":"b30","target_id":"t","resolution":r,"v3_resolution":r} for r in (3,5,10)])
     summary,trials,metrics=execute_variant_expansion(legacy_run=fake,duals=frame,research={"resolutions":[3,5,10],"forensics":{"candidate_policy":{"min_active_n":100,"min_abs_edge_bps":1,"keep_top_k_per_target_resolution":10}},"variant_expansion":{"parent_limit":1,"neighbors_per_side":2,"rejected_audit_count":0}})
     assert len(summary)==3 and set(trials.status)=={"executed"} and metrics["planned"]==1
+
+def test_universe_filters_use_only_prior_sessions():
+    sessions=pd.date_range("2025-01-01",periods=21).date; rows=[]
+    for security,price,prior_volume,current_volume in (("liquid",10.,100.,100.),("current_spike",10.,10.,100000.),("low_price",2.,1000.,1000.)):
+        for index,session in enumerate(sessions): rows.append({"security_id":security,"session_date":session,"bar_start_ts_utc":pd.Timestamp(session),"close":price,"vwap":price,"volume":current_volume if index==20 else prior_volume})
+    bars=pd.DataFrame(rows); panel=bars[bars.session_date.eq(sessions[-1])].copy(); membership=panel[["security_id","session_date"]].assign(in_universe=True); master=pd.DataFrame({"security_id":["liquid","current_spike","low_price"]})
+    got=apply_point_in_time_universe(panel,membership,master,{"minimum_price":3.,"minimum_prior_20d_median_dollar_volume":500.},bars)
+    assert got.security_id.tolist()==["liquid"]
+
+def test_interaction_only_candidate_is_preserved_and_non_directional(tmp_path):
+    feature=lambda feature_id:SimpleNamespace(feature_id=feature_id,definition_hash=feature_id+"_hash",decision_grid="g")
+    target=SimpleNamespace(target_id="t",definition_hash="t_hash",return_basis="raw")
+    fake=SimpleNamespace(root=tmp_path,compile_registry=lambda:SimpleNamespace(features=[feature("a"),feature("b")],targets=[target]))
+    dual=pd.DataFrame([{"pair_id":"p","feature_a":"a","feature_b":"b","target_id":"t","v3_resolution":3,"selected_cell":0,"selected_n":500,"selected_frequency":.1,"selected_state_return":0.,"selected_state_bps":0.,"selected_interaction_lift_bps":5.,"weighted_state_contribution_bps":0.,"weighted_interaction_contribution_bps":.5,"selected_direction":0}])
+    registry,summary=materialize_candidates(legacy_run=fake,duals=dual,specialist=pd.DataFrame(),research={"forensics":{"candidate_policy":{"min_active_n":100,"min_abs_edge_bps":1.,"keep_top_k_per_target_resolution":10}}},source_manifest_hash="source")
+    assert len(registry)==1 and registry.iloc[0].candidate_type=="interaction_only" and registry.iloc[0].direction==0 and summary.iloc[0].candidate_type=="interaction_only"
