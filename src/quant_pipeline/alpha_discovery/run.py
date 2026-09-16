@@ -225,12 +225,14 @@ class AlphaDiscoveryRun:
         bundle=self.compile_registry(); scoped=[]
         for grid,enabled in self.config.decision_grids.items():
             if enabled: scoped.extend(_initial_feature_scope([item for item in bundle.features if item.decision_grid==grid],self.config)[0])
-        required=(max((int(item.minimum_history) for item in scoped),default=0)+int(self.config.warmup.get("safety_margin_sessions",5))+20)
+        required_history=max((int(item.minimum_history) for item in scoped),default=0)
+        required=required_history+int(self.config.warmup.get("safety_margin_sessions",5))+20
         import duckdb
         with duckdb.connect(self.config.source.duckdb_path,read_only=True) as connection:
             sessions=[row[0] for row in connection.execute(f"SELECT DISTINCT session_date FROM {self.config.source.bars_1m_raw_table} WHERE session_date < DATE '{self.config.research_periods.discovery_start}' ORDER BY session_date DESC LIMIT {required}").fetchall()]
-        if len(sessions)<required and self.config.warmup.get("fail_if_full_coverage_warmup_missing",True):
-            raise ValueError(f"Only {len(sessions)} prior sessions are available; canonical features require {required}")
+        minimum_required=required_history+int(self.config.warmup.get("safety_margin_sessions",5))
+        if len(sessions)<minimum_required and self.config.warmup.get("fail_if_full_coverage_warmup_missing",True):
+            raise ValueError(f"Only {len(sessions)} prior sessions are available; canonical features require {minimum_required}")
         start=str(min(sessions)) if sessions else self.config.research_periods.discovery_start
         self._derived_snapshot_start=start
         return start
