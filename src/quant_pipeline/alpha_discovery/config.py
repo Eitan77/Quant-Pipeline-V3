@@ -45,9 +45,24 @@ class ComputeConfig:
     feature_block_size: int | str = "auto"
     target_block_size: int | str = "auto"
     cpu_workers: int | str = "auto"
+    feature_autoscale_enabled: bool = False
+    feature_initial_workers: int = 6
+    feature_min_workers: int = 1
+    feature_step_workers: int = 2
+    feature_tuning_window_seconds: float = 10.0
+    feature_tuning_min_completions: int = 8
+    feature_min_gain_fraction: float = 0.02
+    feature_regression_fraction: float = 0.05
+    feature_memory_guard_multiplier: float = 1.25
+    feature_default_worker_memory_gb: float = 1.0
+    feature_cooldown_seconds: float = 5.0
     host_memory_fraction: float = 0.90
+    host_reserve_gb: float | None = None
+    duckdb_threads: int | str = "auto"
     duckdb_memory_limit: str = "auto"
     duckdb_temp_directory: str = "scratch/duckdb"
+    blas_threads_per_worker: int = 1
+    omp_threads_per_worker: int = 1
 
 
 @dataclass(frozen=True)
@@ -153,6 +168,22 @@ class AlphaDiscoveryConfig:
             raise ValueError("host_memory_fraction must be in (0, 0.95]")
         if self.compute.cpu_workers != "auto" and int(self.compute.cpu_workers) <= 0:
             raise ValueError("cpu_workers must be positive or 'auto'")
+        if self.compute.duckdb_threads != "auto" and int(self.compute.duckdb_threads) <= 0:
+            raise ValueError("duckdb_threads must be positive or 'auto'")
+        for name in ("feature_initial_workers", "feature_min_workers", "feature_step_workers",
+                     "feature_tuning_min_completions", "blas_threads_per_worker", "omp_threads_per_worker"):
+            if int(getattr(self.compute, name)) <= 0:
+                raise ValueError(f"{name} must be positive")
+        if self.compute.feature_tuning_window_seconds <= 0 or self.compute.feature_cooldown_seconds < 0:
+            raise ValueError("feature tuning window must be positive and cooldown nonnegative")
+        if not 0 <= self.compute.feature_min_gain_fraction < 1:
+            raise ValueError("feature_min_gain_fraction must be in [0, 1)")
+        if not 0 <= self.compute.feature_regression_fraction < 1:
+            raise ValueError("feature_regression_fraction must be in [0, 1)")
+        if self.compute.feature_memory_guard_multiplier <= 0 or self.compute.feature_default_worker_memory_gb <= 0:
+            raise ValueError("feature memory controls must be positive")
+        if self.compute.host_reserve_gb is not None and self.compute.host_reserve_gb <= 0:
+            raise ValueError("host_reserve_gb must be positive when configured")
         if self.duals.get("search_scope", "canonical_concepts") not in {"canonical_concepts", "all_features"}:
             raise ValueError("duals.search_scope must be 'canonical_concepts' or 'all_features'")
         if self.feature_search.get("initial_scope", "canonical_concepts") not in {"canonical_concepts", "all_features"}:

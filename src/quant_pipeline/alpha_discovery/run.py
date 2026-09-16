@@ -86,10 +86,24 @@ def _build_alpha_symbol_part(panel_path: str, specs: list, security_ids: list[st
     return ids_path, values_path
 
 
+def _wait_for_worker_headroom(reserve_bytes:int)->None:
+    from .resources import _system_memory
+    while True:
+        available,_=_system_memory()
+        if available>reserve_bytes: return
+        time.sleep(.25)
+
+
 def _build_alpha_security_lifecycle(panel_path: str, work: list[tuple[str, list]], security_id: str,
-                                    base_root: str, host_memory_fraction: float) -> list[tuple[str, str, str]]:
+                                    base_root: str, reserve_bytes: int) -> dict:
     """Load one security once, reuse its primitive cache, emit bounded feature blocks."""
     from .features.base import FeatureBuilder
+    try:
+        import psutil
+        process=psutil.Process(); peak_rss_bytes=int(process.memory_info().rss)
+    except ImportError:
+        process=None; peak_rss_bytes=0
+    _wait_for_worker_headroom(reserve_bytes)
     frame=pd.read_parquet(panel_path,filters=[("security_id","=",security_id)])
     builder=FeatureBuilder(frame); emitted=builder.frame.emit.to_numpy(bool) if "emit" in builder.frame else np.ones(len(builder.frame),bool)
     emitted = emitted & ~builder.frame["observation_id"].duplicated().to_numpy()
@@ -98,17 +112,15 @@ def _build_alpha_security_lifecycle(panel_path: str, work: list[tuple[str, list]
     for name,specs in work:
         # Active workers pause only while the machine is at its configured RAM
         # ceiling. They resume automatically as soon as memory is released.
-        from .resources import _system_memory
-        while True:
-            available,total=_system_memory()
-            reserved=max(1*(1<<30),int(total*(1-float(host_memory_fraction))))
-            if available>reserved: break
-            time.sleep(0.5)
+        _wait_for_worker_headroom(reserve_bytes)
         values=builder.build_many(specs).to_numpy(dtype=np.float32,na_value=np.nan)[emitted]
         stem=root/f"{security_id.replace(':','_')}__{name}"; ids_path=str(stem)+"_ids.npy"; values_path=str(stem)+"_values.npy"
         np.save(ids_path,ids,allow_pickle=False); np.save(values_path,values.astype(np.float32,copy=False),allow_pickle=False)
         results.append((name,ids_path,values_path))
-    return results
+        if process: peak_rss_bytes=max(peak_rss_bytes,int(process.memory_info().rss))
+    feature_columns=sum(len(specs) for _,specs in work)
+    return {"artifacts":results,"emitted_rows":int(len(ids)),"feature_columns":int(feature_columns),
+            "work_units":int(len(ids)*feature_columns),"peak_rss_bytes":int(peak_rss_bytes)}
 
 
 def _edge_autopsy_parallel_capacity(compute, candidate_count: int, available_bytes: int,
@@ -352,8 +364,8 @@ class AlphaDiscoveryRun:
         source = self.config.source
         start = self._snapshot_start()
         end = self.config.research_periods.discovery_end
-        from .resources import calibrated_resources
-        workers,memory_limit,_=calibrated_resources(self.config.compute); workers=min(workers,self.runtime_worker_cap) if self.runtime_worker_cap else workers
+        from .resources import calibrated_resources,configured_duckdb_threads
+        _,memory_limit,_=calibrated_resources(self.config.compute); threads=configured_duckdb_threads(self.config.compute)
         temp = Path(self.config.compute.duckdb_temp_directory); temp.mkdir(parents=True, exist_ok=True)
         panel_root = self.root / "cache" / "panels"; panel_root.mkdir(parents=True, exist_ok=True)
         calculation_root = self.root / "cache" / "calculation_panels"; calculation_root.mkdir(parents=True, exist_ok=True)
@@ -363,7 +375,7 @@ class AlphaDiscoveryRun:
         minimum_prior_volume=float(self.config.universe["minimum_prior_20d_median_dollar_volume"])
         total = 0; built = 0
         with duckdb.connect(source.duckdb_path, read_only=True) as connection:
-            connection.execute(f"SET threads={workers}")
+            connection.execute(f"SET threads={threads}")
             connection.execute(f"SET memory_limit='{memory_limit}'")
             connection.execute(f"SET temp_directory='{temp.as_posix().replace(chr(39), chr(39)*2)}'")
             # The raw/research/PIT join is the dominant panel I/O. Materialize
@@ -512,7 +524,7 @@ class AlphaDiscoveryRun:
                 self._write_reusable_indexes(grid,Path(panel_destination))
             joined_path.unlink(missing_ok=True)
         return {"panel_rows": total, "enabled_grids": built, "mode": "duckdb_out_of_core",
-                "cpu_workers": workers, "memory_limit": memory_limit}
+                "duckdb_threads": threads, "memory_limit": memory_limit}
 
     def _write_reusable_indexes(self,grid: str,panel_path: Path) -> None:
         import duckdb
@@ -529,14 +541,22 @@ class AlphaDiscoveryRun:
         from collections import deque
         from concurrent.futures import FIRST_COMPLETED, ProcessPoolExecutor, wait
         from .cache.feature_store import ArrayStore
+        from .feature_autoscale import AdaptiveFeatureConcurrency
         from .features.base import FeatureBuilder
         started=time.perf_counter(); self._require("build-panel"); bundle = self.compile_registry(); blocks = 0; columns = 0; resumed_blocks = 0
-        global_telemetry=[]
+        global_telemetry=[]; autoscale_event_count=0; peak_active_workers=0; peak_worker_rss_bytes=0
+        best_workers_by_grid={}; final_active_workers=0
         panel_root = self.root / "cache" / "panels"; feature_root = self.root / "cache" / "features"
-        from .resources import calibrated_resources, host_memory_headroom
-        workers,memory_limit,resource_telemetry=calibrated_resources(self.config.compute); workers=min(workers,self.runtime_worker_cap) if self.runtime_worker_cap else workers
+        from .resources import (calibrated_resources,child_numeric_thread_limits,
+                                configured_feature_worker_cap,host_memory_headroom)
+        max_workers=configured_feature_worker_cap(self.config.compute)
+        if self.runtime_worker_cap is not None: max_workers=min(max_workers,int(self.runtime_worker_cap))
+        _,memory_limit,resource_telemetry=calibrated_resources(self.config.compute)
+        min_workers=min(max_workers,max(1,self.config.compute.feature_min_workers))
+        initial_workers=min(max_workers,max(min_workers,self.config.compute.feature_initial_workers))
         configured_block = self.config.compute.feature_block_size
-        block_size = min(8,workers) if configured_block == "auto" else int(configured_block)
+        block_size = min(8,max_workers) if configured_block == "auto" else int(configured_block)
+        autoscale_path=self.root/"cache"/"feature_autoscaler.jsonl"; autoscale_path.parent.mkdir(parents=True,exist_ok=True)
         for grid, enabled in self.config.decision_grids.items():
             if not enabled: continue
             import duckdb
@@ -558,7 +578,7 @@ class AlphaDiscoveryRun:
                 raise ValueError(f"Observation IDs are not dense and unique for {grid}")
             # Partition once by security. The old path made every worker scan the
             # complete multi-gigabyte panel for every feature block.
-            local_panel = self._ensure_local_feature_panel(grid, calculation_path, workers)
+            local_panel = self._ensure_local_feature_panel(grid, calculation_path)
             groups: list[list[str]] = [[security_id] for security_id in security_ids]
             store = ArrayStore(feature_root / grid)
             registered_specs = [item for item in bundle.features if item.decision_grid == grid]
@@ -587,58 +607,85 @@ class AlphaDiscoveryRun:
             if pending:
                 part_root=store.root/".parts"/"security_lifecycle"; part_root.mkdir(parents=True,exist_ok=True)
                 wave_size=8
-                with ProcessPoolExecutor(max_workers=workers) as process_pool:
-                    for wave_index,wave_start in enumerate(range(0,len(pending),wave_size)):
-                        self._useful_progress(f"feature:{grid}",wave_start,len(pending))
-                        wave=pending[wave_start:wave_start+wave_size]; outputs={}
-                        progress_path=part_root/f"progress-{wave_index:04d}.json"
-                        progress_key={"blocks":[name for name,_ in wave],"observation_count":observation_count}; completed_security={}
-                        if progress_path.exists():
-                            saved=json.loads(progress_path.read_text(encoding="utf-8"))
-                            if saved.get("key")==progress_key: completed_security={str(k):int(v) for k,v in saved.get("completed_security",{}).items()}
-                        for name,batch in wave:
-                            temporary=store.root/f"{name}.tmp.npy"; mode="r+" if temporary.exists() else "w+"
-                            values=np.lib.format.open_memmap(temporary,mode=mode,dtype=np.float32,shape=(observation_count,len(batch)))
-                            if values.shape!=(observation_count,len(batch)): raise ValueError(f"Partial feature block shape mismatch: {temporary}")
-                            outputs[name]=(values,temporary,store.root/f"{name}.npy",batch)
-                        written={name:sum(completed_security.values()) for name,_ in wave}; uncommitted={}
-                        def commit_progress() -> None:
-                            if not uncommitted: return
-                            for values,_,_,_ in outputs.values(): values.flush()
-                            completed_security.update(uncommitted); uncommitted.clear()
-                            pending_progress=progress_path.with_suffix(".tmp.json")
-                            pending_progress.write_text(json.dumps({"key":progress_key,"completed_security":completed_security},indent=2),encoding="utf-8")
-                            pending_progress.replace(progress_path)
-                        queued=deque(security_id for security_id in security_ids if security_id not in completed_security)
-                        futures={}; last_submit=0.0
-                        while queued or futures:
-                            available,reserved,_=host_memory_headroom(self.config.compute)
-                            if queued and len(futures)<workers and (not futures or available>reserved) and time.monotonic()-last_submit>=0.1:
-                                security_id=queued.popleft()
-                                future=process_pool.submit(_build_alpha_security_lifecycle,str(local_panel),wave,security_id,
-                                                           str(part_root),float(self.config.compute.host_memory_fraction))
-                                futures[future]=security_id; last_submit=time.monotonic()
-                            done,_=wait(futures,timeout=0.1,return_when=FIRST_COMPLETED) if futures else (set(),set())
-                            for future in done:
-                                security_id=futures.pop(future); row_count=None
-                                for name,ids_path,values_path in future.result():
-                                    ids=np.load(ids_path,mmap_mode="r"); part_values=np.load(values_path,mmap_mode="r"); dense_ids=np.array(ids,dtype=np.int64,copy=True)
-                                    if len(dense_ids) and (dense_ids.min()<0 or dense_ids.max()>=observation_count): raise ValueError(f"Worker returned out-of-range observation IDs for {grid}")
-                                    if row_count is None: row_count=len(dense_ids)
-                                    elif row_count!=len(dense_ids): raise ValueError(f"Worker block row counts disagree for {security_id}")
-                                    outputs[name][0][dense_ids,:]=part_values; written[name]+=len(dense_ids)
-                                    del ids,part_values; Path(ids_path).unlink(); Path(values_path).unlink()
-                                uncommitted[security_id]=int(row_count or 0)
-                                self._useful_progress(f"feature:{grid}:security",len(completed_security)+len(uncommitted),len(security_ids))
-                                if len(uncommitted)>=8: commit_progress()
-                        commit_progress()
-                        for name,(values,temporary,target,batch) in outputs.items():
-                            if written[name]!=observation_count: raise ValueError(f"Local feature block {name} wrote {written[name]:,}/{observation_count:,} rows")
-                            values.flush(); values._mmap.close(); temporary.replace(target)
-                            meta=target.with_suffix(".json"); tmp_meta=meta.with_suffix(".tmp.json")
-                            tmp_meta.write_text(json.dumps({"shape":[observation_count,len(batch)],"dtype":"float32","columns":[item.feature_id for item in batch]},indent=2),encoding="utf-8"); tmp_meta.replace(meta)
-                            blocks+=1; columns+=len(batch)
-                        progress_path.unlink(missing_ok=True)
+                controller=(AdaptiveFeatureConcurrency(minimum=min_workers,maximum=max_workers,initial=initial_workers,
+                    step=self.config.compute.feature_step_workers,tuning_window_seconds=self.config.compute.feature_tuning_window_seconds,
+                    tuning_min_completions=self.config.compute.feature_tuning_min_completions,min_gain_fraction=self.config.compute.feature_min_gain_fraction,
+                    regression_fraction=self.config.compute.feature_regression_fraction,memory_guard_multiplier=self.config.compute.feature_memory_guard_multiplier,
+                    default_worker_memory_bytes=int(self.config.compute.feature_default_worker_memory_gb*(1<<30)),
+                    cooldown_seconds=self.config.compute.feature_cooldown_seconds) if self.config.compute.feature_autoscale_enabled else None)
+                with child_numeric_thread_limits(blas_threads=self.config.compute.blas_threads_per_worker,
+                                                 omp_threads=self.config.compute.omp_threads_per_worker):
+                    with ProcessPoolExecutor(max_workers=max_workers) as process_pool:
+                        for wave_index,wave_start in enumerate(range(0,len(pending),wave_size)):
+                            self._useful_progress(f"feature:{grid}",wave_start,len(pending))
+                            wave=pending[wave_start:wave_start+wave_size]; outputs={}
+                            if controller: controller.begin_wave(time.monotonic()); active_target=controller.current
+                            else: active_target=max_workers
+                            peak_active_workers=max(peak_active_workers,active_target)
+                            progress_path=part_root/f"progress-{wave_index:04d}.json"
+                            progress_key={"blocks":[name for name,_ in wave],"observation_count":observation_count}; completed_security={}
+                            if progress_path.exists():
+                                saved=json.loads(progress_path.read_text(encoding="utf-8"))
+                                if saved.get("key")==progress_key: completed_security={str(k):int(v) for k,v in saved.get("completed_security",{}).items()}
+                            for name,batch in wave:
+                                temporary=store.root/f"{name}.tmp.npy"; mode="r+" if temporary.exists() else "w+"
+                                values=np.lib.format.open_memmap(temporary,mode=mode,dtype=np.float32,shape=(observation_count,len(batch)))
+                                if values.shape!=(observation_count,len(batch)): raise ValueError(f"Partial feature block shape mismatch: {temporary}")
+                                outputs[name]=(values,temporary,store.root/f"{name}.npy",batch)
+                            written={name:sum(completed_security.values()) for name,_ in wave}; uncommitted={}
+                            def commit_progress() -> None:
+                                if not uncommitted: return
+                                for values,_,_,_ in outputs.values(): values.flush()
+                                completed_security.update(uncommitted); uncommitted.clear()
+                                pending_progress=progress_path.with_suffix(".tmp.json")
+                                pending_progress.write_text(json.dumps({"key":progress_key,"completed_security":completed_security},indent=2),encoding="utf-8")
+                                pending_progress.replace(progress_path)
+                            queued=deque(security_id for security_id in security_ids if security_id not in completed_security); futures={}
+                            while queued or futures:
+                                available,reserved,_=host_memory_headroom(self.config.compute)
+                                while queued and len(futures)<active_target and available>reserved:
+                                    security_id=queued.popleft(); submitted_at=time.monotonic()
+                                    future=process_pool.submit(_build_alpha_security_lifecycle,str(local_panel),wave,security_id,
+                                                               str(part_root),reserved)
+                                    futures[future]={"security_id":security_id,"submitted_at":submitted_at}
+                                    available,reserved,_=host_memory_headroom(self.config.compute)
+                                done,_=wait(futures,timeout=0.1,return_when=FIRST_COMPLETED) if futures else (set(),set())
+                                for future in done:
+                                    security_id=futures.pop(future)["security_id"]; row_count=None; result=future.result()
+                                    for name,ids_path,values_path in result["artifacts"]:
+                                        ids=np.load(ids_path,mmap_mode="r"); part_values=np.load(values_path,mmap_mode="r"); dense_ids=np.array(ids,dtype=np.int64,copy=True)
+                                        if len(dense_ids) and (dense_ids.min()<0 or dense_ids.max()>=observation_count): raise ValueError(f"Worker returned out-of-range observation IDs for {grid}")
+                                        if row_count is None: row_count=len(dense_ids)
+                                        elif row_count!=len(dense_ids): raise ValueError(f"Worker block row counts disagree for {security_id}")
+                                        outputs[name][0][dense_ids,:]=part_values; written[name]+=len(dense_ids)
+                                        del ids,part_values; Path(ids_path).unlink(); Path(values_path).unlink()
+                                    peak_worker_rss_bytes=max(peak_worker_rss_bytes,int(result["peak_rss_bytes"]))
+                                    if controller: controller.observe(work_units=result["work_units"],peak_rss_bytes=result["peak_rss_bytes"],now=time.monotonic())
+                                    uncommitted[security_id]=int(row_count or 0)
+                                    self._useful_progress(f"feature:{grid}:security",len(completed_security)+len(uncommitted),len(security_ids))
+                                    if len(uncommitted)>=8: commit_progress()
+                                if controller:
+                                    now=time.monotonic(); available,reserved,_=host_memory_headroom(self.config.compute)
+                                    if available<=reserved or controller.ready(now):
+                                        event=controller.evaluate(available_bytes=available,reserve_bytes=reserved,now=now)
+                                        if event:
+                                            active_target=controller.current; peak_active_workers=max(peak_active_workers,active_target)
+                                            event.update({"ts_utc":datetime.now(timezone.utc).isoformat(),"grid":grid,"wave":wave_index,
+                                                "available_ram_gb":available/(1<<30),"reserve_ram_gb":reserved/(1<<30),
+                                                "estimated_peak_worker_gb":event["estimated_peak_worker_bytes"]/(1<<30)})
+                                            with autoscale_path.open("a",encoding="utf-8") as stream: stream.write(json.dumps(event,sort_keys=True)+"\n")
+                                            autoscale_event_count+=1
+                                if not futures and queued and available<=reserved: time.sleep(.1)
+                            commit_progress()
+                            for name,(values,temporary,target,batch) in outputs.items():
+                                if written[name]!=observation_count: raise ValueError(f"Local feature block {name} wrote {written[name]:,}/{observation_count:,} rows")
+                                values.flush(); values._mmap.close(); temporary.replace(target)
+                                meta=target.with_suffix(".json"); tmp_meta=meta.with_suffix(".tmp.json")
+                                tmp_meta.write_text(json.dumps({"shape":[observation_count,len(batch)],"dtype":"float32","columns":[item.feature_id for item in batch]},indent=2),encoding="utf-8"); tmp_meta.replace(meta)
+                                blocks+=1; columns+=len(batch)
+                            progress_path.unlink(missing_ok=True)
+                            final_active_workers=active_target
+                            if controller: best_workers_by_grid[grid]=controller.best
             # Global/cross-sectional families need the combined panel. Run them
             # only after the process pool exits so idle workers cannot retain RAM.
             pending_global=[]
@@ -684,14 +731,19 @@ class AlphaDiscoveryRun:
                     "(FORMAT PARQUET,COMPRESSION ZSTD,ROW_GROUP_SIZE 250000)"
                 )
         self._atomic_json("cache/feature_build_resources.json", {
-            "cpu_workers": workers, "host_memory_fraction": self.config.compute.host_memory_fraction,
+            "cpu_workers": max_workers, "host_memory_fraction": self.config.compute.host_memory_fraction,
             "duckdb_memory_limit": memory_limit,"calibration":resource_telemetry,
             "feature_block_size": block_size,"local_wave_size":8,"global_chunks":global_telemetry,
+            "feature_autoscale_enabled":self.config.compute.feature_autoscale_enabled,
+            "max_worker_capacity":max_workers,"initial_workers":initial_workers,"minimum_workers":min_workers,
+            "peak_active_workers":peak_active_workers,"final_active_workers":final_active_workers,
+            "best_observed_workers_by_grid":best_workers_by_grid,"peak_worker_rss_bytes":peak_worker_rss_bytes,
+            "autoscale_events":autoscale_event_count,
             "storage": str(feature_root.resolve()),
         })
         elapsed=time.perf_counter()-started
         return {"feature_blocks":blocks,"feature_columns":columns,"resumed_blocks":resumed_blocks,
-                "cpu_workers":workers,"host_memory_fraction":self.config.compute.host_memory_fraction,
+                "cpu_workers":max_workers,"host_memory_fraction":self.config.compute.host_memory_fraction,
                 "wall_seconds":elapsed,"features_per_second":columns/max(elapsed,1e-9)}
 
     @staticmethod
@@ -746,7 +798,7 @@ class AlphaDiscoveryRun:
         return written,{"emitted_sessions_per_chunk":chunk_size,"history_sessions":history,"budget_bytes":budget,
                         "sample_session_bytes":sample_bytes,"estimated_bytes_per_session":per_session,"peak_process_rss_bytes":peak_rss}
 
-    def _ensure_local_feature_panel(self, grid: str, calculation_path: Path, workers: int) -> Path:
+    def _ensure_local_feature_panel(self, grid: str, calculation_path: Path) -> Path:
         """Create a resume-safe, security-partitioned panel for local workers."""
         import duckdb
         destination = self.root / "cache" / "local_feature_panels" / grid
@@ -764,8 +816,8 @@ class AlphaDiscoveryRun:
         temp_directory = Path(self.config.compute.duckdb_temp_directory)
         temp_directory.mkdir(parents=True, exist_ok=True)
         with duckdb.connect() as connection:
-            connection.execute(f"SET threads={workers}")
-            from .resources import calibrated_resources
+            from .resources import calibrated_resources,configured_duckdb_threads
+            connection.execute(f"SET threads={configured_duckdb_threads(self.config.compute)}")
             _,memory_limit,_=calibrated_resources(self.config.compute)
             connection.execute(f"SET memory_limit='{memory_limit}'")
             connection.execute(f"SET temp_directory='{temp_directory.as_posix().replace(chr(39), chr(39)*2)}'")
@@ -824,13 +876,13 @@ class AlphaDiscoveryRun:
         import duckdb
         source = self.config.source
         output = self.root / "cache" / "targets"; output.mkdir(parents=True, exist_ok=True)
-        from .resources import calibrated_resources
-        workers,memory_limit,_=calibrated_resources(self.config.compute); workers=min(workers,self.runtime_worker_cap) if self.runtime_worker_cap else workers
+        from .resources import calibrated_resources,configured_duckdb_threads
+        _,memory_limit,_=calibrated_resources(self.config.compute); threads=configured_duckdb_threads(self.config.compute)
         total_rows = 0; target_ids: set[str] = set(); benchmark_symbol = source.benchmark_symbols[0]
         temp_directory = Path(self.config.compute.duckdb_temp_directory)
         temp_directory.mkdir(parents=True, exist_ok=True)
         with duckdb.connect(source.duckdb_path, read_only=True) as connection:
-            connection.execute(f"SET threads={workers}")
+            connection.execute(f"SET threads={threads}")
             connection.execute(f"SET memory_limit='{memory_limit}'")
             connection.execute(f"SET temp_directory='{temp_directory.as_posix().replace(chr(39), chr(39)*2)}'")
             snapshot_start=self._snapshot_start()
@@ -914,7 +966,7 @@ class AlphaDiscoveryRun:
                 count, ids = connection.execute(f"SELECT count(*),list(DISTINCT target_id) FROM read_parquet('{destination}')").fetchone()
                 total_rows += int(count); target_ids.update(ids or [])
                 self._useful_progress(f"targets:{grid}",total_rows,total_rows)
-        return {"target_rows": total_rows, "target_ids": len(target_ids), "mode": "duckdb_out_of_core", "cpu_workers": workers}
+        return {"target_rows": total_rows, "target_ids": len(target_ids), "mode": "duckdb_out_of_core", "duckdb_threads": threads}
 
     def _target_ids_and_vector(self, grid: str, observations: pd.DataFrame, target_id: str | None = None):
         """Read aligned target columns from the canonical memory-mapped store."""

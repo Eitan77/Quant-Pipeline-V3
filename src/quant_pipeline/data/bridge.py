@@ -15,7 +15,9 @@ def build_source_bridge(*,repo_root:Path,machine:dict,start:str="2024-04-01",end
     if out.exists() and manifest.exists() and json.loads(manifest.read_text()).get("content_hash")==h:return out
     partial=out.with_suffix(".partial.duckdb"); partial.unlink(missing_ok=True); con=duckdb.connect(str(partial))
     try:
-        con.execute("SET threads TO 5")
+        configured_threads=machine.get("duckdb_threads","auto")
+        threads=max(1,os.cpu_count() or 1) if str(configured_threads).lower()=="auto" else max(1,int(configured_threads))
+        con.execute(f"SET threads TO {threads}")
         for name,path in refs.items():
             p=str(path).replace("'","''"); con.execute(f"CREATE TABLE {name} AS SELECT * FROM read_parquet('{p}')")
         con.execute("""CREATE TABLE split_factors_daily AS WITH dates AS (SELECT DISTINCT session_date FROM sp500_pit_membership_daily), eligible AS (SELECT DISTINCT s.security_id,d.session_date FROM security_master s CROSS JOIN dates d) SELECT e.security_id,e.session_date,COALESCE(EXP(SUM(LN(a.split_factor)) FILTER (WHERE a.split_factor>0 AND a.session_date>e.session_date)),1.0) split_factor FROM eligible e LEFT JOIN corporate_actions a ON a.security_id=e.security_id GROUP BY e.security_id,e.session_date""")

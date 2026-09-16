@@ -1,4 +1,5 @@
 from __future__ import annotations
+from contextlib import contextmanager
 import os
 
 
@@ -24,14 +25,44 @@ def _system_memory() -> tuple[int, int]:
         return int(page_size*os.sysconf("SC_AVPHYS_PAGES")),int(page_size*os.sysconf("SC_PHYS_PAGES"))
 
 
+def logical_cpu_count() -> int:
+    return max(1,os.cpu_count() or 1)
+
+
+def configured_feature_worker_cap(compute) -> int:
+    logical=logical_cpu_count()
+    return logical if compute.cpu_workers=="auto" else max(1,min(logical,int(compute.cpu_workers)))
+
+
+def configured_duckdb_threads(compute) -> int:
+    logical=logical_cpu_count()
+    return logical if compute.duckdb_threads=="auto" else max(1,min(logical,int(compute.duckdb_threads)))
+
+
+def host_memory_reserve_bytes(compute,total:int)->int:
+    if compute.host_reserve_gb is not None:
+        return max(1<<30,int(float(compute.host_reserve_gb)*(1<<30)))
+    return max(1<<30,int(total*(1-float(compute.host_memory_fraction))))
+
+
+@contextmanager
+def child_numeric_thread_limits(*,blas_threads:int,omp_threads:int):
+    keys={"OMP_NUM_THREADS":str(omp_threads),"MKL_NUM_THREADS":str(blas_threads),
+          "OPENBLAS_NUM_THREADS":str(blas_threads),"NUMEXPR_NUM_THREADS":str(blas_threads)}
+    previous={key:os.environ.get(key) for key in keys}; os.environ.update(keys)
+    try: yield
+    finally:
+        for key,value in previous.items():
+            if value is None: os.environ.pop(key,None)
+            else: os.environ[key]=value
+
+
 def calibrated_resources(compute) -> tuple[int, str, dict]:
-    logical=max(1,os.cpu_count() or 1)
+    logical=logical_cpu_count()
     available,total=_system_memory()
-    reserved=max(1*(1<<30),int(total*(1-float(compute.host_memory_fraction))))
+    reserved=host_memory_reserve_bytes(compute,total)
     usable=max(4*(1<<30),available-reserved)
-    # The pool exposes every logical CPU. Feature submission is throttled from
-    # live host memory instead of assuming a fixed amount of RAM per worker.
-    workers=logical if compute.cpu_workers=="auto" else int(compute.cpu_workers)
+    workers=configured_feature_worker_cap(compute)
     memory=f"{max(4,int(usable*.75/(1<<30)))}GB" if str(compute.duckdb_memory_limit).lower()=="auto" else str(compute.duckdb_memory_limit)
     return workers,memory,{"logical_cpus":logical,"selected_workers":workers,"available_bytes":available,"reserved_bytes":reserved,"worker_memory_budget_bytes":usable}
 
@@ -39,5 +70,5 @@ def calibrated_resources(compute) -> tuple[int, str, dict]:
 def host_memory_headroom(compute) -> tuple[int, int, int]:
     """Return live available bytes, configured safety reserve, and total RAM."""
     available,total=_system_memory()
-    reserved=max(1*(1<<30),int(total*(1-float(compute.host_memory_fraction))))
+    reserved=host_memory_reserve_bytes(compute,total)
     return available,reserved,total

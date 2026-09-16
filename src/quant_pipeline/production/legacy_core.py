@@ -4,6 +4,7 @@ from dataclasses import dataclass
 from datetime import datetime,timezone
 from pathlib import Path
 from quant_pipeline.alpha_discovery.run import AlphaDiscoveryRun
+from quant_pipeline.alpha_discovery.resources import configured_feature_worker_cap
 from quant_pipeline.ported_pipeline import ported_config
 from quant_pipeline.production.cache_keys import STAGE_PATHS,SharedStageCache,core_stage_key,stage_implementation_hash
 from quant_pipeline.telemetry import ResourcePlan,StallWatchdog,run_with_resource_recovery
@@ -56,7 +57,8 @@ class LegacyCoreAdapter:
                             watchdog=StallWatchdog(run.root,int(self.machine.get("stall_seconds",900)))
                             operation=lambda op=operation:watchdog.run(op,abort_event=abort,on_stall=lambda details:self.telemetry.event("stall_detected",stage=f"core:{stage}",details=details),poll_seconds=float(self.machine.get("watchdog_poll_seconds",30)))
                         return operation()
-                    result=run_with_resource_recovery(attempt,ResourcePlan(tile_pairs=int(self.machine.get("pair_cap",8192)),workers=int(self.machine.get("feature_workers",6))),on_retry=lambda exc,plan:self.telemetry.event("resource_retry",stage=f"core:{stage}",error=str(exc),tile_pairs=plan.tile_pairs,workers=plan.workers) if self.telemetry else None)
+                    initial_plan_workers=configured_feature_worker_cap(run.config.compute)
+                    result=run_with_resource_recovery(attempt,ResourcePlan(tile_pairs=int(self.machine.get("pair_cap",8192)),workers=initial_plan_workers),on_retry=lambda exc,plan:self.telemetry.event("resource_retry",stage=f"core:{stage}",error=str(exc),tile_pairs=plan.tile_pairs,workers=plan.workers) if self.telemetry else None)
                     cache.publish(stage,key,run.root,result); result={**result,"shared_cache_reused":False,"shared_cache_key":key}
             else: result=run.execute(stage)
             results.append(result)

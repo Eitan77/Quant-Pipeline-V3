@@ -6,8 +6,20 @@ scratch_root: D:/AlgoResearch/Quant-Pipeline-V3/scratch
 duckdb_temp: D:/AlgoResearch/Quant-Pipeline-V3/scratch/duckdb
 gpu_device: cuda:0
 resource_budget: {ram_gb: 32, reserve_ram_gb: 6, vram_soft_limit_gb: 10.0}
-feature_workers: 6
-duckdb_threads: 5
+feature_workers: auto
+feature_autoscale:
+  enabled: true
+  initial_workers: 6
+  min_workers: 4
+  step_workers: 2
+  tuning_window_seconds: 10
+  tuning_min_completions: 8
+  min_gain_fraction: 0.02
+  regression_fraction: 0.05
+  memory_guard_multiplier: 1.25
+  default_worker_memory_gb: 1.0
+  cooldown_seconds: 5
+duckdb_threads: auto
 duckdb_memory_limit_gb: 18
 blas_threads_per_worker: 1
 omp_threads_per_worker: 1

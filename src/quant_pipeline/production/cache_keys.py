@@ -3,10 +3,10 @@ import json,os,shutil
 from pathlib import Path
 from quant_pipeline.hashing import content_hash
 
-STAGE_IMPLEMENTATION_VERSION={"build-panel":1,"build-features":1,"build-targets":1,"scan-singles":1,"scan-duals-coarse":1}
+STAGE_IMPLEMENTATION_VERSION={"build-panel":1,"build-features":2,"build-targets":1,"scan-singles":1,"scan-duals-coarse":1}
 STAGE_FILES={
  "build-panel":["alpha_discovery/data/source.py","alpha_discovery/data/snapshot.py","alpha_discovery/data/universe.py","alpha_discovery/data/corporate_actions.py","alpha_discovery/data/panel.py","alpha_discovery/eligibility.py"],
- "build-features":["alpha_discovery/registry.py","alpha_discovery/models.py","alpha_discovery/features/*.py","alpha_discovery/cache/feature_store.py"],
+ "build-features":["alpha_discovery/registry.py","alpha_discovery/models.py","alpha_discovery/features/*.py","alpha_discovery/cache/feature_store.py","alpha_discovery/run.py","alpha_discovery/resources.py","alpha_discovery/feature_autoscale.py"],
  "build-targets":["alpha_discovery/registry.py","alpha_discovery/models.py","alpha_discovery/targets/*.py","alpha_discovery/cache/target_store.py"],
  "scan-singles":["alpha_discovery/scan/singles.py","alpha_discovery/cache/rank_store.py","alpha_discovery/cache/bin_store.py"],
  "scan-duals-coarse":["alpha_discovery/scan/dual_coarse.py","alpha_discovery/scan/pair_plan.py","alpha_discovery/cache/rank_store.py","alpha_discovery/cache/bin_store.py"]}

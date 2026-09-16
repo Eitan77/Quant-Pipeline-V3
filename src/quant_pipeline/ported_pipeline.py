@@ -6,15 +6,29 @@ from quant_pipeline.alpha_discovery.run import AlphaDiscoveryRun
 from quant_pipeline.data.bridge import build_source_bridge
 import duckdb,json,os
 
+def _worker_value(value,default="auto"):
+    value=default if value is None else value
+    if isinstance(value,str) and value.lower()=="auto": return "auto"
+    return int(value)
+
 def ported_config(research,machine,repo_root:Path):
     p=research["periods"]; smoke=research.get("external_smoke",{}); warmup=smoke.get("warmup",{"auto_derive_transitive_history":True})
     bridge_start=warmup.get("snapshot_start","2024-04-01") if not warmup.get("auto_derive_transitive_history",True) else "2024-04-01"
     bridge=build_source_bridge(repo_root=repo_root,machine=machine,start=bridge_start,end=p["discovery"]["end"])
+    autoscale=machine.get("feature_autoscale",{}); reserve_gb=machine.get("resource_budget",{}).get("reserve_ram_gb")
     return AlphaDiscoveryConfig(
       run_name=research["run_name"],project_root=str(repo_root),output_root=machine["run_root"],
       source=SourceConfig(duckdb_path=str(bridge),corporate_actions_path=str(repo_root/"reference/corporate_actions.parquet")),
       research_periods=ResearchPeriodsConfig(discovery_start=p["discovery"]["start"],discovery_end=p["discovery"]["end"],replication_start=p["replication"]["start"],replication_end=p["replication"]["end"],final_holdout_start=p["final_holdout"]["start"],allow_replication_access=False,allow_final_holdout_access=False),
-      compute=ComputeConfig(prefer_cuda=True,gpu_device=machine.get("gpu_device","cuda:0"),dynamic_memory_fraction=.85,cpu_fallback=True,deterministic=True,feature_block_size="auto",target_block_size="auto",cpu_workers=int(machine.get("feature_workers",6)),host_memory_fraction=.80,duckdb_memory_limit=f"{machine.get('duckdb_memory_limit_gb',18)}GB",duckdb_temp_directory=machine["duckdb_temp"]),
+      compute=ComputeConfig(prefer_cuda=True,gpu_device=machine.get("gpu_device","cuda:0"),dynamic_memory_fraction=.85,cpu_fallback=True,deterministic=True,feature_block_size="auto",target_block_size="auto",
+        cpu_workers=_worker_value(machine.get("feature_workers","auto")),feature_autoscale_enabled=bool(autoscale.get("enabled",False)),
+        feature_initial_workers=int(autoscale.get("initial_workers",6)),feature_min_workers=int(autoscale.get("min_workers",1)),feature_step_workers=int(autoscale.get("step_workers",2)),
+        feature_tuning_window_seconds=float(autoscale.get("tuning_window_seconds",10.0)),feature_tuning_min_completions=int(autoscale.get("tuning_min_completions",8)),
+        feature_min_gain_fraction=float(autoscale.get("min_gain_fraction",.02)),feature_regression_fraction=float(autoscale.get("regression_fraction",.05)),
+        feature_memory_guard_multiplier=float(autoscale.get("memory_guard_multiplier",1.25)),feature_default_worker_memory_gb=float(autoscale.get("default_worker_memory_gb",1.0)),
+        feature_cooldown_seconds=float(autoscale.get("cooldown_seconds",5.0)),host_memory_fraction=.80,host_reserve_gb=float(reserve_gb) if reserve_gb is not None else None,
+        duckdb_threads=_worker_value(machine.get("duckdb_threads","auto")),duckdb_memory_limit=f"{machine.get('duckdb_memory_limit_gb',18)}GB",duckdb_temp_directory=machine["duckdb_temp"],
+        blas_threads_per_worker=int(machine.get("blas_threads_per_worker",1)),omp_threads_per_worker=int(machine.get("omp_threads_per_worker",1))),
       decision_grids=smoke.get("decision_grids",{"intraday_5m":True,"daily_close":True,"preclose_1555":True,"intraday_1m":False}),
       feature_windows=smoke.get("feature_windows",{"intraday":["1m","2m","5m","10m","15m","30m","60m","120m","240m","session"],"daily":["1d","2d","3d","5d","10d","20d","30d","40d","63d","126d","252d"]}),
       feature_search={"initial_scope":"canonical_concepts","canonical_scale_anchors":{"intraday_5m":"30m","daily_close":"20d","preclose_1555":"20d"}},
