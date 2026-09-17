@@ -92,6 +92,34 @@ def _torch_rankdata(values, torch):
     return ranked
 
 
+def _torch_rankdata_columns(values, valid, torch):
+    """Average-tie ranks for a bounded batch of independently masked columns."""
+    rows, columns = values.shape
+    masked = torch.where(valid, values, torch.inf)
+    order = torch.argsort(masked, dim=0, stable=True)
+    ordered = torch.gather(values, 0, order)
+    ordered_valid = torch.gather(valid, 0, order)
+    starts = ordered_valid.clone()
+    if rows > 1:
+        starts[1:] &= ordered[1:] != ordered[:-1]
+    groups = torch.cumsum(starts.to(torch.int64), dim=0) - 1
+    offsets = torch.arange(columns, device=values.device, dtype=torch.int64)[None, :] * rows
+    flat_groups = groups + offsets
+    positions = torch.arange(1, rows + 1, device=values.device, dtype=torch.float64)[:, None].expand(-1, columns)
+    sums = torch.zeros(rows * columns, device=values.device, dtype=torch.float64)
+    sizes = torch.zeros_like(sums)
+    selected = ordered_valid
+    sums.scatter_add_(0, flat_groups[selected], positions[selected])
+    sizes.scatter_add_(0, flat_groups[selected], torch.ones_like(positions[selected]))
+    ranked_ordered = torch.zeros_like(positions)
+    ranked_ordered[selected] = (sums / sizes.clamp_min(1))[flat_groups[selected]]
+    ranked = torch.zeros_like(ranked_ordered)
+    ranked.scatter_(0, order, ranked_ordered)
+    counts = valid.sum(dim=0).to(torch.float64)
+    centered = torch.where(valid, ranked - ranked.sum(dim=0) / counts.clamp_min(1), 0.0)
+    return centered, ordered, counts
+
+
 def _sorted_quantile(ordered, q: float):
     position = (ordered.numel() - 1) * q
     lower = int(position); upper = min(lower + 1, ordered.numel() - 1)
@@ -127,12 +155,7 @@ def _cuda_cross_sectional_signals(x, decision_codes, within_group, group_count, 
 
 
 def _scan_singles_cuda(features, targets, feature_ids, target_ids, clusters, decision_ts, device_name):
-    """Exact CUDA singles with one host synchronization per feature.
-
-    Kernels still use bounded feature/target workspaces, but scalar metrics stay
-    on device until every target for the feature is complete.  This removes the
-    repeated ``Tensor.item()`` barriers that previously left the GPU idle.
-    """
+    """Exact CUDA singles using bounded target tiles and batched reductions."""
     import torch
     device = torch.device(device_name)
     feature_array = np.asarray(features)
@@ -156,6 +179,9 @@ def _scan_singles_cuda(features, targets, feature_ids, target_ids, clusters, dec
         group_count = len(host_counts); max_group_size = int(host_counts.max()) if len(host_counts) else 0
     else:
         decision_codes = within_group = None; group_count = max_group_size = 0
+    free_bytes,_ = torch.cuda.mem_get_info(device)
+    bytes_per_target=max(1,len(target_array))*96
+    target_batch=max(1,min(len(target_ids),8,int((free_bytes*.30)//bytes_per_target)))
     rows = []; nan = torch.tensor(float("nan"), dtype=torch.float64, device=device)
     with torch.no_grad():
         for fi, feature_id in enumerate(feature_ids):
@@ -168,87 +194,66 @@ def _scan_singles_cuda(features, targets, feature_ids, target_ids, clusters, dec
                 )
             else:
                 signals = None
-            device_rows = []
-            for ti, target_id in enumerate(target_ids):
-                y = target_tensor[:, ti]
-                valid = finite_x & torch.isfinite(y)
-                xv = x[valid].to(torch.float64); yv = y[valid].to(torch.float64)
-                n = xv.numel()
-                if n:
-                    pass
-                else:
-                    xv = torch.empty(0, dtype=torch.float64, device=device)
-                    yv = torch.empty(0, dtype=torch.float64, device=device)
-                if n >= 3:
-                    xr = _torch_rankdata(xv, torch); yr = _torch_rankdata(yv, torch)
-                    xr -= xr.mean(); yr -= yr.mean()
-                    denominator = torch.sqrt(torch.dot(xr, xr) * torch.dot(yr, yr))
-                    ic = torch.where(denominator > 0, torch.dot(xr, yr) / denominator, nan)
-                else:
-                    ic = nan
-                if n >= 20:
-                    ordered_x = torch.sort(xv).values
-                    low = _sorted_quantile(ordered_x, .1); high = _sorted_quantile(ordered_x, .9)
-                    low_mask = xv <= low; high_mask = xv >= high
-                    spread = yv[high_mask].mean() - yv[low_mask].mean()
-                else:
-                    low_mask = high_mask = None; spread = nan
+            for target_start in range(0,len(target_ids),target_batch):
+                target_end=min(target_start+target_batch,len(target_ids)); y=target_tensor[:,target_start:target_end]
+                valid=finite_x[:,None]&torch.isfinite(y); width=target_end-target_start
+                x_columns=x[:,None].expand(-1,width)
+                xr,ordered_x,n=_torch_rankdata_columns(x_columns,valid,torch)
+                yr,_,_=_torch_rankdata_columns(y,valid,torch)
+                denominator=torch.sqrt(xr.square().sum(0)*yr.square().sum(0))
+                ic=torch.where((n>=3)&(denominator>0),(xr*yr).sum(0)/denominator,nan)
+                positions=(n.clamp_min(1)-1)*.1
+                lower=positions.floor().to(torch.int64); upper=torch.minimum(lower+1,(n.clamp_min(1)-1).to(torch.int64))
+                columns=torch.arange(width,device=device)
+                weight=positions-lower
+                low=ordered_x[lower,columns]*(1-weight)+ordered_x[upper,columns]*weight
+                positions=(n.clamp_min(1)-1)*.9
+                lower=positions.floor().to(torch.int64); upper=torch.minimum(lower+1,(n.clamp_min(1)-1).to(torch.int64))
+                weight=positions-lower
+                high=ordered_x[lower,columns]*(1-weight)+ordered_x[upper,columns]*weight
+                low_mask=valid&(x_columns<=low); high_mask=valid&(x_columns>=high)
+                low_n=low_mask.sum(0).clamp_min(1); high_n=high_mask.sum(0).clamp_min(1)
+                spread=torch.where(n>=20,(torch.where(high_mask,y,0).sum(0)/high_n-
+                                           torch.where(low_mask,y,0).sum(0)/low_n),nan)
                 if signals is None:
-                    position = torch.zeros(n, dtype=torch.float64, device=device)
-                    if n >= 20: position = high_mask.to(torch.float64) - low_mask.to(torch.float64)
+                    position=high_mask.to(torch.float64)-low_mask.to(torch.float64)
                 else:
-                    position = signals[:, 1][valid].to(torch.float64)
-                values = position * yv
-                active = position != 0
+                    position=signals[:,1,None].to(torch.float64).expand(-1,width)*valid
+                values=torch.where(valid,position*y.to(torch.float64),0.0); safe_n=n.clamp_min(1)
+                effect=values.sum(0)/safe_n; active_n=(position!=0).sum(0).to(torch.float64)
                 if cluster_tensor is not None:
-                    if n >= 3:
-                        codes = cluster_tensor[valid]
-                        counts = torch.bincount(codes, minlength=total_clusters).to(torch.float64)
-                        cluster_sums = torch.zeros(total_clusters, dtype=torch.float64, device=device)
-                        cluster_sums.scatter_add_(0, codes, values)
-                        mean = values.mean()
-                        nonempty = counts > 0; cluster_count = nonempty.sum().to(torch.float64)
-                        centered_sums = cluster_sums[nonempty] - counts[nonempty] * mean
-                        correction = cluster_count / torch.clamp(cluster_count - 1, min=1)
-                        variance = correction * torch.dot(centered_sums, centered_sums) / (n * n)
-                        se = torch.sqrt(torch.clamp(variance, min=0)); effect = mean
-                        statistic = torch.where(se > 0, effect / se, nan)
-                        contributions = cluster_sums.abs(); contribution_sum = contributions.sum()
-                        share = torch.where(contribution_sum > 0, contributions.max() / contribution_sum, nan)
-                    else:
-                        effect = se = statistic = share = nan
-                        cluster_count = torch.zeros((), dtype=torch.float64, device=device)
-                    neighbors = []
-                    if signals is not None and n:
-                        for index in (0, 2):
-                            neighbors.append((signals[:, index][valid].to(torch.float64) * yv).mean())
-                    while len(neighbors) < 2: neighbors.append(nan)
+                    index=cluster_tensor[:,None].expand(-1,width)
+                    cluster_sums=torch.zeros((total_clusters,width),dtype=torch.float64,device=device)
+                    cluster_counts=torch.zeros_like(cluster_sums)
+                    cluster_sums.scatter_add_(0,index,values)
+                    cluster_counts.scatter_add_(0,index,valid.to(torch.float64))
+                    nonempty=cluster_counts>0; cluster_count=nonempty.sum(0).to(torch.float64)
+                    centered=cluster_sums-cluster_counts*effect
+                    correction=cluster_count/torch.clamp(cluster_count-1,min=1)
+                    variance=correction*centered.square().sum(0)/(safe_n*safe_n)
+                    se=torch.sqrt(torch.clamp(variance,min=0)); statistic=torch.where(se>0,effect/se,nan)
+                    contributions=cluster_sums.abs(); total=contributions.sum(0)
+                    share=torch.where(total>0,contributions.max(0).values/total,nan)
+                    if signals is not None:
+                        neighbor_low=torch.where(valid,signals[:,0,None].to(torch.float64)*y,0.0).sum(0)/safe_n
+                        neighbor_high=torch.where(valid,signals[:,2,None].to(torch.float64)*y,0.0).sum(0)/safe_n
+                    else: neighbor_low=neighbor_high=torch.full_like(effect,float("nan"))
                 else:
-                    effect = se = statistic = share = nan
-                    cluster_count = torch.zeros((), dtype=torch.float64, device=device)
-                    neighbors = [nan, nan]
-                device_rows.append(torch.stack((
-                    torch.tensor(float(n), dtype=torch.float64, device=device), ic, spread,
-                    effect, se, statistic, cluster_count, active.sum().to(torch.float64), share,
-                    neighbors[0], neighbors[1],
-                )))
-            packed = torch.stack(device_rows).cpu().numpy()
-            for ti, target_id in enumerate(target_ids):
-                n,ic,spread,effect,se,statistic,cluster_count,active_n,share,neighbor_low,neighbor_high = packed[ti]
-                row = {"feature_id":feature_id,"target_id":target_id,"n_obs":int(n),"rank_ic":ic,
-                       "top_bottom_spread":spread,
-                       "signal_policy":"decision_cross_section" if signals is not None else "descriptive_full_sample"}
-                if cluster_tensor is not None:
-                    neighbors=[neighbor_low,neighbor_high]
-                    aligned=[abs(value)/abs(effect) for value in neighbors
-                             if np.isfinite(value) and effect and np.sign(value)==np.sign(effect)]
-                    p_value=float(2*norm.sf(abs(statistic))) if np.isfinite(statistic) else np.nan
-                    row.update(candidate_effect=effect,cluster_se=se,test_statistic=statistic,p_value=p_value,
-                               cluster_count=int(cluster_count),cell_min_count=int(active_n),outlier_cluster_share=share,
-                               neighbor_effect_retention=float(np.median(aligned)) if aligned else 0.,
-                               plateau_area=1+sum(value>=.5 for value in aligned),
-                               robustness_status="MEASURED" if signals is not None else "NOT_MEASURED")
-                rows.append(row)
+                    effect=se=statistic=share=torch.full_like(effect,float("nan"))
+                    cluster_count=torch.zeros_like(effect); neighbor_low=neighbor_high=torch.full_like(effect,float("nan"))
+                packed=torch.stack((n,ic,spread,effect,se,statistic,cluster_count,active_n,share,neighbor_low,neighbor_high),dim=1).cpu().numpy()
+                for offset,target_id in enumerate(target_ids[target_start:target_end]):
+                    nv,icv,spreadv,effectv,sev,statv,cc,activev,sharev,nlow,nhigh=packed[offset]
+                    row={"feature_id":feature_id,"target_id":target_id,"n_obs":int(nv),"rank_ic":icv,
+                         "top_bottom_spread":spreadv,"signal_policy":"decision_cross_section" if signals is not None else "descriptive_full_sample"}
+                    if cluster_tensor is not None:
+                        neighbors=[nlow,nhigh]; aligned=[abs(v)/abs(effectv) for v in neighbors if np.isfinite(v) and effectv and np.sign(v)==np.sign(effectv)]
+                        row.update(candidate_effect=effectv,cluster_se=sev,test_statistic=statv,
+                                   p_value=float(2*norm.sf(abs(statv))) if np.isfinite(statv) else np.nan,
+                                   cluster_count=int(cc),cell_min_count=int(activev),outlier_cluster_share=sharev,
+                                   neighbor_effect_retention=float(np.median(aligned)) if aligned else 0.,
+                                   plateau_area=1+sum(v>=.5 for v in aligned),robustness_status="MEASURED" if signals is not None else "NOT_MEASURED")
+                    rows.append(row)
             del x, signals
     torch.cuda.synchronize(device)
     return pd.DataFrame(rows)
