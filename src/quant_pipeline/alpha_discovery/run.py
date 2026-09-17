@@ -1141,6 +1141,11 @@ class AlphaDiscoveryRun:
     def _dual_scan_fused(self) -> dict:
         from .scan.pair_plan import PairPlan
         from .scan.dual_coarse import DualTileScanner
+        try:
+            import torch
+            if torch.cuda.is_available(): torch.cuda.empty_cache()
+        except Exception:
+            pass
         started=time.perf_counter(); self._require("build-features"); self._require("build-targets")
         bundle=self.compile_registry(); resolutions=tuple(self.config.duals.get("resolutions",(3,5,10))); attempted=excluded=chunks=0; backend=None
         output_roots={r:self.root/{3:"dual_coarse_results",5:"dual_fine_results",10:"dual_exact_results"}[r] for r in resolutions}
@@ -1213,6 +1218,9 @@ class AlphaDiscoveryRun:
                 table=result[result.target_index.eq(target_index)].drop(columns="target_index").copy(); table["target_id"]=target_id
                 destination.parent.mkdir(parents=True,exist_ok=True); temporary=destination.with_suffix(".tmp.parquet")
                 table.to_parquet(temporary,index=False); temporary.replace(destination); written+=1
+        if scanner.device.type=="cuda":
+            del results
+            scanner.torch.cuda.empty_cache()
         return written
 
     @staticmethod
