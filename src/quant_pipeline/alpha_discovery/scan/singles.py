@@ -80,10 +80,11 @@ def _torch_rankdata(values, torch):
     starts = torch.ones(count, dtype=torch.bool, device=values.device)
     if count > 1: starts[1:] = ordered[1:] != ordered[:-1]
     groups = torch.cumsum(starts.to(torch.int64), 0) - 1
-    group_count = int(groups[-1].item()) + 1
     positions = torch.arange(1, count + 1, dtype=torch.float64, device=values.device)
-    sums = torch.zeros(group_count, dtype=torch.float64, device=values.device)
-    sizes = torch.zeros(group_count, dtype=torch.float64, device=values.device)
+    # A count-sized workspace avoids synchronizing CUDA merely to read the
+    # number of tie groups.  Unused tail entries are harmless.
+    sums = torch.zeros(count, dtype=torch.float64, device=values.device)
+    sizes = torch.zeros(count, dtype=torch.float64, device=values.device)
     sums.scatter_add_(0, groups, positions)
     sizes.scatter_add_(0, groups, torch.ones_like(positions))
     ranked = torch.empty(count, dtype=torch.float64, device=values.device)
@@ -126,7 +127,12 @@ def _cuda_cross_sectional_signals(x, decision_codes, within_group, group_count, 
 
 
 def _scan_singles_cuda(features, targets, feature_ids, target_ids, clusters, decision_ts, device_name):
-    """CUDA implementation of the exact singles statistics with bounded pair workspaces."""
+    """Exact CUDA singles with one host synchronization per feature.
+
+    Kernels still use bounded feature/target workspaces, but scalar metrics stay
+    on device until every target for the feature is complete.  This removes the
+    repeated ``Tensor.item()`` barriers that previously left the GPU idle.
+    """
     import torch
     device = torch.device(device_name)
     feature_array = np.asarray(features)
@@ -150,7 +156,7 @@ def _scan_singles_cuda(features, targets, feature_ids, target_ids, clusters, dec
         group_count = len(host_counts); max_group_size = int(host_counts.max()) if len(host_counts) else 0
     else:
         decision_codes = within_group = None; group_count = max_group_size = 0
-    rows = []
+    rows = []; nan = torch.tensor(float("nan"), dtype=torch.float64, device=device)
     with torch.no_grad():
         for fi, feature_id in enumerate(feature_ids):
             host_x = np.asarray(feature_array[:, fi], dtype=np.float32)
@@ -162,12 +168,14 @@ def _scan_singles_cuda(features, targets, feature_ids, target_ids, clusters, dec
                 )
             else:
                 signals = None
+            device_rows = []
             for ti, target_id in enumerate(target_ids):
                 y = target_tensor[:, ti]
                 valid = finite_x & torch.isfinite(y)
-                n = int(valid.sum().item())
+                xv = x[valid].to(torch.float64); yv = y[valid].to(torch.float64)
+                n = xv.numel()
                 if n:
-                    xv = x[valid].to(torch.float64); yv = y[valid].to(torch.float64)
+                    pass
                 else:
                     xv = torch.empty(0, dtype=torch.float64, device=device)
                     yv = torch.empty(0, dtype=torch.float64, device=device)
@@ -175,16 +183,16 @@ def _scan_singles_cuda(features, targets, feature_ids, target_ids, clusters, dec
                     xr = _torch_rankdata(xv, torch); yr = _torch_rankdata(yv, torch)
                     xr -= xr.mean(); yr -= yr.mean()
                     denominator = torch.sqrt(torch.dot(xr, xr) * torch.dot(yr, yr))
-                    ic = float((torch.dot(xr, yr) / denominator).item()) if denominator.item() else np.nan
+                    ic = torch.where(denominator > 0, torch.dot(xr, yr) / denominator, nan)
                 else:
-                    ic = np.nan
+                    ic = nan
                 if n >= 20:
                     ordered_x = torch.sort(xv).values
                     low = _sorted_quantile(ordered_x, .1); high = _sorted_quantile(ordered_x, .9)
                     low_mask = xv <= low; high_mask = xv >= high
-                    spread = float((yv[high_mask].mean() - yv[low_mask].mean()).item())
+                    spread = yv[high_mask].mean() - yv[low_mask].mean()
                 else:
-                    low_mask = high_mask = None; spread = np.nan
+                    low_mask = high_mask = None; spread = nan
                 if signals is None:
                     position = torch.zeros(n, dtype=torch.float64, device=device)
                     if n >= 20: position = high_mask.to(torch.float64) - low_mask.to(torch.float64)
@@ -192,9 +200,6 @@ def _scan_singles_cuda(features, targets, feature_ids, target_ids, clusters, dec
                     position = signals[:, 1][valid].to(torch.float64)
                 values = position * yv
                 active = position != 0
-                row = {"feature_id": feature_id, "target_id": target_id, "n_obs": n, "rank_ic": ic,
-                       "top_bottom_spread": spread,
-                       "signal_policy": "decision_cross_section" if signals is not None else "descriptive_full_sample"}
                 if cluster_tensor is not None:
                     if n >= 3:
                         codes = cluster_tensor[valid]
@@ -202,28 +207,46 @@ def _scan_singles_cuda(features, targets, feature_ids, target_ids, clusters, dec
                         cluster_sums = torch.zeros(total_clusters, dtype=torch.float64, device=device)
                         cluster_sums.scatter_add_(0, codes, values)
                         mean = values.mean()
-                        nonempty = counts > 0; cluster_count = int(nonempty.sum().item())
+                        nonempty = counts > 0; cluster_count = nonempty.sum().to(torch.float64)
                         centered_sums = cluster_sums[nonempty] - counts[nonempty] * mean
-                        correction = cluster_count / max(cluster_count - 1, 1)
+                        correction = cluster_count / torch.clamp(cluster_count - 1, min=1)
                         variance = correction * torch.dot(centered_sums, centered_sums) / (n * n)
-                        se = float(torch.sqrt(torch.clamp(variance, min=0)).item())
-                        effect = float(mean.item()); statistic = effect / se if se > 0 else np.nan
-                        p_value = float(2 * norm.sf(abs(statistic))) if np.isfinite(statistic) else np.nan
+                        se = torch.sqrt(torch.clamp(variance, min=0)); effect = mean
+                        statistic = torch.where(se > 0, effect / se, nan)
                         contributions = cluster_sums.abs(); contribution_sum = contributions.sum()
-                        share = float((contributions.max() / contribution_sum).item()) if contribution_sum.item() else np.nan
+                        share = torch.where(contribution_sum > 0, contributions.max() / contribution_sum, nan)
                     else:
-                        effect = se = statistic = p_value = share = np.nan; cluster_count = 0
+                        effect = se = statistic = share = nan
+                        cluster_count = torch.zeros((), dtype=torch.float64, device=device)
                     neighbors = []
                     if signals is not None and n:
                         for index in (0, 2):
-                            neighbors.append(float((signals[:, index][valid].to(torch.float64) * yv).mean().item()))
-                    aligned = [abs(value) / abs(effect) for value in neighbors
-                               if np.isfinite(value) and effect and np.sign(value) == np.sign(effect)]
-                    row.update(candidate_effect=effect, cluster_se=se, test_statistic=statistic, p_value=p_value,
-                               cluster_count=cluster_count, cell_min_count=int(active.sum().item()),
-                               outlier_cluster_share=share,
+                            neighbors.append((signals[:, index][valid].to(torch.float64) * yv).mean())
+                    while len(neighbors) < 2: neighbors.append(nan)
+                else:
+                    effect = se = statistic = share = nan
+                    cluster_count = torch.zeros((), dtype=torch.float64, device=device)
+                    neighbors = [nan, nan]
+                device_rows.append(torch.stack((
+                    torch.tensor(float(n), dtype=torch.float64, device=device), ic, spread,
+                    effect, se, statistic, cluster_count, active.sum().to(torch.float64), share,
+                    neighbors[0], neighbors[1],
+                )))
+            packed = torch.stack(device_rows).cpu().numpy()
+            for ti, target_id in enumerate(target_ids):
+                n,ic,spread,effect,se,statistic,cluster_count,active_n,share,neighbor_low,neighbor_high = packed[ti]
+                row = {"feature_id":feature_id,"target_id":target_id,"n_obs":int(n),"rank_ic":ic,
+                       "top_bottom_spread":spread,
+                       "signal_policy":"decision_cross_section" if signals is not None else "descriptive_full_sample"}
+                if cluster_tensor is not None:
+                    neighbors=[neighbor_low,neighbor_high]
+                    aligned=[abs(value)/abs(effect) for value in neighbors
+                             if np.isfinite(value) and effect and np.sign(value)==np.sign(effect)]
+                    p_value=float(2*norm.sf(abs(statistic))) if np.isfinite(statistic) else np.nan
+                    row.update(candidate_effect=effect,cluster_se=se,test_statistic=statistic,p_value=p_value,
+                               cluster_count=int(cluster_count),cell_min_count=int(active_n),outlier_cluster_share=share,
                                neighbor_effect_retention=float(np.median(aligned)) if aligned else 0.,
-                               plateau_area=1 + sum(value >= .5 for value in aligned),
+                               plateau_area=1+sum(value>=.5 for value in aligned),
                                robustness_status="MEASURED" if signals is not None else "NOT_MEASURED")
                 rows.append(row)
             del x, signals
