@@ -45,7 +45,7 @@ function Get-PipelineStep([string]$stage) {
     if ($stage -match '^core:compile-registry$') { return 4 }
     if ($stage -match '^core:(build-features|feature:)') { return 5 }
     if ($stage -match '^core:(build-targets|targets:)') { return 6 }
-    if ($stage -match '^core:scan-singles$') { return 7 }
+    if ($stage -match '^core:(scan-singles|singles:)') { return 7 }
     if ($stage -match '^core:(scan-duals-coarse|duals:)') { return 8 }
     if ($stage -match '^core:scan-duals-fine$') { return 9 }
     if ($stage -match '^core:exact-duals$') { return 10 }
