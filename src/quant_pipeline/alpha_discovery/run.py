@@ -1029,12 +1029,14 @@ class AlphaDiscoveryRun:
             decision_codes=pd.factorize(observations.decision_ts,sort=True)[0]
             stems=sorted({path.stem for path in feature_store.root.glob("*.json")} | {path.stem for path in packed_store.root.glob("*.json")})
             destination = self.root / "single_results" / grid; destination.mkdir(parents=True, exist_ok=True)
+            grid_completed=0
             for stem in stems:
                 result_path=destination/f"{stem}.parquet"
                 try: packed,packed_columns=packed_store.read(stem)
                 except (FileNotFoundError,ValueError,KeyError): packed=None; packed_columns=None
                 if result_path.exists() and packed is not None:
-                    prior=pd.read_parquet(result_path,columns=["fold_id"]); chunks+=1; tests+=int(prior.fold_id.eq("all").sum()); continue
+                    prior=pd.read_parquet(result_path,columns=["fold_id"]); chunks+=1; tests+=int(prior.fold_id.eq("all").sum())
+                    grid_completed+=1; self._useful_progress(f"singles:{grid}",grid_completed,len(stems)); continue
                 try: values, feature_ids = feature_store.read(stem)
                 except (FileNotFoundError,ValueError,KeyError) as error:
                     raise RuntimeError(f"Single scan cannot resume incomplete block {grid}/{stem} without raw features") from error
@@ -1058,7 +1060,8 @@ class AlphaDiscoveryRun:
                 del values,packed
                 if "__global__" not in stem:
                     (feature_store.root/f"{stem}.npy").unlink(missing_ok=True); (feature_store.root/f"{stem}.json").unlink(missing_ok=True)
-                chunks += 1; tests += int(result.fold_id.eq("all").sum())
+                chunks += 1; tests += int(result.fold_id.eq("all").sum()); grid_completed+=1
+                self._useful_progress(f"singles:{grid}",grid_completed,len(stems))
         return {"result_chunks": chunks, "attempted_single_tests": tests,
                 "backend": single_backend(self.config.compute.prefer_cuda, self.config.compute.gpu_device)}
 
