@@ -98,6 +98,27 @@ do {
             $percent = 0.0
         }
 
+        # Singles publishes one atomic parquet per completed feature block but
+        # does not emit an in-stage STATUS counter. Derive exact block progress.
+        if ([string]$status.stage -eq 'core:scan-singles') {
+            $completed = 0.0
+            $expected = 0.0
+            $featureRoot = Join-Path $runPath 'cache\features'
+            $packedRoot = Join-Path $runPath 'cache\bins\packed'
+            $singleRoot = Join-Path $runPath 'single_results'
+            if (Test-Path $featureRoot) {
+                foreach ($grid in Get-ChildItem -LiteralPath $featureRoot -Directory) {
+                    $stems = @(
+                        @(Get-ChildItem -LiteralPath $grid.FullName -Filter '*.json' -File -ErrorAction SilentlyContinue).BaseName
+                        @(Get-ChildItem -LiteralPath (Join-Path $packedRoot $grid.Name) -Filter '*.json' -File -ErrorAction SilentlyContinue).BaseName
+                    ) | Sort-Object -Unique
+                    $expected += $stems.Count
+                    $completed += @(Get-ChildItem -LiteralPath (Join-Path $singleRoot $grid.Name) -Filter '*.parquet' -File -ErrorAction SilentlyContinue).Count
+                }
+            }
+            $percent = if ($expected -gt 0) { [math]::Min(100.0, 100.0 * $completed / $expected) } else { 0.0 }
+        }
+
         Clear-Watcher
         Write-Host "Quant Pipeline V3" -ForegroundColor Cyan
         Write-Host "Run:      $RunId"
