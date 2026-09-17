@@ -322,7 +322,9 @@ class DualTileScanner:
                                       t.zeros((pairs,target_count,groups),dtype=t.int64,device=self.device)] for bins in resolutions}
                 selected_device={bins:t.as_tensor(results[bins].selected_cell.to_numpy(np.int64).reshape(pairs,target_count),device=self.device) for bins in resolutions}
                 frequency_device={bins:t.as_tensor(results[bins].selected_frequency.to_numpy(copy=True).reshape(pairs,target_count),dtype=t.float64,device=self.device) for bins in resolutions}
-                inference_chunk=self.recommended_shape(observations,targets=1,maximum_pairs=max(1,pairs))[0]
+                # Reuse the already-safe accumulation chunk. Re-querying free
+                # VRAM here counts this tile's live states against itself.
+                inference_chunk=chunk
                 for start in range(0,observations,inference_chunk):
                     end=min(start+inference_chunk,observations); payload=reader(start,end)
                     if len(payload)==3:
