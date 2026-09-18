@@ -21,7 +21,7 @@ def iter_dual_batches(path:Path,*,columns:list[str]|None=None,batch_size:int=16_
 
 class ProductionData:
     def __init__(self,legacy_run):
-        self.run=legacy_run; self.bundle=legacy_run.compile_registry(); self.features={x.feature_id:x for x in self.bundle.features}; self.targets={x.target_id:x for x in self.bundle.targets}; self._grids={}; self._bin_sources={}; self._targets={}; self._ranks={}
+        self.run=legacy_run; self.bundle=legacy_run.compile_registry(); self.features={x.feature_id:x for x in self.bundle.features}; self.targets={x.target_id:x for x in self.bundle.targets}; self._grids={}; self._bin_mappings={}; self._bin_sources={}; self._targets={}; self._ranks={}
     def grid(self,feature_id): return self.features[feature_id].decision_grid
     def observations(self,grid):
         if grid not in self._grids:self._grids[grid]=pd.read_parquet(self.run.root/"cache"/"features"/grid/"observations.parquet")
@@ -29,7 +29,8 @@ class ProductionData:
     def bin_source(self,grid,feature_id):
         key=(grid,feature_id)
         if key not in self._bin_sources:
-            mapping,_=self.run._ensure_bin_cache(grid,self.observations(grid))
+            if grid not in self._bin_mappings:self._bin_mappings[grid],_=self.run._ensure_bin_cache(grid,self.observations(grid))
+            mapping=self._bin_mappings[grid]
             if feature_id not in mapping: raise KeyError(f"Packed bins missing for {feature_id}")
             path,column=mapping[feature_id]; self._bin_sources[key]=(np.load(path,mmap_mode="r",allow_pickle=False),int(column))
         return self._bin_sources[key]
