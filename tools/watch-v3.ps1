@@ -98,6 +98,14 @@ do {
             $percent = 0.0
         }
 
+        $specialistProgress = Join-Path $runPath 'v3_progress\cell_specialist.json'
+        if ($stepNumber -eq 13 -and (Test-Path $specialistProgress)) {
+            $detail = Get-Content -Raw -LiteralPath $specialistProgress | ConvertFrom-Json
+            $completed = [double]$detail.completed
+            $expected = [double]$detail.expected
+            $percent = if ($expected -gt 0) { 100.0 * $completed / $expected } else { 0.0 }
+        }
+
         # Singles publishes one atomic parquet per completed feature block but
         # does not emit an in-stage STATUS counter. Derive exact block progress.
         if ([string]$status.stage -eq 'core:scan-singles') {
