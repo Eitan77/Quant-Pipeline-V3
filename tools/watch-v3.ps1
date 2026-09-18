@@ -106,6 +106,14 @@ do {
             $percent = if ($expected -gt 0) { 100.0 * $completed / $expected } else { 0.0 }
         }
 
+        $temporalProgress = Join-Path $runPath 'v3_progress\cell_temporal.json'
+        if ($stepNumber -eq 14 -and (Test-Path $temporalProgress)) {
+            $detail = Get-Content -Raw -LiteralPath $temporalProgress | ConvertFrom-Json
+            $completed = [double]$detail.completed
+            $expected = [double]$detail.expected
+            $percent = if ($expected -gt 0) { 100.0 * $completed / $expected } else { 0.0 }
+        }
+
         # Singles publishes one atomic parquet per completed feature block but
         # does not emit an in-stage STATUS counter. Derive exact block progress.
         if ([string]$status.stage -eq 'core:scan-singles') {
