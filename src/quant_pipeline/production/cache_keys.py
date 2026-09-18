@@ -27,8 +27,11 @@ def _link_tree(source:Path,destination:Path):
         if path.is_dir(): target.mkdir(parents=True,exist_ok=True)
         elif not target.exists():
             target.parent.mkdir(parents=True,exist_ok=True)
-            try: os.link(path,target)
-            except OSError: shutil.copy2(path,target)
+            source_path=str(path.resolve()); target_path=str(target.resolve())
+            if os.name=="nt":
+                source_path="\\\\?\\"+source_path; target_path="\\\\?\\"+target_path
+            try: os.link(source_path,target_path)
+            except OSError: shutil.copy2(source_path,target_path)
 
 STAGE_PATHS={
     "build-panel":("cache/calculation_panels","cache/panels","cache/indexes"),
