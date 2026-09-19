@@ -10,6 +10,8 @@ The project is designed around broad, reproducible discovery. It generates the e
 
 V3 is built to run on one workstation, make heavy use of the GPU, survive long unattended runs, reuse previous work, protect sealed out-of-sample data, and finish each run with a standardized analysis package that can be queried directly with DuckDB or handed to GPT for deeper forensic analysis.
 
+The latest completed canonical discovery run is documented in [docs/V3_DISCOVERY_COMPLETION.md](docs/V3_DISCOVERY_COMPLETION.md). The report records evidence coverage and sealed-data verification without publishing the underlying licensed run artifacts.
+
 ---
 
 ## What the pipeline does
