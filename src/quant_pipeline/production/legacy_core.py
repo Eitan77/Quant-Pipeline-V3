@@ -25,6 +25,11 @@ class LegacyCoreAdapter:
         elif stage=="build-targets": common|={"targets":c.targets}
         elif stage in {"scan-singles","scan-duals-coarse"}: common|={"features":c.feature_windows,"targets":c.targets,"duals":c.duals,"stability_folds":c.stability.get("chronological_folds")}
         return common
+    @staticmethod
+    def _rebase_restored_stage_metadata(run,stage):
+        if stage!="scan-duals-coarse": return
+        path=run.root/"cache/fused_dual_scan.json"; manifest=json.loads(path.read_text(encoding="utf-8")); manifest["config_hash"]=run.config.definition_hash; manifest["implementation_hash"]=run.implementation_hash
+        run._atomic_json("cache/fused_dual_scan.json",manifest)
     def execute(self):
         run=self.build_run(); run.initialize(); source_marker=run.root/"core_source_manifest.json"
         if source_marker.exists() and json.loads(source_marker.read_text()).get("source_manifest_hash")!=self.source_manifest_hash:
@@ -47,6 +52,7 @@ class LegacyCoreAdapter:
                 cached_result=cache.restore(stage,key,run.root)
                 reused=cached_result is not None
                 if reused:
+                    self._rebase_restored_stage_metadata(run,stage)
                     payload={**cached_result,"stage":stage,"status":"complete","completed_at":datetime.now(timezone.utc).isoformat(),"config_hash":run.config.definition_hash,"implementation_hash":run.implementation_hash,"shared_cache_reused":True,"shared_cache_key":key}
                     run._atomic_json(f"checkpoints/{stage}.json",payload); result=payload
                 else:

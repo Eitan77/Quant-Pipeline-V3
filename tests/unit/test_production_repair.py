@@ -6,7 +6,7 @@ from quant_pipeline.alpha_discovery.data.universe import apply_point_in_time_uni
 from quant_pipeline.data.source_manifest import build_production_source_manifest,build_source_manifest
 from quant_pipeline.discovery.specialist import specialist_probe
 from quant_pipeline.production.cache_keys import SharedStageCache,core_stage_key,stage_implementation_hash
-from quant_pipeline.production.legacy_core import LOW_LEVEL_STAGES
+from quant_pipeline.production.legacy_core import LOW_LEVEL_STAGES,LegacyCoreAdapter
 from quant_pipeline.production.materialization import materialization_pool,materialize_candidates
 from quant_pipeline.production.runner import V3ProductionRunner
 from quant_pipeline.production.resolution_diagnostics import build_resolution_diagnostics
@@ -50,6 +50,16 @@ def test_component_hashes_are_stage_scoped():
 
 def test_shared_stage_cache_materializes_compatible_artifacts(tmp_path):
     first=tmp_path/"run-a"; artifact=first/"cache/features/g/observations.parquet"; artifact.parent.mkdir(parents=True); artifact.write_bytes(b"immutable"); store=SharedStageCache(tmp_path/"shared"); store.publish("build-features","key",first,{"rows":1}); second=tmp_path/"run-b"; result=store.restore("build-features","key",second); assert result["rows"]==1 and (second/"cache/features/g/observations.parquet").read_bytes()==b"immutable"
+
+def test_restored_fused_scan_manifest_is_rebased_to_new_run_identity(tmp_path):
+    class Config: definition_hash="new-config"
+    class Run:
+        root=tmp_path; config=Config(); implementation_hash="new-implementation"
+        def _atomic_json(self,relative,payload):
+            path=self.root/relative; path.parent.mkdir(parents=True,exist_ok=True); path.write_text(__import__("json").dumps(payload),encoding="utf-8")
+    path=tmp_path/"cache/fused_dual_scan.json"; path.parent.mkdir(parents=True); path.write_text('{"config_hash":"old","implementation_hash":"old","resolutions":[3,5,10]}',encoding="utf-8")
+    LegacyCoreAdapter._rebase_restored_stage_metadata(Run(),"scan-duals-coarse")
+    restored=__import__("json").loads(path.read_text(encoding="utf-8")); assert restored["config_hash"]=="new-config" and restored["implementation_hash"]=="new-implementation"
 
 def test_production_boundary_and_oos_seal(tmp_path):
     assert not {"build-stability","expand-context","run-edge-autopsy","build-report"}&set(LOW_LEVEL_STAGES)
