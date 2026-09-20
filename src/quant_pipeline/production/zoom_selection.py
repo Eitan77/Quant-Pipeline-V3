@@ -20,7 +20,7 @@ def _prepare(frame):
     if "state_key" not in x:x["state_key"]=[state_key(r) for r in x.to_dict("records")]
     if "family" not in x:x["family"]=np.where(x.get("selection_role",pd.Series(index=x.index,dtype=object)).notna(),"variant","canonical_dual")
     x["abs_interaction"]=x.selected_interaction_lift_bps.abs(); x["abs_weighted"]=np.maximum(x.weighted_state_contribution_bps.abs(),x.weighted_interaction_contribution_bps.abs()); x["negative_score"]=(-x.selected_state_bps).clip(lower=0); retention=x["neighbor_effect_retention"] if "neighbor_effect_retention" in x else pd.Series(0.0,index=x.index); x["failure_score"]=(1-retention.fillna(0)).clip(lower=0)*x["abs_interaction"]; x["temporal_score"]=x.get("fold_sign_consistency",pd.Series(0.0,index=x.index)).fillna(0).abs()
-    group=["feature_a","feature_b","target_id"]; x["resolution_breadth"]=x.groupby(group)["v3_resolution"].transform("nunique"); x["cross_resolution_min_abs_edge"]=x.groupby(group)["selected_state_bps"].transform(lambda s:s.abs().min()); x["cross_resolution_min_n"]=x.groupby(group)["selected_n"].transform("min")
+    group=["feature_a","feature_b","target_id"]; x["resolution_breadth"]=x.groupby(group)["v3_resolution"].transform("nunique"); x["cross_resolution_complete"]=x.groupby(group)["v3_resolution"].transform(lambda s:set(s.astype(int))=={3,5,10}); x["cross_resolution_min_abs_edge"]=x.groupby(group)["selected_state_bps"].transform(lambda s:s.abs().min()); x["cross_resolution_min_n"]=x.groupby(group)["selected_n"].transform("min")
     def consistent(series):
         signs=set(np.sign(series).astype(int)) if len(series) and np.isfinite(series).all() and series.ne(0).all() else set(); return len(series)==3 and len(signs)==1
     x["cross_resolution_same_nonzero_sign"]=x.groupby(group)["selected_state_bps"].transform(consistent).astype(bool); return x
@@ -33,7 +33,7 @@ def _winner(part,metric,eligible=None):
 def _family_role_winners(part):
     winners=[]; canonical=_winner(part,"selected_n",part.get("requested_canonical_parent",pd.Series(False,index=part.index)).fillna(False).astype(bool))
     if canonical is not None:winners.append((canonical,"canonical_parent"))
-    cross=part[part.resolution_breadth.eq(3)].copy()
+    cross=part[part.cross_resolution_complete].copy()
     if len(cross):
         groups=cross.drop_duplicates(["feature_a","feature_b","target_id"]).sort_values(["cross_resolution_same_nonzero_sign","cross_resolution_min_abs_edge","cross_resolution_min_n","feature_a","feature_b","target_id"],ascending=[False,False,False,True,True,True],kind="stable"); chosen=groups.iloc[0]; same=cross[(cross.feature_a==chosen.feature_a)&(cross.feature_b==chosen.feature_b)&(cross.target_id==chosen.target_id)]; winners.append((_winner(same,"abs_weighted"),"cross_resolution"))
     for role,metric in SIMPLE_ROLES.items():

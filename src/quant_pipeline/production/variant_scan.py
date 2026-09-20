@@ -19,13 +19,14 @@ def _scan_one(legacy_run,left,right,target_id,resolutions):
     return out
 
 def execute_variant_expansion(*,legacy_run,duals:pd.DataFrame,research:dict,canonical_path:Path|None=None,resolved_requests:pd.DataFrame|None=None):
-    policy=research.get("forensics",{}).get("candidate_policy",{}); parents=materialization_pool(duals,min_active_n=int(policy.get("min_active_n",250)),min_abs_edge_bps=float(policy.get("min_abs_edge_bps",1.0)),top_k=int(policy.get("keep_top_k_per_target_resolution",250)))
     settings=research.get("variant_expansion",{}); mode=settings.get("mode","automatic"); parent_limit=settings.get("parent_limit"); neighbors=int(settings.get("neighbors_per_side",3)); audit_count=int(settings.get("rejected_audit_count",2)); bundle=legacy_run.compile_registry(); fmap={x.feature_id:x for x in bundle.features}
-    normal=parents.sort_values("materialization_score",ascending=False).drop_duplicates(["pair_id","target_id"])
-    if parent_limit is not None and int(parent_limit)>0: normal=normal.head(int(parent_limit))
-    selected_pairs=set(normal.pair_id); unique_rejected=duals[~duals.pair_id.isin(selected_pairs)].drop_duplicates("pair_id").copy(); unique_rejected["audit_key"]=[content_hash({"pair_id":p,"run":legacy_run.root.name,"audit_version":1}) for p in unique_rejected.pair_id]; audited_pairs=set(unique_rejected.sort_values("audit_key").head(audit_count).pair_id)
-    audited=duals[duals.pair_id.isin(audited_pairs)].drop_duplicates(["pair_id","target_id"]); parent_rows=pd.concat([normal.assign(audited_pair=False),audited.assign(audited_pair=True)],ignore_index=True,sort=False); requests=[]
+    policy=research.get("forensics",{}).get("candidate_policy",{}); requests=[]; audited_pairs=set()
     if mode in {"automatic","automatic_plus_explicit"}:
+        parents=materialization_pool(duals,min_active_n=int(policy.get("min_active_n",250)),min_abs_edge_bps=float(policy.get("min_abs_edge_bps",1.0)),top_k=int(policy.get("keep_top_k_per_target_resolution",250)))
+        normal=parents.sort_values("materialization_score",ascending=False).drop_duplicates(["pair_id","target_id"])
+        if parent_limit is not None and int(parent_limit)>0: normal=normal.head(int(parent_limit))
+        selected_pairs=set(normal.pair_id); unique_rejected=duals[~duals.pair_id.isin(selected_pairs)].drop_duplicates("pair_id").copy(); unique_rejected["audit_key"]=[content_hash({"pair_id":p,"run":legacy_run.root.name,"audit_version":1}) for p in unique_rejected.pair_id]; audited_pairs=set(unique_rejected.sort_values("audit_key").head(audit_count).pair_id)
+        audited=duals[duals.pair_id.isin(audited_pairs)].drop_duplicates(["pair_id","target_id"]); parent_rows=pd.concat([normal.assign(audited_pair=False),audited.assign(audited_pair=True)],ignore_index=True,sort=False)
         for parent in parent_rows.to_dict("records"):
             pa,pb=fmap[parent["feature_a"]],fmap[parent["feature_b"]]; left=sorted((x for x in bundle.features if x.concept_id==pa.concept_id and x.decision_grid==pa.decision_grid),key=lambda x:(x.feature_id!=pa.feature_id,abs(x.minimum_history-pa.minimum_history),x.feature_id))[:neighbors+1]; right=sorted((x for x in bundle.features if x.concept_id==pb.concept_id and x.decision_grid==pb.decision_grid),key=lambda x:(x.feature_id!=pb.feature_id,abs(x.minimum_history-pb.minimum_history),x.feature_id))[:neighbors+1]
             for a in left:

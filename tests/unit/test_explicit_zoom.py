@@ -76,10 +76,13 @@ def test_explicit_plus_rules_universe_excludes_unrelated_zoom_rows():
     got=V3ProductionRunner._explicit_rule_universe(variants)
     assert got.pair_id.tolist()==["requested"]
 
-def test_requested_variants_are_not_regated_before_role_selection():
-    row=surface(a="a",b="c",resolution=3); row.update(family="A",request_id="req",selected_n=1,selected_state_bps=.01,selected_interaction_lift_bps=.01); row["state_key"]=state_key(row)
-    got=build_pre_specialist_contenders(candidate_rows=pd.DataFrame([row]),explicit_rows=pd.DataFrame(),settings={"pre_specialist_per_family":8})
-    assert got.state_key.tolist()==[row["state_key"]]
+def test_requested_variants_are_not_regated_by_materialization_pool(tmp_path,monkeypatch):
+    run=fake_run(tmp_path); row=surface(a="a",b="c",resolution=3); row.update(family="A",role="check",request_id="req",source_pair_id=pair_id("a","b"),source_feature_a="a",source_feature_b="b",canonical_existing=False,selected_n=1,selected_state_bps=.01,selected_interaction_lift_bps=.01)
+    resolved=pd.DataFrame([{key:row[key] for key in ("family","role","request_id","source_pair_id","source_feature_a","source_feature_b","feature_a","feature_b","target_id","pair_id","canonical_existing")}]); research={"resolutions":[3,5,10],"forensics":{"candidate_policy":{"min_active_n":999,"min_abs_edge_bps":999,"keep_top_k_per_target_resolution":0}},"variant_expansion":{"mode":"explicit"}}
+    monkeypatch.setattr("quant_pipeline.production.variant_scan.materialization_pool",lambda *a,**k:pytest.fail("explicit requests must not be materialization-gated")); monkeypatch.setattr("quant_pipeline.production.variant_scan._scan_one",lambda *a,**k:[{**row,"resolution":r,"v3_resolution":r} for r in (3,5,10)])
+    got,_,_=execute_variant_expansion(legacy_run=run,duals=pd.DataFrame([surface()]),research=research,canonical_path=tmp_path/"unused.parquet",resolved_requests=resolved)
+    universe=V3ProductionRunner._explicit_rule_universe(got); contenders=build_pre_specialist_contenders(candidate_rows=universe,explicit_rows=pd.DataFrame(),settings={"pre_specialist_per_family":8})
+    assert len(got)==3 and row["pair_id"] in set(contenders.pair_id)
 
 def test_dynamic_cap_allocates_every_family_before_extra_capacity():
     rows=[]
@@ -101,6 +104,13 @@ def test_cross_resolution_prefers_same_nonzero_sign_and_canonical_role_is_reques
             row=surface(a="a",b=feature_b,resolution=resolution); row.update(pair_id=pair,family="A",selected_state_bps=edge,selected_state_return=edge/1e4,selected_n=100 if pair=="mixed" else 10,requested_canonical_parent=requested); row["state_key"]=state_key(row); rows.append(row)
     got=build_pre_specialist_contenders(candidate_rows=pd.DataFrame(rows),explicit_rows=pd.DataFrame(),settings={"pre_specialist_per_family":8}); canonical=got[got.role_reason_codes.map(lambda x:"canonical_parent" in x)].iloc[0]; cross=got[got.role_reason_codes.map(lambda x:"cross_resolution" in x)].iloc[0]
     assert canonical.pair_id=="consistent" and cross.pair_id=="consistent"
+
+def test_cross_resolution_requires_exact_r3_r5_r10_set():
+    rows=[]
+    for resolution in (2,3,5):
+        row=surface(resolution=resolution); row.update(family="A",selected_state_bps=10.); row["state_key"]=state_key(row); rows.append(row)
+    got=build_pre_specialist_contenders(candidate_rows=pd.DataFrame(rows),explicit_rows=pd.DataFrame(),settings={"pre_specialist_per_family":8})
+    assert not got.role_reason_codes.map(lambda codes:"cross_resolution" in codes).any()
 
 def test_explicit_resolution_comparison_fetches_all_canonical_scanner_rows(tmp_path):
     canonical=pd.DataFrame([surface(resolution=r,cell=0) for r in (3,5,10)]); path=tmp_path/"canonical.parquet"; canonical.to_parquet(path,index=False); frozen=surface(resolution=5,cell=2); frozen["cell_mode"]="explicit"; candidates=pd.DataFrame([frozen])

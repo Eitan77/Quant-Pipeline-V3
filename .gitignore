@@ -15,6 +15,7 @@ __pycache__/
 !/scratch/.gitkeep
 /logs/*
 !/logs/.gitkeep
+/v3_github_release/
 *.log
 *.duckdb
 *.duckdb.wal

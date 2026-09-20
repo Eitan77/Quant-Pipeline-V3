@@ -43,8 +43,10 @@ class V3ProductionRunner:
             return con.execute("""SELECT * FROM read_parquet(?) WHERE selected_n>=? AND (abs(selected_state_bps)>=? OR abs(selected_interaction_lift_bps)>=?) QUALIFY row_number() OVER(PARTITION BY target_id,v3_resolution ORDER BY greatest(abs(selected_state_bps),abs(selected_interaction_lift_bps)) DESC)<=?""",[str(path),minimum_n,edge,edge,top]).fetchdf()
     @staticmethod
     def _explicit_rule_universe(variants:pd.DataFrame)->pd.DataFrame:
-        if variants.empty or "request_id" not in variants:return variants.head(0).copy()
-        return variants[variants.request_id.notna()].copy()
+        if variants.empty:return variants.head(0).copy()
+        if "explicit_request" in variants:return variants[variants.explicit_request.fillna(False).astype(bool)].copy()
+        if "request_id" in variants:return variants[variants.request_id.notna()].copy()
+        return variants.head(0).copy()
     def _automatic_materialization_states(self,rows:pd.DataFrame)->pd.DataFrame:
         policy=self.research.get("forensics",{}).get("candidate_policy",{}); return materialization_pool(rows,min_active_n=int(policy.get("min_active_n",250)),min_abs_edge_bps=float(policy.get("min_abs_edge_bps",1.0)),top_k=int(policy.get("keep_top_k_per_target_resolution",250)))
     def _coverage(self,ledger:Path):
