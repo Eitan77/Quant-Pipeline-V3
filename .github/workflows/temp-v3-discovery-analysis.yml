@@ -1,0 +1,40 @@
+name: Temporary V3 Discovery Analysis
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  analyze:
+    runs-on: ubuntu-latest
+    timeout-minutes: 360
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install analysis dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install "duckdb>=1.1,<2" "pandas>=2.2,<3" "pyarrow>=17,<22" "numpy>=2,<3"
+
+      - name: Analyze existing v3-discovery release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          python .github/scripts/v3_release_analyze.py
+
+      - name: Upload compact analysis artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: v3-discovery-analysis
+          path: _v3_analysis/
+          if-no-files-found: error
+          retention-days: 7
+          compression-level: 6
