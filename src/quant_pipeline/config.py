@@ -15,6 +15,29 @@ def load_research_config(path: Path) -> dict:
     if c.get("allow_replication_access") or c.get("allow_final_holdout_access"): raise ConfigurationError("Normal discovery config may not authorize sealed access")
     if c.get("resolutions") != [3,5,10]: raise ConfigurationError("V3 requires independent r3/r5/r10")
     if c.get("discovery",{}).get("single_parent_gate",True): raise ConfigurationError("Singles may not gate canonical duals")
+    zoom=c.get("zoom",{}); selection_mode=zoom.get("selection_mode","automatic")
+    if selection_mode not in {"automatic","explicit","explicit_plus_rules"}: raise ConfigurationError("zoom.selection_mode must be automatic, explicit, or explicit_plus_rules")
+    expansion=c.get("variant_expansion",{}); variant_mode=expansion.get("mode","automatic")
+    if variant_mode not in {"automatic","explicit","automatic_plus_explicit"}: raise ConfigurationError("variant_expansion.mode must be automatic, explicit, or automatic_plus_explicit")
+    explicit_variants=expansion.get("explicit_requests",[])
+    if not isinstance(explicit_variants,list): raise ConfigurationError("variant_expansion.explicit_requests must be a list")
+    for index,item in enumerate(explicit_variants):
+        required={"source_feature_a","source_feature_b","feature_a","feature_b","target_id","family","role"}
+        if not isinstance(item,dict) or required-set(item): raise ConfigurationError(f"Explicit variant request {index} is missing required fields")
+    forensics=c.get("forensics",{}); explicit_candidates=forensics.get("explicit_candidates",[])
+    if not isinstance(explicit_candidates,list): raise ConfigurationError("forensics.explicit_candidates must be a list")
+    for index,item in enumerate(explicit_candidates):
+        required={"feature_a","feature_b","target_id","resolution","cell_mode","direction_mode","family","role"}
+        if not isinstance(item,dict) or required-set(item): raise ConfigurationError(f"Explicit candidate {index} is missing required fields")
+        if item["resolution"] not in {3,5,10}: raise ConfigurationError(f"Explicit candidate {index} has invalid resolution")
+        if item["cell_mode"] not in {"scanner_selected","explicit"}: raise ConfigurationError(f"Explicit candidate {index} has invalid cell_mode")
+        if item["direction_mode"] not in {"auto","descriptive"}: raise ConfigurationError(f"Explicit candidate {index} has invalid direction_mode")
+        if item["cell_mode"]=="explicit" and item.get("cell_index") is None: raise ConfigurationError(f"Explicit candidate {index} requires cell_index")
+        if item["cell_mode"]=="explicit" and (not isinstance(item["cell_index"],int) or isinstance(item["cell_index"],bool) or not 0<=item["cell_index"]<item["resolution"]**2): raise ConfigurationError(f"Explicit candidate {index} has invalid cell_index")
+    dossier=forensics.get("dossier_selection",{})
+    if "enabled" in dossier and not isinstance(dossier["enabled"],bool): raise ConfigurationError("forensics.dossier_selection.enabled must be boolean")
+    for key in ("max_dynamic_dossiers","pre_specialist_per_family"):
+        if key in dossier and (not isinstance(dossier[key],int) or dossier[key]<0): raise ConfigurationError(f"forensics.dossier_selection.{key} must be a nonnegative integer")
     return c
 
 def load_machine_config(path: Path) -> dict:
@@ -25,4 +48,3 @@ def load_machine_config(path: Path) -> dict:
     owned=[Path(c[k]).resolve() for k in ("cache_root","run_root","scratch_root")]
     if any(x==source or source in x.parents for x in owned): raise ConfigurationError("Generated V3 paths may not be inside data_root")
     return c
-

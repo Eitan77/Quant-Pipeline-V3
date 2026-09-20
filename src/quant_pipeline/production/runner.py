@@ -10,11 +10,13 @@ from quant_pipeline.production.cell_specialist import build_cell_specialist_summ
 from quant_pipeline.production.cell_temporal import build_cell_temporal_summary
 from quant_pipeline.production.dossiers import build_candidate_dossiers
 from quant_pipeline.production.legacy_core import LegacyCoreAdapter
-from quant_pipeline.production.materialization import materialize_candidates
+from quant_pipeline.production.materialization import materialization_pool,materialize_candidates
 from quant_pipeline.production.resolution_diagnostics import build_resolution_diagnostics
 from quant_pipeline.production.specialist_stage import run_production_specialist_probe
 from quant_pipeline.production.trials import build_production_trial_ledger
 from quant_pipeline.production.variant_scan import execute_variant_expansion
+from quant_pipeline.production.zoom_requests import resolve_explicit_candidate_requests,resolve_explicit_variant_requests,state_key
+from quant_pipeline.production.zoom_selection import build_pre_specialist_contenders,finalize_dossier_selection
 
 class V3ProductionRunner:
     def __init__(self,*,research:dict,machine:dict,repo_root:Path,telemetry):
@@ -71,8 +73,13 @@ class V3ProductionRunner:
         self._write_json(root/"EVIDENCE_COMPLETE.json",{"status":"complete","completed_at_utc":datetime.now(timezone.utc).isoformat(),"source_manifest_hash":source_hash,"replication_accessed":False,"final_holdout_accessed":False,"zoom_enabled":bool(self.research.get("zoom",{}).get("enabled",False))})
         zoom={"enabled":False,"variants":0,"candidates":0,"dossiers":0}
         if self.research.get("zoom",{}).get("enabled",False):
-            duals=self._zoom_pool(resolution_path); selected_specialist=root/"specialist_summary.parquet"; run_production_specialist_probe(legacy_run=legacy_run,duals=duals,research=self.research); specialist=pd.read_parquet(selected_specialist)
-            variants,variant_trials,variant_metrics=execute_variant_expansion(legacy_run=legacy_run,duals=duals,research=self.research); materialization_input=pd.concat([duals,variants],ignore_index=True,sort=False) if len(variants) else duals
-            candidates,candidate_summary=materialize_candidates(legacy_run=legacy_run,duals=materialization_input,specialist=specialist,research=self.research,source_manifest_hash=source_hash); dossiers=build_candidate_dossiers(legacy_run=legacy_run,candidates=candidates,candidate_summary=candidate_summary,duals=materialization_input,specialist=specialist)
+            all_duals=pd.read_parquet(resolution_path); duals=self._zoom_pool(resolution_path); selected_specialist=root/"specialist_summary.parquet"; variant_mode=self.research.get("variant_expansion",{}).get("mode","automatic"); resolved_variants=resolve_explicit_variant_requests(legacy_run=legacy_run,canonical_duals=all_duals,research=self.research) if variant_mode in {"explicit","automatic_plus_explicit"} else None
+            variants,variant_trials,variant_metrics=execute_variant_expansion(legacy_run=legacy_run,duals=duals,research=self.research,canonical_duals=all_duals,resolved_requests=resolved_variants); materialization_input=pd.concat([duals,variants],ignore_index=True,sort=False) if len(variants) else duals.copy(); materialization_input["state_key"]=[state_key(x) for x in materialization_input.to_dict("records")]; materialization_input=materialization_input.drop_duplicates("state_key",keep="last"); selection_mode=self.research.get("zoom",{}).get("selection_mode","automatic")
+            if selection_mode=="automatic":
+                run_production_specialist_probe(legacy_run=legacy_run,duals=duals,research=self.research); specialist=pd.read_parquet(selected_specialist); exact_rows=None
+            else:
+                explicit=resolve_explicit_candidate_requests(legacy_run=legacy_run,canonical_duals=all_duals,variant_duals=variants,research=self.research); policy=self.research.get("forensics",{}).get("candidate_policy",{}); automatic=materialization_pool(materialization_input,min_active_n=int(policy.get("min_active_n",250)),min_abs_edge_bps=float(policy.get("min_abs_edge_bps",1.0)),top_k=int(policy.get("keep_top_k_per_target_resolution",250))) if selection_mode=="explicit_plus_rules" else materialization_input.head(0); settings=self.research.get("forensics",{}).get("dossier_selection",{}); context=root/"context_expansion"
+                contenders=build_pre_specialist_contenders(candidate_rows=automatic,explicit_rows=explicit,settings=settings,output_dir=context); run_production_specialist_probe(legacy_run=legacy_run,duals=contenders,research=self.research); specialist=pd.read_parquet(selected_specialist); exact_rows=finalize_dossier_selection(contenders=contenders,specialist=specialist,settings=settings,output_dir=context)
+            candidates,candidate_summary=materialize_candidates(legacy_run=legacy_run,duals=materialization_input,specialist=specialist,research=self.research,source_manifest_hash=source_hash,candidate_rows=exact_rows); dossiers=build_candidate_dossiers(legacy_run=legacy_run,candidates=candidates,candidate_summary=candidate_summary,duals=materialization_input,specialist=specialist)
             build_production_trial_ledger(legacy_run=legacy_run,dual_path=resolution_path,core_results=core_results,variant_trials=variant_trials,specialist_count=specialist_count,temporal_count=temporal_count,candidate_count=len(dossiers)); coverage=self._coverage(ledger); build_v3_analysis_bundle(run_root=root,research=self.research,source_manifest_hash=source_hash,trial_coverage=coverage); zoom={"enabled":True,"variants":variant_metrics.get("planned",0),"candidates":len(candidates),"dossiers":len(dossiers)}; self._mark(root,"zoom",source_hash,zoom)
         return {"core_results":core_results,"resolution_diagnostics":str(resolution_path),"cell_specialist":str(specialist_path),"cell_temporal":str(temporal_path),"trial_ledger":str(ledger),"analysis_bundle":str(bundle),"evidence_complete":True,"zoom":zoom}

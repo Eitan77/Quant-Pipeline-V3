@@ -6,6 +6,7 @@ from quant_pipeline.alpha_discovery.scan.dual_coarse import DualTileScanner
 from quant_pipeline.alpha_discovery.scan.dual_pairs import pair_id
 from quant_pipeline.hashing import content_hash
 from quant_pipeline.production.materialization import materialization_pool
+from quant_pipeline.production.zoom_requests import resolve_explicit_variant_requests
 
 def _scan_one(legacy_run,left,right,target_id,resolutions):
     feature_map={x.feature_id:x for x in legacy_run.compile_registry().features}; grid=feature_map[left].decision_grid
@@ -17,25 +18,34 @@ def _scan_one(legacy_run,left,right,target_id,resolutions):
         row=frame.iloc[0].to_dict(); row|={"pair_id":pair_id(left,right),"feature_a":left,"feature_b":right,"target_id":target_id,"resolution":int(resolution),"v3_resolution":int(resolution)}; out.append(row)
     return out
 
-def execute_variant_expansion(*,legacy_run,duals:pd.DataFrame,research:dict):
+def execute_variant_expansion(*,legacy_run,duals:pd.DataFrame,research:dict,canonical_duals:pd.DataFrame|None=None,resolved_requests:pd.DataFrame|None=None):
     policy=research.get("forensics",{}).get("candidate_policy",{}); parents=materialization_pool(duals,min_active_n=int(policy.get("min_active_n",250)),min_abs_edge_bps=float(policy.get("min_abs_edge_bps",1.0)),top_k=int(policy.get("keep_top_k_per_target_resolution",250)))
-    settings=research.get("variant_expansion",{}); parent_limit=settings.get("parent_limit"); neighbors=int(settings.get("neighbors_per_side",3)); audit_count=int(settings.get("rejected_audit_count",2)); bundle=legacy_run.compile_registry(); fmap={x.feature_id:x for x in bundle.features}
+    settings=research.get("variant_expansion",{}); mode=settings.get("mode","automatic"); parent_limit=settings.get("parent_limit"); neighbors=int(settings.get("neighbors_per_side",3)); audit_count=int(settings.get("rejected_audit_count",2)); bundle=legacy_run.compile_registry(); fmap={x.feature_id:x for x in bundle.features}; canonical_duals=duals if canonical_duals is None else canonical_duals
     normal=parents.sort_values("materialization_score",ascending=False).drop_duplicates(["pair_id","target_id"])
     if parent_limit is not None and int(parent_limit)>0: normal=normal.head(int(parent_limit))
     selected_pairs=set(normal.pair_id); unique_rejected=duals[~duals.pair_id.isin(selected_pairs)].drop_duplicates("pair_id").copy(); unique_rejected["audit_key"]=[content_hash({"pair_id":p,"run":legacy_run.root.name,"audit_version":1}) for p in unique_rejected.pair_id]; audited_pairs=set(unique_rejected.sort_values("audit_key").head(audit_count).pair_id)
     audited=duals[duals.pair_id.isin(audited_pairs)].drop_duplicates(["pair_id","target_id"]); parent_rows=pd.concat([normal.assign(audited_pair=False),audited.assign(audited_pair=True)],ignore_index=True,sort=False); requests=[]
-    for parent in parent_rows.to_dict("records"):
-        pa,pb=fmap[parent["feature_a"]],fmap[parent["feature_b"]]; left=sorted((x for x in bundle.features if x.concept_id==pa.concept_id and x.decision_grid==pa.decision_grid),key=lambda x:(x.feature_id!=pa.feature_id,abs(x.minimum_history-pa.minimum_history),x.feature_id))[:neighbors+1]; right=sorted((x for x in bundle.features if x.concept_id==pb.concept_id and x.decision_grid==pb.decision_grid),key=lambda x:(x.feature_id!=pb.feature_id,abs(x.minimum_history-pb.minimum_history),x.feature_id))[:neighbors+1]
-        for a in left:
-            for b in right:
-                if a.feature_id==pa.feature_id and b.feature_id==pb.feature_id:continue
-                x,y=sorted((a.feature_id,b.feature_id)); requests.append({"source_pair_id":parent["pair_id"],"source_feature_a":pa.feature_id,"source_feature_b":pb.feature_id,"feature_a":x,"feature_b":y,"target_id":parent["target_id"],"selection_role":"rejected_pair_audit" if bool(parent.get("audited_pair",False)) else "requires_new_chronological_confirmation"})
-    planned=pd.DataFrame(requests).drop_duplicates(["feature_a","feature_b","target_id"]) if requests else pd.DataFrame(columns=["source_pair_id","source_feature_a","source_feature_b","feature_a","feature_b","target_id","selection_role"])
+    if mode in {"automatic","automatic_plus_explicit"}:
+        for parent in parent_rows.to_dict("records"):
+            pa,pb=fmap[parent["feature_a"]],fmap[parent["feature_b"]]; left=sorted((x for x in bundle.features if x.concept_id==pa.concept_id and x.decision_grid==pa.decision_grid),key=lambda x:(x.feature_id!=pa.feature_id,abs(x.minimum_history-pa.minimum_history),x.feature_id))[:neighbors+1]; right=sorted((x for x in bundle.features if x.concept_id==pb.concept_id and x.decision_grid==pb.decision_grid),key=lambda x:(x.feature_id!=pb.feature_id,abs(x.minimum_history-pb.minimum_history),x.feature_id))[:neighbors+1]
+            for a in left:
+                for b in right:
+                    if a.feature_id==pa.feature_id and b.feature_id==pb.feature_id:continue
+                    x,y=sorted((a.feature_id,b.feature_id)); requests.append({"source_pair_id":parent["pair_id"],"source_feature_a":pa.feature_id,"source_feature_b":pb.feature_id,"feature_a":x,"feature_b":y,"target_id":parent["target_id"],"selection_role":"rejected_pair_audit" if bool(parent.get("audited_pair",False)) else "requires_new_chronological_confirmation","family":"automatic_variant","role":"rejected_pair_audit" if bool(parent.get("audited_pair",False)) else "variant_confirmation","explicit_request":False,"canonical_existing":False})
+    planned=pd.DataFrame(requests).drop_duplicates(["feature_a","feature_b","target_id"]) if requests else pd.DataFrame(columns=["source_pair_id","source_feature_a","source_feature_b","feature_a","feature_b","target_id","selection_role","family","role","explicit_request","canonical_existing"])
+    if mode in {"explicit","automatic_plus_explicit"}:
+        explicit=resolved_requests if resolved_requests is not None else resolve_explicit_variant_requests(legacy_run=legacy_run,canonical_duals=canonical_duals,research=research)
+        if len(explicit):
+            explicit=explicit.copy(); explicit["selection_role"]=explicit.role; explicit["explicit_request"]=True
+            planned=pd.concat([planned,explicit],ignore_index=True,sort=False).sort_values("explicit_request",ascending=False,kind="stable").drop_duplicates(["feature_a","feature_b","target_id"],keep="first")
     registry_path=legacy_run.root/"context_expansion"/"variant_dual_registry.parquet"; registry_path.parent.mkdir(parents=True,exist_ok=True); planned.to_parquet(registry_path,index=False)
     root=legacy_run.root/"variant_results"; root.mkdir(exist_ok=True); rows=[]; trials=[]
     for item in planned.to_dict("records"):
+        request_id=item.get("request_id"); request_id=None if request_id is None or pd.isna(request_id) else request_id
         base=f"{pair_id(item['feature_a'],item['feature_b'])}::{item['target_id']}"; expected=[root/f"r{r}"/(content_hash({"trial":base,"resolution":r})[:20]+".parquet") for r in research["resolutions"]]
-        if all(x.exists() for x in expected):
+        if bool(item.get("canonical_existing",False)):
+            scanned=canonical_duals[(canonical_duals.target_id==item["target_id"])&(((canonical_duals.feature_a==item["feature_a"])&(canonical_duals.feature_b==item["feature_b"]))|((canonical_duals.feature_a==item["feature_b"])&(canonical_duals.feature_b==item["feature_a"])))&canonical_duals.v3_resolution.isin(research["resolutions"])].copy(); status="reused"
+        elif all(x.exists() for x in expected):
             scanned=pd.concat([pd.read_parquet(x) for x in expected],ignore_index=True); status="reused"
         else:
             try:
@@ -44,8 +54,8 @@ def execute_variant_expansion(*,legacy_run,duals:pd.DataFrame,research:dict):
             except (KeyError,FileNotFoundError): scanned=pd.DataFrame(); status="unavailable"
             except Exception as error: scanned=pd.DataFrame(); status="failed"; item["error"]=f"{type(error).__name__}: {error}"
         if len(scanned):
-            scanned["source_pair_id"]=item["source_pair_id"]; scanned["source_feature_a"]=item["source_feature_a"]; scanned["source_feature_b"]=item["source_feature_b"]; scanned["selection_role"]=item["selection_role"]; rows.extend(scanned.to_dict("records"))
-        for resolution in research["resolutions"]: trials.append({"trial_id":f"variant::{base}::r{resolution}","trial_family_id":"variant_expansion","trial_type":"variant_dual","feature_a_id":item["feature_a"],"feature_b_id":item["feature_b"],"target_id":item["target_id"],"resolution":resolution,"status":status,"reason":item.get("error"),"work_units":1})
+            scanned["source_pair_id"]=item["source_pair_id"]; scanned["source_feature_a"]=item["source_feature_a"]; scanned["source_feature_b"]=item["source_feature_b"]; scanned["selection_role"]=item["selection_role"]; scanned["request_id"]=request_id; scanned["family"]=item.get("family"); scanned["role"]=item.get("role"); scanned["execution_status"]=status; scanned["canonical_reuse"]=bool(item.get("canonical_existing",False)); rows.extend(scanned.to_dict("records"))
+        for resolution in research["resolutions"]: trials.append({"trial_id":f"variant::{request_id or base}::r{resolution}","trial_family_id":"variant_expansion","trial_type":"explicit_variant_dual" if item.get("explicit_request",False) else "variant_dual","feature_a_id":item["feature_a"],"feature_b_id":item["feature_b"],"target_id":item["target_id"],"resolution":resolution,"status":status,"reason":item.get("error"),"work_units":1,"request_id":request_id,"family":item.get("family"),"role":item.get("role")})
     summary=pd.DataFrame(rows) if rows else pd.DataFrame(columns=["pair_id","feature_a","feature_b","target_id","resolution","v3_resolution","selected_n","selected_frequency","selected_state_return","selected_state_bps","selected_interaction_lift_bps","weighted_state_contribution_bps","weighted_interaction_contribution_bps","selected_direction","selection_role"]); trial_frame=pd.DataFrame(trials) if trials else pd.DataFrame(columns=["trial_id","trial_family_id","trial_type","feature_a_id","feature_b_id","target_id","resolution","status","reason","work_units"]); summary.to_parquet(legacy_run.root/"variant_summary.parquet",index=False); trial_frame.to_parquet(legacy_run.root/"variant_trial_ledger.parquet",index=False)
     threshold=float(policy.get("min_abs_edge_bps",1.0)); meaningful_mask=((summary.selected_state_bps.abs()>=threshold)|(summary.selected_interaction_lift_bps.abs()>=threshold)) if len(summary) else pd.Series(dtype=bool)
     audited_reject_count=len(audited_pairs); meaningful_pairs=set(summary.loc[(summary.selection_role=="rejected_pair_audit")&meaningful_mask,"source_pair_id"]) if len(summary) else set(); meaningful=len(meaningful_pairs); miss_rate=meaningful/audited_reject_count if audited_reject_count else 0.0

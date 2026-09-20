@@ -1545,7 +1545,17 @@ When operating the project end-to-end, use this order:
 
 ---
 
-# 35. The core rule
+# 35. Explicit zoom requests
+
+A zoom config may request exact neighboring variants in `variant_expansion.explicit_requests` and exact canonical or variant states in `forensics.explicit_candidates`. Use `zoom.selection_mode: explicit` for only guaranteed requests or `explicit_plus_rules` to union them with the deterministic, bounded dossier selector. Existing automatic behavior remains the default.
+
+An explicit cell must use the authoritative stored `feature_a` / `feature_b` surface orientation; reversing those fields is rejected because the same numeric cell would mean a different state. `cell_mode: scanner_selected` retains the scanner cell, while `cell_mode: explicit` freezes `cell_index`. Use `direction_mode: auto` for normal directional semantics or `descriptive` for a zero-direction evidence dossier whose raw evidence is preserved and whose direction-aligned fields are unavailable.
+
+Specialist evidence is keyed by the exact feature pair, target, resolution, and selected cell (`state_key`). Guaranteed explicit states are probed even below the automatic selected-N screen. Dynamic dossiers are selected in deterministic pre/post-specialist passes and remain bounded; guaranteed explicit dossiers are outside that cap. `symbol_active_breakdown.parquet` reports every active frozen-cell observation by security, while `symbol_breakdown.parquet` remains the independent-opportunity view.
+
+---
+
+# 36. The core rule
 
 **Use V3 to generate auditable evidence, use GPT/Codex to ask focused questions of that evidence, and never let a convenient follow-up silently rewrite the experiment that produced it.**
 
