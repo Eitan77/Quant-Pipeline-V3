@@ -1,6 +1,10 @@
 name: Temporary V3 Discovery Analysis
 
 on:
+  push:
+    branches: [master]
+    paths:
+      - ".github/workflows/temp-v3-discovery-analysis.yml"
   workflow_dispatch:
 
 permissions:
