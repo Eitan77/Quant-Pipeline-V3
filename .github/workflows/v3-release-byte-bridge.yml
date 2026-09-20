@@ -38,15 +38,43 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          mkdir -p payload
+          mkdir -p payload chunks
           gh release download v3-discovery --repo "${{ github.repository }}" --dir payload --pattern "${{ matrix.asset }}"
+          split -b 400M -d -a 2 "payload/${{ matrix.asset }}" "chunks/${{ matrix.key }}.part-"
 
-      - name: Upload exact bytes as Actions artifact
+      - name: Upload exact byte chunk 00
+        if: ${{ hashFiles(format('chunks/{0}.part-00', matrix.key)) != '' }}
         uses: actions/upload-artifact@v4
         with:
-          name: v3-${{ matrix.key }}
-          path: payload/${{ matrix.asset }}
-          if-no-files-found: error
+          name: v3-${{ matrix.key }}-part-00
+          path: chunks/${{ matrix.key }}.part-00
+          compression-level: 0
+          retention-days: 7
+
+      - name: Upload exact byte chunk 01
+        if: ${{ hashFiles(format('chunks/{0}.part-01', matrix.key)) != '' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: v3-${{ matrix.key }}-part-01
+          path: chunks/${{ matrix.key }}.part-01
+          compression-level: 0
+          retention-days: 7
+
+      - name: Upload exact byte chunk 02
+        if: ${{ hashFiles(format('chunks/{0}.part-02', matrix.key)) != '' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: v3-${{ matrix.key }}-part-02
+          path: chunks/${{ matrix.key }}.part-02
+          compression-level: 0
+          retention-days: 7
+
+      - name: Upload exact byte chunk 03
+        if: ${{ hashFiles(format('chunks/{0}.part-03', matrix.key)) != '' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: v3-${{ matrix.key }}-part-03
+          path: chunks/${{ matrix.key }}.part-03
           compression-level: 0
           retention-days: 7
 
@@ -88,7 +116,7 @@ jobs:
             gh release download v3-discovery --repo "${{ github.repository }}" --dir payload --pattern "$f"
           done
 
-      - name: Upload exact bytes as Actions artifact
+      - name: Upload remaining exact bytes
         uses: actions/upload-artifact@v4
         with:
           name: v3-small-assets
