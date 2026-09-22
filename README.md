@@ -1,5 +1,7 @@
 # Quant Pipeline V3
 
+**Comprehensive research handoff status:** the new local subgroup evidence path is implemented for bounded fixtures, but the configured full discovery request is blocked at storage preflight. See [implementation status](docs/RESEARCH_IMPLEMENTATION_STATUS.md). Existing `v3_discovery` artifacts retain their legacy coverage meaning.
+
 > A single-machine, GPU-accelerated quantitative research engine for searching large spaces of equity features, interactions, tails, and specialist effects without throwing away useful evidence too early.
 
 Quant Pipeline V3 is the third version of a research pipeline I built to answer a deceptively hard question:

@@ -4,6 +4,7 @@ from hashlib import sha256
 import json,os
 from pathlib import Path
 import duckdb,pandas as pd
+from quant_pipeline.alpha_discovery.registry import compile_registry
 from quant_pipeline.data.source_manifest import build_production_source_manifest
 from quant_pipeline.production.bundle import build_v3_analysis_bundle
 from quant_pipeline.production.cell_specialist import build_cell_specialist_summary
@@ -17,22 +18,38 @@ from quant_pipeline.production.trials import build_production_trial_ledger
 from quant_pipeline.production.variant_scan import execute_variant_expansion
 from quant_pipeline.production.zoom_requests import load_resolution_comparison_rows,resolve_explicit_candidate_requests,resolve_explicit_variant_requests,state_key
 from quant_pipeline.production.zoom_selection import build_pre_specialist_contenders,finalize_dossier_selection
+from quant_pipeline.production.evidence_identity import stage_identity,digest
+from quant_pipeline.production.evidence_store import publish_evidence
+from quant_pipeline.production.coverage import preflight_comprehensive,plan_storage,plan_coverage,execute_coverage
+from quant_pipeline.production.research_specs import resolve_research_scope
+
+STAGE_CODE={
+    "resolution_diagnostics":("resolution_diagnostics.py","surface_math.py","outputs.py"),
+    "cell_specialist":("cell_specialist.py","outputs.py"),
+    "cell_temporal":("cell_temporal.py","state_helpers.py","outputs.py"),
+    "trial_ledger":("trials.py",),
+    "analysis_bundle":("bundle.py",),
+    "zoom":("variant_scan.py","variant_batches.py","zoom_requests.py","zoom_selection.py","materialization.py","dossiers.py"),
+}
 
 class V3ProductionRunner:
     def __init__(self,*,research:dict,machine:dict,repo_root:Path,telemetry):
-        self.research=research; self.machine=machine; self.repo_root=Path(repo_root); self.telemetry=telemetry; digest=sha256(); package=self.repo_root/"src/quant_pipeline"
-        paths=list((package/"production").glob("*.py"))+list((package/"forensics").glob("*.py"))+list((package/"candidates").glob("*.py"))+[path for path in (package/"alpha_discovery/targets/excursions.py",package/"data/source_manifest.py") if path.exists()]
-        for path in sorted(paths,key=lambda x:x.relative_to(package).as_posix()): digest.update(path.relative_to(package).as_posix().encode()); digest.update(path.read_bytes())
-        self.implementation_hash=digest.hexdigest()
+        self.research=research; self.machine=machine; self.repo_root=Path(repo_root); self.telemetry=telemetry
     @staticmethod
     def _write_json(path:Path,payload):
         path.parent.mkdir(parents=True,exist_ok=True); temporary=path.with_suffix(".partial"); temporary.write_text(json.dumps(payload,indent=2,sort_keys=True,default=str),encoding="utf-8"); os.replace(temporary,path)
-    def _reusable(self,root:Path,name:str,outputs:list[Path],source_hash:str):
+    def _stage_id(self,name,source_hash,upstream,semantics,observation_id):
+        root=self.repo_root/"src/quant_pipeline/production"
+        implementation={path:sha256((root/path).read_bytes()).hexdigest() for path in STAGE_CODE[name]}
+        return stage_identity(stage=name,sources=source_hash,observation_id=observation_id,
+                              upstream=upstream,definitions=semantics,semantics=semantics,
+                              implementation=implementation,schema=2,numeric={"return_unit":"decimal","bins":[3,5,10]})
+    def _reusable(self,root:Path,name:str,outputs:list[Path],source_hash:str,*,stage_id:str):
         marker=root/"v3_checkpoints"/f"{name}.json"
         if not marker.exists() or not all(path.exists() for path in outputs): return False
-        payload=json.loads(marker.read_text()); return payload.get("status")=="complete" and payload.get("source_manifest_hash")==source_hash and payload.get("implementation_hash")==self.implementation_hash
-    def _mark(self,root:Path,name:str,source_hash:str,metrics:dict):
-        self._write_json(root/"v3_checkpoints"/f"{name}.json",{"stage":name,"status":"complete","completed_at_utc":datetime.now(timezone.utc).isoformat(),"source_manifest_hash":source_hash,"implementation_hash":self.implementation_hash,"metrics":metrics})
+        payload=json.loads(marker.read_text()); return payload.get("schema_version")==2 and payload.get("status")=="complete" and payload.get("source_manifest_hash")==source_hash and payload.get("stage_id")==stage_id
+    def _mark(self,root:Path,name:str,source_hash:str,metrics:dict,*,stage_id:str):
+        self._write_json(root/"v3_checkpoints"/f"{name}.json",{"schema_version":2,"stage":name,"stage_id":stage_id,"status":"complete","completed_at_utc":datetime.now(timezone.utc).isoformat(),"source_manifest_hash":source_hash,"metrics":metrics})
         if self.telemetry:self.telemetry.event("v3_stage_complete",stage=f"v3:{name}",metrics=metrics)
     @staticmethod
     def _row_count(path:Path)->int:
@@ -67,18 +84,74 @@ class V3ProductionRunner:
             raise RuntimeError(f"Evidence count mismatch: expected {expected_surfaces}, dual={dual_count}, specialist={specialist_count}, temporal={temporal_count}")
     def run(self):
         if self.research["periods"]["discovery"]["end"]>="2026-05-01": raise PermissionError("Discovery mode cannot request sealed replication rows")
+        if self.research.get("evidence",{}).get("profile","legacy")=="comprehensive":
+            preflight_adapter=LegacyCoreAdapter(self.research,self.machine,self.repo_root,"preflight",self.telemetry)
+            preflight_run=preflight_adapter.build_run()
+            preflight_scope=getattr(preflight_adapter,"resolved_scope",None) or resolve_research_scope(self.research,
+                compile_registry(preflight_run.config),preflight_run.config)
+            preflight=preflight_comprehensive(self.repo_root,self.machine,preflight_scope,self.research)
+            preflight_root=Path(self.machine["run_root"])/self.research["run_name"]
+            self._write_json(preflight_root/"evidence"/"preflight_storage.json",preflight)
+            self._write_json(preflight_root/"resolved_research_scope.json",preflight_scope)
+            if preflight["status"]=="blocked_storage":
+                coverage={"core_complete":False,"mandatory_coverage_complete":False,
+                          "materialization_complete_for_policy":False,"status":"blocked_storage",
+                          "reason":"Mandatory subgroup materialization exceeds the safe disk budget; streaming reducer and eviction are not integrated"}
+                self._write_json(preflight_root/"evidence"/"coverage_status.json",coverage)
+                return {"evidence_complete":False,"mandatory_coverage_complete":False,"coverage":coverage,
+                        "storage_preflight":preflight}
         source_manifest=build_production_source_manifest(data_root=Path(self.machine["data_root"]),repo_root=self.repo_root); source_hash=source_manifest["source_manifest_hash"]; adapter=LegacyCoreAdapter(self.research,self.machine,self.repo_root,source_hash,self.telemetry); legacy_run,core_results=adapter.execute(); root=legacy_run.root; self._write_json(root/"source_manifest.json",source_manifest)
+        observation_id=digest({"source":source_hash,"scope":getattr(adapter,"resolved_scope",None),"core_config":legacy_run.config.definition_hash})
+        core_checkpoint=root/"checkpoints"/"scan-duals-coarse.json"
+        core_id=json.loads(core_checkpoint.read_text(encoding="utf-8")).get("shared_cache_key",legacy_run.config.definition_hash)
+        mandatory={"core_complete":True,"mandatory_coverage_complete":False,"materialization_complete_for_policy":False}
+        if self.research.get("evidence",{}).get("profile","legacy")=="comprehensive":
+            scope=resolve_research_scope(self.research,legacy_run.compile_registry(),legacy_run.config)
+            if hasattr(adapter,"resolved_scope"):
+                scope=adapter.resolved_scope
+            self._write_json(root/"resolved_research_scope.json",scope)
+            core_inputs={stage:json.loads((root/"checkpoints"/f"{stage}.json").read_text(encoding="utf-8")).get("shared_cache_key")
+                         for stage in ("build-panel","build-features","build-targets","scan-singles","scan-duals-coarse")}
+            try:
+                reader_path=publish_evidence(legacy_run,scope,core_inputs,self.research)
+            except ValueError as error:
+                if "Unverified packed-bin observation lineage" not in str(error): raise
+                mandatory.update(status="blocked_lineage",error=str(error))
+                self._write_json(root/"evidence"/"coverage_status.json",mandatory)
+            else:
+                reader_manifest=json.loads(reader_path.read_text(encoding="utf-8"))
+                storage=plan_storage(reader_manifest,root,self.machine,self.research["resolutions"])
+                self._write_json(root/"evidence"/"storage_plan.json",storage)
+                if storage["status"]=="admitted":
+                    max_state_bytes=512*(1<<20)
+                    plan=plan_coverage(root,reader_manifest,self.research["resolutions"],max_state_bytes=max_state_bytes)
+                    device=self.machine.get("gpu_device","cuda:0")
+                    try:
+                        import torch
+                        if not torch.cuda.is_available(): device="cpu"
+                    except ImportError: device="cpu"
+                    mandatory=execute_coverage(root,reader_manifest,plan,device=device,
+                                              row_chunk=int(self.research.get("cell_evidence",{}).get("observation_chunk",250000)),
+                                              max_state_bytes=max_state_bytes)
+                else:
+                    mandatory.update(status="blocked_storage",storage_plan=storage)
+                    self._write_json(root/"evidence"/"coverage_status.json",mandatory)
         resolution_path=root/"v3_diagnostics/dual_resolution_summary.parquet"
-        if not self._reusable(root,"resolution_diagnostics",[resolution_path],source_hash): build_resolution_diagnostics(run_root=root,research=self.research); self._mark(root,"resolution_diagnostics",source_hash,{"resolutions":self.research["resolutions"]})
+        resolution_id=self._stage_id("resolution_diagnostics",source_hash,{"core":core_id},{"resolutions":self.research["resolutions"]},observation_id)
+        if not self._reusable(root,"resolution_diagnostics",[resolution_path],source_hash,stage_id=resolution_id): build_resolution_diagnostics(run_root=root,research=self.research); self._mark(root,"resolution_diagnostics",source_hash,{"resolutions":self.research["resolutions"]},stage_id=resolution_id)
         specialist_path=root/"cell_specialist_summary.parquet"
-        if not self._reusable(root,"cell_specialist",[specialist_path],source_hash): build_cell_specialist_summary(legacy_run=legacy_run,dual_path=resolution_path,research=self.research); self._mark(root,"cell_specialist",source_hash,{"surfaces":self._row_count(specialist_path)})
+        specialist_id=self._stage_id("cell_specialist",source_hash,{"resolution":resolution_id,"core":core_id},{"specialist":self.research.get("specialist",{}),"folds":legacy_run.config.stability.get("chronological_folds")},observation_id)
+        if not self._reusable(root,"cell_specialist",[specialist_path],source_hash,stage_id=specialist_id): build_cell_specialist_summary(legacy_run=legacy_run,dual_path=resolution_path,research=self.research,stage_id=specialist_id); self._mark(root,"cell_specialist",source_hash,{"surfaces":self._row_count(specialist_path)},stage_id=specialist_id)
         temporal_path=root/"cell_temporal_summary.parquet"
-        if not self._reusable(root,"cell_temporal",[temporal_path],source_hash): build_cell_temporal_summary(legacy_run=legacy_run,dual_path=resolution_path,research=self.research); self._mark(root,"cell_temporal",source_hash,{"surfaces":self._row_count(temporal_path)})
+        temporal_id=self._stage_id("cell_temporal",source_hash,{"resolution":resolution_id,"core":core_id},{"folds":legacy_run.config.stability.get("chronological_folds")},observation_id)
+        if not self._reusable(root,"cell_temporal",[temporal_path],source_hash,stage_id=temporal_id): build_cell_temporal_summary(legacy_run=legacy_run,dual_path=resolution_path,research=self.research,stage_id=temporal_id); self._mark(root,"cell_temporal",source_hash,{"surfaces":self._row_count(temporal_path)},stage_id=temporal_id)
         specialist_count=self._row_count(specialist_path); temporal_count=self._row_count(temporal_path); self._verify_evidence_counts(root,resolution_path,specialist_count,temporal_count); ledger=root/"trial_ledger.parquet"
-        if not self._reusable(root,"trial_ledger",[ledger],source_hash): build_production_trial_ledger(legacy_run=legacy_run,dual_path=resolution_path,core_results=core_results,specialist_count=specialist_count,temporal_count=temporal_count); self._mark(root,"trial_ledger",source_hash,{"rows":self._row_count(ledger)})
+        ledger_id=self._stage_id("trial_ledger",source_hash,{"resolution":resolution_id,"specialist":specialist_id,"temporal":temporal_id},{"schema":2},observation_id)
+        if not self._reusable(root,"trial_ledger",[ledger],source_hash,stage_id=ledger_id): build_production_trial_ledger(legacy_run=legacy_run,dual_path=resolution_path,core_results=core_results,specialist_count=specialist_count,temporal_count=temporal_count); self._mark(root,"trial_ledger",source_hash,{"rows":self._row_count(ledger)},stage_id=ledger_id)
         coverage=self._coverage(ledger); bundle=root/"analysis_bundle"
-        if not self._reusable(root,"analysis_bundle",[bundle/"research.duckdb",bundle/"bundle_manifest.json"],source_hash): build_v3_analysis_bundle(run_root=root,research=self.research,source_manifest_hash=source_hash,trial_coverage=coverage); self._mark(root,"analysis_bundle",source_hash,{"evidence_complete":True})
-        self._write_json(root/"EVIDENCE_COMPLETE.json",{"status":"complete","completed_at_utc":datetime.now(timezone.utc).isoformat(),"source_manifest_hash":source_hash,"replication_accessed":False,"final_holdout_accessed":False,"zoom_enabled":bool(self.research.get("zoom",{}).get("enabled",False))})
+        bundle_id=self._stage_id("analysis_bundle",source_hash,{"ledger":ledger_id},{"coverage":coverage,"research":self.research},observation_id)
+        if not self._reusable(root,"analysis_bundle",[bundle/"research.duckdb",bundle/"bundle_manifest.json"],source_hash,stage_id=bundle_id): build_v3_analysis_bundle(run_root=root,research=self.research,source_manifest_hash=source_hash,trial_coverage=coverage); self._mark(root,"analysis_bundle",source_hash,{"evidence_complete":True},stage_id=bundle_id)
+        self._write_json(root/"EVIDENCE_COMPLETE.json",{"status":"complete" if mandatory.get("mandatory_coverage_complete") or self.research.get("evidence",{}).get("profile","legacy")=="legacy" else "partial","completed_at_utc":datetime.now(timezone.utc).isoformat(),"source_manifest_hash":source_hash,"replication_accessed":False,"final_holdout_accessed":False,"zoom_enabled":bool(self.research.get("zoom",{}).get("enabled",False)),"coverage":mandatory,"legacy_meaning":"core and selected summaries only"})
         zoom={"enabled":False,"variants":0,"candidates":0,"dossiers":0}
         if self.research.get("zoom",{}).get("enabled",False):
             duals=self._zoom_pool(resolution_path); selected_specialist=root/"specialist_summary.parquet"; variant_mode=self.research.get("variant_expansion",{}).get("mode","automatic"); resolved_variants=resolve_explicit_variant_requests(legacy_run=legacy_run,canonical_path=resolution_path,research=self.research) if variant_mode in {"explicit","automatic_plus_explicit"} else None
@@ -89,5 +162,5 @@ class V3ProductionRunner:
                 explicit=resolve_explicit_candidate_requests(legacy_run=legacy_run,canonical_path=resolution_path,variant_duals=variants,research=self.research); requested=self._explicit_rule_universe(variants) if selection_mode=="explicit_plus_rules" else materialization_input.head(0); settings=self.research.get("forensics",{}).get("dossier_selection",{}); context=root/"context_expansion"
                 contenders=build_pre_specialist_contenders(candidate_rows=requested,explicit_rows=explicit,settings=settings,output_dir=context); run_production_specialist_probe(legacy_run=legacy_run,duals=contenders,research=self.research); specialist=pd.read_parquet(selected_specialist); exact_rows=finalize_dossier_selection(contenders=contenders,specialist=specialist,settings=settings,output_dir=context)
             candidates,candidate_summary=materialize_candidates(legacy_run=legacy_run,duals=materialization_input,specialist=specialist,research=self.research,source_manifest_hash=source_hash,candidate_rows=exact_rows); comparison_rows=load_resolution_comparison_rows(canonical_path=resolution_path,variant_duals=variants,candidates=candidate_summary); dossiers=build_candidate_dossiers(legacy_run=legacy_run,candidates=candidates,candidate_summary=candidate_summary,duals=comparison_rows,specialist=specialist)
-            build_production_trial_ledger(legacy_run=legacy_run,dual_path=resolution_path,core_results=core_results,variant_trials=variant_trials,specialist_count=specialist_count,temporal_count=temporal_count,candidate_count=len(dossiers)); coverage=self._coverage(ledger); build_v3_analysis_bundle(run_root=root,research=self.research,source_manifest_hash=source_hash,trial_coverage=coverage); zoom={"enabled":True,"variants":variant_metrics.get("planned",0),"candidates":len(candidates),"dossiers":len(dossiers)}; self._mark(root,"zoom",source_hash,zoom)
-        return {"core_results":core_results,"resolution_diagnostics":str(resolution_path),"cell_specialist":str(specialist_path),"cell_temporal":str(temporal_path),"trial_ledger":str(ledger),"analysis_bundle":str(bundle),"evidence_complete":True,"zoom":zoom}
+            build_production_trial_ledger(legacy_run=legacy_run,dual_path=resolution_path,core_results=core_results,variant_trials=variant_trials,specialist_count=specialist_count,temporal_count=temporal_count,candidate_count=len(dossiers)); coverage=self._coverage(ledger); build_v3_analysis_bundle(run_root=root,research=self.research,source_manifest_hash=source_hash,trial_coverage=coverage); zoom={"enabled":True,"variants":variant_metrics.get("planned",0),"candidates":len(candidates),"dossiers":len(dossiers)}; zoom_id=self._stage_id("zoom",source_hash,{"bundle":bundle_id},{"zoom":self.research.get("zoom",{}),"variants":self.research.get("variant_expansion",{}),"forensics":self.research.get("forensics",{})},observation_id); self._mark(root,"zoom",source_hash,zoom,stage_id=zoom_id)
+        return {"core_results":core_results,"resolution_diagnostics":str(resolution_path),"cell_specialist":str(specialist_path),"cell_temporal":str(temporal_path),"trial_ledger":str(ledger),"analysis_bundle":str(bundle),"evidence_complete":self.research.get("evidence",{}).get("profile","legacy")=="legacy" or mandatory.get("mandatory_coverage_complete",False),"mandatory_coverage_complete":mandatory.get("mandatory_coverage_complete",False) if self.research.get("evidence",{}).get("profile","legacy")=="comprehensive" else None,"coverage":mandatory,"zoom":zoom}

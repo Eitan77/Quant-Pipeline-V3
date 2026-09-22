@@ -1,5 +1,9 @@
 # Quant Pipeline V3 — Codex Operation Manual
 
+## Comprehensive evidence status
+
+The optional `evidence.profile: comprehensive` path currently stops at storage preflight for the full discovery request. `research describe` reports coverage; `research query` and `research search` operate on committed subgroup catalogs when present. `research inspect` supports stored symbol/time/month/fold moments; neighbor and backtest jobs return `unavailable` until their verified adapters exist. Use [implementation status](RESEARCH_IMPLEMENTATION_STATUS.md) before starting the comprehensive request. The existing analysis bundle remains a legacy summary, not complete subgroup coverage.
+
 ## Purpose
 
 This document is the operating manual for a Codex agent working inside the **Quant Pipeline V3** repository.

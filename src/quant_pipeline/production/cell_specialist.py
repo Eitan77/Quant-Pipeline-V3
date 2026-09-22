@@ -51,9 +51,9 @@ def _pair_block_size(torch,device,*,axis_count:int,cells:int,row_chunk:int,maxim
     free,_=torch.cuda.mem_get_info(device); budget=min(int(free*.65),int(9.5*1024**3)); per_pair=max(1,axis_count*cells*16*target_count+row_chunk*28)
     return max(1,min(maximum,budget//per_pair))
 
-def build_cell_specialist_summary(*,legacy_run,dual_path:Path,research:dict)->Path:
+def build_cell_specialist_summary(*,legacy_run,dual_path:Path,research:dict,stage_id:str)->Path:
     import torch
-    data=ProductionData(legacy_run); destination=legacy_run.root/"cell_specialist_summary.parquet"; destination.unlink(missing_ok=True); parts=legacy_run.root/"cell_specialist_parts"; parts.mkdir(exist_ok=True); completed=_completed(parts); expected=pq.ParquetFile(dual_path).metadata.num_rows; progress=legacy_run.root/"v3_progress"/"cell_specialist.json"; progress.parent.mkdir(exist_ok=True)
+    data=ProductionData(legacy_run); destination=legacy_run.root/"cell_specialist_summary.parquet"; destination.unlink(missing_ok=True); parts=legacy_run.root/"cell_specialist_parts"/stage_id; parts.mkdir(parents=True,exist_ok=True); completed=_completed(parts); expected=pq.ParquetFile(dual_path).metadata.num_rows; progress=legacy_run.root/"v3_progress"/"cell_specialist.json"; progress.parent.mkdir(exist_ok=True)
     pair_cap=int(research.get("cell_evidence",{}).get("pair_block_max",64)); row_chunk=int(research.get("cell_evidence",{}).get("observation_chunk",250_000)); minimum=int(research.get("specialist",{}).get("min_local_n",20)); device=torch.device(legacy_run.config.compute.gpu_device if legacy_run.config.compute.prefer_cuda and torch.cuda.is_available() else "cpu")
     with duckdb.connect() as con:
         pairs=con.execute("SELECT DISTINCT pair_id,feature_a,feature_b,v3_resolution FROM read_parquet(?) ORDER BY v3_resolution,pair_id",[str(dual_path)]).fetchdf()

@@ -1,0 +1,60 @@
+run_name: v3_comprehensive_20260922
+mode: full-canonical
+fixture: null
+periods:
+  discovery:
+    start: '2025-05-01'
+    end: '2026-04-30'
+  replication:
+    start: '2026-05-01'
+    end: '2026-08-31'
+    sealed: true
+  final_holdout:
+    start: '2026-09-01'
+    end: null
+    sealed: true
+allow_replication_access: false
+allow_final_holdout_access: false
+resolutions:
+- 3
+- 5
+- 10
+feature_packs:
+- builtin_v2_port
+discovery:
+  canonical_duals: exhaustive_compatible
+  single_parent_gate: false
+  retain_negative_effects: true
+forensics:
+  enabled: true
+  candidate_policy:
+    min_active_n: 250
+    min_abs_edge_bps: 1.0
+    keep_top_k_per_target_resolution: 250
+specialist:
+  min_local_n: 20
+  min_selected_n: 250
+cell_evidence:
+  pair_block_max: 64
+  observation_chunk: 250000
+variant_expansion:
+  parent_limit: null
+  neighbors_per_side: 3
+  rejected_audit_count: 0
+zoom:
+  enabled: false
+evidence:
+  profile: comprehensive
+  mandatory_groupings:
+  - - security
+  - - month
+  - - fold
+  - - time_bucket
+  - - security
+    - time_bucket
+  - - security
+    - month
+  condition_definitions: []
+  condition_groupings: []
+  retention: budgeted
+  dossier_policy: on_request

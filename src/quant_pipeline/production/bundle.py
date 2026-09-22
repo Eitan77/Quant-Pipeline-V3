@@ -54,7 +54,13 @@ def build_v3_analysis_bundle(*,run_root:Path,research:dict,source_manifest_hash:
         surface_files=list(surface_root.rglob("*.parquet"))
         if surface_files: con.execute(f"CREATE VIEW surface_cells AS SELECT * FROM read_parquet('{str(surface_root/'**'/'*.parquet').replace(chr(39),chr(39)*2)}',union_by_name=true)")
         con.execute("CREATE VIEW surface_summary AS SELECT * FROM dual_summary")
-        con.execute("""CREATE VIEW cell_evidence AS WITH expanded AS (
+        temporal_columns={item[0] for item in con.execute("DESCRIBE cell_temporal_summary").fetchall()}
+        def temporal_expr(name,sql_type):
+            return f"list_extract(tp.{name},m.cell_index+1) {name}" if name in temporal_columns else f"NULL::{sql_type} {name}"
+        fold_extra=",\n            ".join((temporal_expr("populated_fold_count","UINTEGER"),
+                                  temporal_expr("expected_fold_count","UINTEGER"),
+                                  temporal_expr("minimum_fold_n_including_empty","UBIGINT")))
+        con.execute(f"""CREATE VIEW cell_evidence AS WITH expanded AS (
           SELECT d.*,cell_index,floor(cell_index/d.v3_resolution)::INTEGER feature_a_cell,(cell_index%d.v3_resolution)::INTEGER feature_b_cell,
             list_extract(d.surface_counts,cell_index+1)::DOUBLE active_n,list_extract(d.surface_sums,cell_index+1)::DOUBLE cell_sum,list_extract(d.surface_sumsq,cell_index+1)::DOUBLE cell_sumsq,
             list_sum(d.surface_counts)::DOUBLE total_n,list_sum(d.surface_sums)::DOUBLE total_sum
@@ -69,10 +75,14 @@ def build_v3_analysis_bundle(*,run_root:Path,research:dict,source_manifest_hash:
           FROM expanded)
           SELECT m.pair_id,m.feature_a,m.feature_b,m.target_id,m.v3_resolution resolution,m.cell_index,m.feature_a_cell,m.feature_b_cell,m.active_n,m.raw_edge_bps,m.frequency,
             sqrt(greatest(m.variance,0)/nullif(m.active_n,0))*10000.0 se_bps,m.interaction_lift_bps,m.raw_edge_bps*m.frequency weighted_contribution_bps,
+            list_extract(sp.eligible_symbol_count,m.cell_index+1) eligible_symbol_count,
+            list_extract(sp.best_positive_local_bps,m.cell_index+1) best_positive_local_bps,
+            list_extract(sp.best_negative_local_bps,m.cell_index+1) best_negative_local_bps,
             list_extract(sp.positive_symbol_fraction,m.cell_index+1) positive_symbol_fraction,list_extract(sp.negative_symbol_fraction,m.cell_index+1) negative_symbol_fraction,
             list_extract(sp.symbol_effect_dispersion_bps,m.cell_index+1) symbol_effect_dispersion_bps,list_extract(sp.cancellation_score,m.cell_index+1) cancellation_score,
             list_extract(tp.fold_positive_fraction,m.cell_index+1) fold_positive_fraction,list_extract(tp.fold_negative_fraction,m.cell_index+1) fold_negative_fraction,
-            list_extract(tp.worst_fold_bps,m.cell_index+1) worst_fold_bps,list_extract(tp.best_fold_bps,m.cell_index+1) best_fold_bps,list_extract(tp.minimum_fold_n,m.cell_index+1) minimum_fold_n
+            list_extract(tp.worst_fold_bps,m.cell_index+1) worst_fold_bps,list_extract(tp.best_fold_bps,m.cell_index+1) best_fold_bps,list_extract(tp.minimum_fold_n,m.cell_index+1) minimum_fold_n,
+            {fold_extra}
           FROM math m JOIN cell_specialist_summary sp ON sp.pair_id=m.pair_id AND sp.target_id=m.target_id AND sp.resolution=m.v3_resolution
           JOIN cell_temporal_summary tp ON tp.pair_id=m.pair_id AND tp.target_id=m.target_id AND tp.resolution=m.v3_resolution""")
         registry_count=int(con.execute("SELECT count(*) FROM edge_registry").fetchone()[0])

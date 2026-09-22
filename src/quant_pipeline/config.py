@@ -3,6 +3,9 @@ from dataclasses import dataclass
 from pathlib import Path
 import yaml
 from .errors import ConfigurationError
+from .production.state_helpers import validate_discovery_subrange
+
+DISCOVERY_ENVELOPE={"start":"2025-05-01","end":"2026-04-30"}
 
 def _load(path: Path) -> dict:
     value=yaml.safe_load(path.read_text(encoding="utf-8")) or {}
@@ -11,10 +14,29 @@ def _load(path: Path) -> dict:
 
 def load_research_config(path: Path) -> dict:
     c=_load(path); p=c.get("periods",{})
-    if p.get("discovery",{}).get("end") != "2026-04-30": raise ConfigurationError("Initial V3 discovery must end 2026-04-30")
+    try: validate_discovery_subrange(p["discovery"],DISCOVERY_ENVELOPE)
+    except (KeyError,ValueError,TypeError) as error: raise ConfigurationError(f"Invalid governed discovery range: {error}") from error
     if c.get("allow_replication_access") or c.get("allow_final_holdout_access"): raise ConfigurationError("Normal discovery config may not authorize sealed access")
     if c.get("resolutions") != [3,5,10]: raise ConfigurationError("V3 requires independent r3/r5/r10")
     if c.get("discovery",{}).get("single_parent_gate",True): raise ConfigurationError("Singles may not gate canonical duals")
+    for selector_name in ("feature_selection","target_selection"):
+        if selector_name in c:
+            selector=c[selector_name]
+            allowed={"ids","concepts","families","scales","representations","grids"} if selector_name=="feature_selection" else {"ids"}
+            if not isinstance(selector,dict) or set(selector)-allowed or any(not isinstance(value,list) or any(not isinstance(item,str) for item in value) for value in selector.values()):
+                raise ConfigurationError(f"Invalid {selector_name}")
+            if not any(selector.values()): raise ConfigurationError(f"{selector_name} resolves to an empty selection")
+    if "evidence" in c:
+        evidence=c["evidence"]
+        allowed={"profile","mandatory_groupings","condition_definitions","condition_groupings","retention","dossier_policy"}
+        if not isinstance(evidence,dict) or set(evidence)-allowed: raise ConfigurationError("Unsupported evidence field")
+        if evidence.get("profile","comprehensive") not in {"comprehensive","legacy"}: raise ConfigurationError("Unsupported evidence profile")
+        if evidence.get("retention","budgeted") not in {"budgeted","durable"}: raise ConfigurationError("Unsupported evidence retention")
+        if evidence.get("dossier_policy","on_request") not in {"on_request","legacy"}: raise ConfigurationError("Unsupported dossier policy")
+        if evidence.get("condition_definitions",[]): raise ConfigurationError("Condition definitions are unavailable until a causal registered builder is supplied")
+        if evidence.get("condition_groupings",[]): raise ConfigurationError("Condition groupings require causal condition definitions")
+        if "mandatory_groupings" in evidence and (not isinstance(evidence["mandatory_groupings"],list) or any(not isinstance(group,list) or not group or any(key not in {"security","month","fold","time_bucket"} for key in group) for group in evidence["mandatory_groupings"])):
+            raise ConfigurationError("Invalid mandatory_groupings")
     zoom=c.get("zoom",{}); selection_mode=zoom.get("selection_mode","automatic")
     if selection_mode not in {"automatic","explicit","explicit_plus_rules"}: raise ConfigurationError("zoom.selection_mode must be automatic, explicit, or explicit_plus_rules")
     expansion=c.get("variant_expansion",{}); variant_mode=expansion.get("mode","automatic")

@@ -1,12 +1,14 @@
 from __future__ import annotations
-import json,shutil,threading
+import json,threading
 from dataclasses import dataclass
 from datetime import datetime,timezone
 from pathlib import Path
 from quant_pipeline.alpha_discovery.run import AlphaDiscoveryRun
 from quant_pipeline.alpha_discovery.resources import configured_feature_worker_cap
 from quant_pipeline.ported_pipeline import ported_config
-from quant_pipeline.production.cache_keys import STAGE_PATHS,SharedStageCache,core_stage_key,stage_implementation_hash
+from quant_pipeline.production.cache_keys import SharedStageCache,core_stage_key,stage_implementation_hash
+from quant_pipeline.production.research_specs import resolve_research_scope
+from quant_pipeline.alpha_discovery.registry import compile_registry
 from quant_pipeline.telemetry import ResourcePlan,StallWatchdog,run_with_resource_recovery
 
 LOW_LEVEL_STAGES=("validate-config","snapshot","build-panel","compile-registry","build-features","build-targets","scan-singles","scan-duals-coarse","scan-duals-fine","exact-duals","audit-exhaustiveness")
@@ -16,7 +18,24 @@ CACHEABLE=set(("build-panel","build-features","build-targets","scan-singles","sc
 class LegacyCoreAdapter:
     research:dict; machine:dict; repo_root:Path; source_manifest_hash:str; telemetry:object|None=None
     def build_run(self):
-        cfg=ported_config(self.research,self.machine,self.repo_root); cfg.validate(); return AlphaDiscoveryRun(cfg)
+        cfg=ported_config(self.research,self.machine,self.repo_root); cfg.validate()
+        if "feature_selection" in self.research or "target_selection" in self.research:
+            scope=resolve_research_scope(self.research,compile_registry(cfg))
+            if "feature_selection" in self.research:
+                feature_ids=[item["id"] for item in scope["features"]]
+                cfg=replace(cfg,feature_search={**cfg.feature_search,"feature_ids":feature_ids,"initial_scope":"all_features"},
+                            duals={**cfg.duals,"feature_ids":feature_ids,"search_scope":"all_features"})
+            if "target_selection" in self.research:
+                cfg=replace(cfg,targets={**cfg.targets,"active_target_ids":[item["id"] for item in scope["targets"]]})
+            feature_grids={item["grid"] for item in scope["features"]}
+            target_grids={item["grid"] for item in scope["targets"]}
+            enabled_grids=feature_grids & target_grids
+            cfg=replace(cfg,decision_grids={grid:bool(enabled and grid in enabled_grids) for grid,enabled in cfg.decision_grids.items()})
+            scope["grids"]=[grid for grid in scope["grids"] if grid in enabled_grids]
+            scope["features"]=[item for item in scope["features"] if item["grid"] in enabled_grids]
+            scope["targets"]=[item for item in scope["targets"] if item["grid"] in enabled_grids]
+            self.resolved_scope=scope
+        return AlphaDiscoveryRun(cfg)
     def _semantic(self,run,stage):
         c=run.config
         common={"periods":{"start":c.research_periods.discovery_start,"end":c.research_periods.discovery_end},"grids":c.decision_grids,"universe":c.universe}
@@ -32,15 +51,10 @@ class LegacyCoreAdapter:
         run._atomic_json("cache/fused_dual_scan.json",manifest)
     def execute(self):
         run=self.build_run(); run.initialize(); source_marker=run.root/"core_source_manifest.json"
+        if hasattr(self,"resolved_scope"):
+            run._atomic_json("resolved_research_scope.json",self.resolved_scope)
         if source_marker.exists() and json.loads(source_marker.read_text()).get("source_manifest_hash")!=self.source_manifest_hash:
-            for paths in STAGE_PATHS.values():
-                for relative in paths:
-                    target=run.root/relative
-                    if target.is_dir():shutil.rmtree(target)
-                    elif target.exists():target.unlink()
-            for target in (run.root/"checkpoints",run.root/"v3_checkpoints",run.root/"v3_diagnostics",run.root/"candidates",run.root/"analysis_bundle",run.root/"variant_results"):
-                if target.is_dir():shutil.rmtree(target)
-            for name in ("specialist_summary.parquet","cell_specialist_summary.parquet","cell_temporal_summary.parquet","variant_summary.parquet","variant_trial_ledger.parquet","variant_metrics.json","edge_registry.parquet","candidate_summary.parquet","trial_ledger.parquet","EVIDENCE_COMPLETE.json"):(run.root/name).unlink(missing_ok=True)
+            raise RuntimeError("Source manifest changed for this run; choose a new run_name to preserve committed evidence")
         source_marker.write_text(json.dumps({"source_manifest_hash":self.source_manifest_hash},sort_keys=True),encoding="utf-8"); results=[]; cache=SharedStageCache(Path(self.machine["cache_root"])); keys={}; abort=threading.Event(); run.abort_requested=abort
         if self.telemetry: run.progress_callback=lambda unit,completed,expected:self.telemetry.progress(f"core:{unit}",completed,expected)
         for index,stage in enumerate(LOW_LEVEL_STAGES):

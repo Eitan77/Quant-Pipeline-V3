@@ -4,13 +4,16 @@ from hashlib import sha256
 import json,os,warnings
 import duckdb,numpy as np,pandas as pd,pyarrow as pa,pyarrow.dataset as ds,pyarrow.parquet as pq
 from quant_pipeline.production.outputs import ProductionData
+from quant_pipeline.production.state_helpers import fold_coverage
 
 SCHEMA=pa.schema([("pair_id",pa.string()),("target_id",pa.string()),("resolution",pa.int16()),
     ("fold_positive_fraction",pa.list_(pa.float32())),("fold_negative_fraction",pa.list_(pa.float32())),
     ("worst_fold_bps",pa.list_(pa.float32())),("best_fold_bps",pa.list_(pa.float32())),
-    ("median_fold_bps",pa.list_(pa.float32())),("fold_dispersion_bps",pa.list_(pa.float32())),("minimum_fold_n",pa.list_(pa.uint32()))])
+    ("median_fold_bps",pa.list_(pa.float32())),("fold_dispersion_bps",pa.list_(pa.float32())),("minimum_fold_n",pa.list_(pa.uint32())),
+    ("populated_fold_count",pa.list_(pa.uint32())),("expected_fold_count",pa.list_(pa.uint32())),
+    ("minimum_fold_n_including_empty",pa.list_(pa.uint64()))])
 
-def _reduce(counts,sums):
+def _reduce(counts,sums,*,expected_folds=None):
     means=np.divide(sums,counts,out=np.full_like(sums,np.nan,dtype=float),where=counts>0)*1e4; valid=counts>0; local=np.where(valid,means,np.nan); n=valid.sum(axis=1)
     positive=(local>0).sum(axis=1); negative=(local<0).sum(axis=1); positive_fraction=np.divide(positive,n,out=np.full(n.shape,np.nan),where=n>0); negative_fraction=np.divide(negative,n,out=np.full(n.shape,np.nan),where=n>0)
     worst=np.min(np.where(valid,local,np.inf),axis=1); worst[~np.isfinite(worst)]=np.nan; best=np.max(np.where(valid,local,-np.inf),axis=1); best[~np.isfinite(best)]=np.nan
@@ -18,7 +21,10 @@ def _reduce(counts,sums):
         warnings.simplefilter("ignore",RuntimeWarning); median=np.nanmedian(local,axis=1); dispersion=np.nanstd(local,axis=1,ddof=1)
     minimum=np.min(np.where(valid,counts,np.iinfo(np.int64).max),axis=1); minimum[n==0]=0
     metrics=(positive_fraction,negative_fraction,worst,best,median,dispersion,minimum)
-    return [{name:values[pair].tolist() for name,values in zip(SCHEMA.names[3:],metrics)} for pair in range(counts.shape[0])]
+    rows=[{name:values[pair].tolist() for name,values in zip(SCHEMA.names[3:],metrics)} for pair in range(counts.shape[0])]
+    coverage=fold_coverage(counts,counts.shape[1] if expected_folds is None else expected_folds)
+    for pair,row in enumerate(rows): row.update({name:values[pair].tolist() for name,values in coverage.items()})
+    return rows
 
 def _pair_block_size(torch,device,*,folds:int,cells:int,row_chunk:int,maximum:int,target_count:int=1)->int:
     if device.type!="cuda":return max(1,min(maximum,32))
@@ -42,9 +48,9 @@ def _compact(parts:Path,destination:Path):
     if writer is None:pq.write_table(pa.Table.from_pylist([],schema=SCHEMA),temporary,compression="zstd")
     os.replace(temporary,destination)
 
-def build_cell_temporal_summary(*,legacy_run,dual_path:Path,research:dict)->Path:
+def build_cell_temporal_summary(*,legacy_run,dual_path:Path,research:dict,stage_id:str)->Path:
     import torch
-    data=ProductionData(legacy_run); destination=legacy_run.root/"cell_temporal_summary.parquet"; destination.unlink(missing_ok=True); parts=legacy_run.root/"cell_temporal_parts"; parts.mkdir(exist_ok=True); completed=_completed(parts); expected=pq.ParquetFile(dual_path).metadata.num_rows; progress=legacy_run.root/"v3_progress"/"cell_temporal.json"; progress.parent.mkdir(exist_ok=True)
+    data=ProductionData(legacy_run); destination=legacy_run.root/"cell_temporal_summary.parquet"; destination.unlink(missing_ok=True); parts=legacy_run.root/"cell_temporal_parts"/stage_id; parts.mkdir(parents=True,exist_ok=True); completed=_completed(parts); expected=pq.ParquetFile(dual_path).metadata.num_rows; progress=legacy_run.root/"v3_progress"/"cell_temporal.json"; progress.parent.mkdir(exist_ok=True)
     pair_cap=int(research.get("cell_evidence",{}).get("pair_block_max",64)); row_chunk=int(research.get("cell_evidence",{}).get("observation_chunk",250_000)); device=torch.device(legacy_run.config.compute.gpu_device if legacy_run.config.compute.prefer_cuda and torch.cuda.is_available() else "cpu")
     with duckdb.connect() as con:
         pairs=con.execute("SELECT DISTINCT pair_id,feature_a,feature_b,v3_resolution FROM read_parquet(?) ORDER BY v3_resolution,pair_id",[str(dual_path)]).fetchdf(); links=con.execute("SELECT DISTINCT feature_a,target_id FROM read_parquet(?)",[str(dual_path)]).fetchdf()
@@ -69,7 +75,7 @@ def build_cell_temporal_summary(*,legacy_run,dual_path:Path,research:dict)->Path
                     for target_number,target_id in enumerate(active):
                         yd=torch.as_tensor(targets[target_id][start:end],dtype=torch.float64,device=device); valid=bin_valid&torch.isfinite(yd)[:,None]; flat=key[valid]; values=yd[:,None].expand(-1,pair_count)[valid]; counts[target_number].view(-1).add_(torch.bincount(flat,minlength=pair_count*folds*cells)); sums[target_number].view(-1).scatter_add_(0,flat,values)
                 for target_number,target_id in enumerate(active):
-                    keep=needed[target_id]; selected=part.loc[keep]; selected_keys=[(pair_id,target_id,int(resolution)) for pair_id in selected.pair_id]; reduced=_reduce(counts[target_number].cpu().numpy()[keep],sums[target_number].cpu().numpy()[keep]); rows=[]
+                    keep=needed[target_id]; selected=part.loc[keep]; selected_keys=[(pair_id,target_id,int(resolution)) for pair_id in selected.pair_id]; reduced=_reduce(counts[target_number].cpu().numpy()[keep],sums[target_number].cpu().numpy()[keep],expected_folds=int(legacy_run.config.stability["chronological_folds"])); rows=[]
                     for base,metrics in zip(selected.to_dict("records"),reduced):rows.append({"pair_id":base["pair_id"],"target_id":target_id,"resolution":int(resolution),**metrics})
                     pending.append(pa.Table.from_pylist(rows,schema=SCHEMA)); pending_keys.extend(selected_keys); pending_rows+=len(rows)
                     if pending_rows>=2048:flush()

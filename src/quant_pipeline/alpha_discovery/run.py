@@ -34,6 +34,10 @@ def _alpha_feature_is_global(spec) -> bool:
 
 
 def _dual_parent_scope(specs: list, dual_config: dict) -> tuple[list, dict[str, str]]:
+    if dual_config.get("feature_ids"):
+        allowed=set(dual_config["feature_ids"])
+        specs=[item for item in specs if item.feature_id in allowed]
+        if not specs: raise ValueError("Dual feature selection produced no active specifications")
     if dual_config.get("search_scope", "canonical_concepts") == "all_features": return specs, {}
     from .scan.pair_plan import canonical_concept_features
     return canonical_concept_features(specs, dual_config.get("canonical_scale_anchors"))
@@ -868,6 +872,9 @@ class AlphaDiscoveryRun:
                     residual["target"] = residual.target - beta * residual.benchmark_target
                     residual["target_basis"] = "beta_residual"; residual["target_id"] = residual.target_id.str.replace("__raw__", "__beta_residual__", regex=False); bases.append(residual)
                 table = pd.concat(bases, ignore_index=True).drop(columns=["benchmark_target"], errors="ignore")
+            from quant_pipeline.production.research_specs import active_target_ids
+            active=set(active_target_ids(self.config,grid,list(table.get("target_id",pd.Series(dtype=str)).unique())))
+            table=table[table.target_id.isin(active)]
             table.to_parquet(output / f"{grid}.parquet", index=False); rows += len(table); target_ids.update(table.get("target_id", []))
         return {"target_rows": rows, "target_ids": len(target_ids)}
 
@@ -948,6 +955,11 @@ class AlphaDiscoveryRun:
                     """
                 bases = ["raw"] + (["benchmark_adjusted"] if "benchmark_adjusted" in self.config.targets["bases"] else []) + (["beta_residual"] if "beta_residual" in self.config.targets["bases"] else [])
                 basis_values = ",".join(f"('{basis}')" for basis in bases)
+                selected_target_ids=self.config.targets.get("active_target_ids")
+                target_filter=""
+                if selected_target_ids is not None:
+                    literals=",".join("'"+item.replace("'","''")+"'" for item in selected_target_ids)
+                    target_filter=f" AND ('target_'||target_label||'__'||basis||'__{grid}') IN ({literals})"
                 actions_path = Path(source.corporate_actions_path).as_posix().replace("'", "''")
                 split_cross = f"EXISTS(SELECT 1 FROM read_parquet('{actions_path}') a WHERE a.security_id=enriched.security_id AND a.session_date>CAST(enriched.bar_start_ts_utc AS DATE) AND a.session_date<=CAST(enriched.bar_end_ts_utc AS DATE) AND lower(a.action_type) LIKE '%split%')"
                 cash_cross = f"EXISTS(SELECT 1 FROM read_parquet('{actions_path}') a WHERE a.security_id=enriched.security_id AND a.session_date>CAST(enriched.bar_start_ts_utc AS DATE) AND a.session_date<=CAST(enriched.bar_end_ts_utc AS DATE) AND (lower(a.action_type) LIKE '%cash%' OR lower(a.action_type) LIKE '%dividend%'))"
@@ -960,7 +972,7 @@ class AlphaDiscoveryRun:
                     basis AS target_basis,'target_'||target_label||'__'||basis||'__{grid}' AS target_id,beta_prior,
                     {split_cross} AS crosses_split,{cash_cross} AS crosses_cash_dividend
                   FROM enriched CROSS JOIN (VALUES {basis_values}) q(basis)
-                  WHERE basis='raw' OR benchmark_target IS NOT NULL AND (basis<>'beta_residual' OR beta_prior IS NOT NULL)
+                  WHERE (basis='raw' OR benchmark_target IS NOT NULL AND (basis<>'beta_residual' OR beta_prior IS NOT NULL)){target_filter}
                 """
                 connection.execute(f"COPY ({query}) TO '{destination}' (FORMAT PARQUET,COMPRESSION ZSTD,ROW_GROUP_SIZE 250000)")
                 count, ids = connection.execute(f"SELECT count(*),list(DISTINCT target_id) FROM read_parquet('{destination}')").fetchone()
@@ -976,7 +988,10 @@ class AlphaDiscoveryRun:
         if not matrix_path.exists():
             self._build_aligned_target_store(grid, observations, store)
         matrix, columns = store.read("aligned")
-        if target_id is None: return columns
+        from quant_pipeline.production.research_specs import active_target_ids
+        active=active_target_ids(self.config,grid,columns)
+        if target_id is None: return active
+        if target_id not in active: raise KeyError(f"Target outside resolved scope: {target_id}")
         try: index = columns.index(target_id)
         except ValueError as error: raise KeyError(f"Unknown target: {target_id}") from error
         return matrix[:, index]
@@ -985,7 +1000,14 @@ class AlphaDiscoveryRun:
         from .cache.target_store import TargetStore
         store = TargetStore(self.root / "cache" / "target_store" / grid)
         if not (store.root / "aligned.npy").exists(): self._build_aligned_target_store(grid, observations, store)
-        return store.read("aligned")
+        matrix,columns=store.read("aligned")
+        from quant_pipeline.production.research_specs import active_target_ids
+        active=active_target_ids(self.config,grid,columns)
+        if not active: raise ValueError(f"No active targets for {grid}")
+        if len(active)!=len(columns):
+            indices=[columns.index(target_id) for target_id in active]
+            return matrix[:,indices],active
+        return matrix,columns
 
     def _build_aligned_target_store(self, grid: str, observations: pd.DataFrame, store) -> None:
         """Create the target matrix one column at a time from the auditable long ledger."""
@@ -996,6 +1018,9 @@ class AlphaDiscoveryRun:
         with duckdb.connect() as connection:
             connection.register("observation_order", pd.DataFrame({"position": np.arange(len(ids)), "observation_id": ids}))
             columns = [row[0] for row in connection.execute(f"SELECT DISTINCT target_id FROM read_parquet('{path}') ORDER BY target_id").fetchall()]
+            from quant_pipeline.production.research_specs import active_target_ids
+            columns=active_target_ids(self.config,grid,columns)
+            if not columns: raise ValueError(f"No active targets for {grid}")
             duplicate=connection.execute(f"""SELECT 1 FROM read_parquet('{path}') t JOIN observation_order o USING(observation_id)
                 GROUP BY t.observation_id,t.target_id HAVING count(*)>1 LIMIT 1""").fetchone()
             if duplicate: raise ValueError("Target ledger contains duplicate observation_id/target_id rows")
@@ -1020,10 +1045,12 @@ class AlphaDiscoveryRun:
         for grid, enabled in self.config.decision_grids.items():
             if not enabled: continue
             observations = pd.read_parquet(self.root / "cache" / "features" / grid / "observations.parquet")
+            from quant_pipeline.production.evidence_identity import file_digest
+            observations_file_hash=file_digest(self.root/"cache"/"features"/grid/"observations.parquet")
+            observation_ids_hash=sha256(observations.observation_id.to_numpy(np.int64).tobytes()).hexdigest()
             clusters = pd.factorize(observations.session_date, sort=True)[0]
             target_matrix, target_ids = self._target_matrix(grid, observations)
             if not target_ids: continue
-            target_vectors={target_id:target_matrix[:,index] for index,target_id in enumerate(target_ids)}
             feature_store=ArrayStore(self.root/"cache"/"features"/grid)
             packed_store=PackedBinStore(self.root/"cache"/"bins"/"packed"/grid)
             decision_codes=pd.factorize(observations.decision_ts,sort=True)[0]
@@ -1035,6 +1062,11 @@ class AlphaDiscoveryRun:
                 try: packed,packed_columns=packed_store.read(stem)
                 except (FileNotFoundError,ValueError,KeyError): packed=None; packed_columns=None
                 if result_path.exists() and packed is not None:
+                    metadata=json.loads((packed_store.root/f"{stem}.json").read_text(encoding="utf-8"))
+                    if metadata.get("observation_id_sha256")!=observation_ids_hash:
+                        raise RuntimeError(f"Unverified legacy packed-bin lineage for {grid}/{stem}; use a fresh governed run or verified migration")
+                    if metadata.get("observations_sha256")!=observations_file_hash:
+                        raise RuntimeError(f"Packed-bin observation metadata changed for {grid}/{stem}")
                     prior=pd.read_parquet(result_path,columns=["fold_id"]); chunks+=1; tests+=int(prior.fold_id.eq("all").sum())
                     grid_completed+=1; self._useful_progress(f"singles:{grid}",grid_completed,len(stems)); continue
                 try: values, feature_ids = feature_store.read(stem)
@@ -1055,6 +1087,12 @@ class AlphaDiscoveryRun:
                     result = pd.concat([result, *fold_rows], ignore_index=True)
                 if packed is None:
                     packed=build_packed_bins(np.asarray(values),decision_codes); packed_store.write(stem,packed,feature_ids)
+                    packed_meta=packed_store.root/f"{stem}.json"
+                    payload=json.loads(packed_meta.read_text(encoding="utf-8"))
+                    payload["observation_id_sha256"]=observation_ids_hash
+                    payload["observations_sha256"]=observations_file_hash
+                    payload["feature_definition_hashes"]={item.feature_id:item.definition_hash for item in self.compile_registry().features if item.feature_id in feature_ids}
+                    temporary=packed_meta.with_suffix(".tmp.json"); temporary.write_text(json.dumps(payload,sort_keys=True),encoding="utf-8"); os.replace(temporary,packed_meta)
                 elif packed_columns!=feature_ids: raise ValueError(f"Packed feature columns disagree for {grid}/{stem}")
                 temporary=result_path.with_suffix(".tmp.parquet"); result.to_parquet(temporary,index=False); temporary.replace(result_path)
                 del values,packed
@@ -1700,12 +1738,13 @@ class AlphaDiscoveryRun:
 
     def _stage_audit_exhaustiveness(self) -> dict:
         from .scan.pair_plan import PairPlan
+        from quant_pipeline.production.research_specs import active_target_ids
         bundle = self.compile_registry(); initial_specs=[]; expected_singles=0; unavailable_singles=0; realized_targets={}
         for grid in {item.decision_grid for item in bundle.features}:
             registered=[item for item in bundle.features if item.decision_grid==grid]; scoped,_=_initial_feature_scope(registered,self.config)
-            registered_target_ids={item.target_id for item in bundle.targets if item.decision_grid==grid}
+            registered_target_ids=set(active_target_ids(self.config,grid,[item.target_id for item in bundle.targets if item.decision_grid==grid]))
             target_meta=self.root/"cache"/"target_store"/grid/"aligned.json"
-            realized_targets[grid]=set(json.loads(target_meta.read_text(encoding="utf-8")).get("columns",[])) if target_meta.exists() else set()
+            realized_targets[grid]=(set(json.loads(target_meta.read_text(encoding="utf-8")).get("columns",[])) & registered_target_ids) if target_meta.exists() else set()
             missing_targets=registered_target_ids-realized_targets[grid]
             initial_specs.extend(scoped); expected_singles+=len(scoped)*len(registered_target_ids); unavailable_singles+=len(scoped)*len(missing_targets)
         single_files = list((self.root / "single_results").glob("*/*.parquet"))
@@ -1721,7 +1760,7 @@ class AlphaDiscoveryRun:
                 scoped=_single_survivor_scope(scoped,self.root/"single_results"/grid,self.config.duals)
             total=len(registered)*(len(registered)-1)//2; canonical_total=len(scoped)*(len(scoped)-1)//2
             plan=PairPlan.compile([item.feature_id for item in scoped],alias_hashes)
-            registered_target_count=sum(item.decision_grid==grid for item in bundle.targets)
+            registered_target_count=len(active_target_ids(self.config,grid,[item.target_id for item in bundle.targets if item.decision_grid==grid]))
             realized_target_count=len(realized_targets.get(grid,set())); missing_target_count=registered_target_count-realized_target_count
             structural_exclusions+=(total-canonical_total)*realized_target_count
             alias_exclusions+=(canonical_total-len(plan.left))*realized_target_count

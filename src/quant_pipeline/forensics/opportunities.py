@@ -43,7 +43,11 @@ def opportunity_timing_summary(*,opportunities,end_ts_by_obs=None,hold_ns=None):
                 "fraction_signals_in_clusters_2plus":0.0,"fraction_signals_in_clusters_5plus":0.0,
                 "fraction_signals_in_clusters_10plus":0.0,"average_concurrency":0.0,"peak_concurrency":0}
     _,counts=np.unique(starts,return_counts=True)
-    concurrency=np.asarray([np.sum((starts<=ts)&(ends>ts)) for ts in starts],dtype=float)
+    live=ends>starts
+    concurrency=(
+        np.searchsorted(np.sort(starts[live]),starts,side="right")
+        -np.searchsorted(np.sort(ends[live]),starts,side="right")
+    ).astype(float)
     return {"unique_signal_timestamps":int(len(counts)),"simultaneous_cluster_count":int(np.sum(counts>=2)),
             "largest_simultaneous_cluster":int(counts.max()),
             "fraction_signals_in_clusters_2plus":float(counts[counts>=2].sum()/len(starts)),
