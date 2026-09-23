@@ -758,7 +758,7 @@ class AlphaDiscoveryRun:
         self._atomic_json("cache/feature_build_resources.json", {
             "cpu_workers": max_workers, "host_memory_fraction": self.config.compute.host_memory_fraction,
             "duckdb_memory_limit": memory_limit,"calibration":resource_telemetry,
-            "feature_block_size": block_size,"local_wave_size":8,"global_chunks":global_telemetry,
+            "feature_block_size": block_size,"local_wave_sizes":wave_sizes,"global_chunks":global_telemetry,
             "feature_autoscale_enabled":self.config.compute.feature_autoscale_enabled,
             "max_worker_capacity":max_workers,"initial_workers":initial_workers,"minimum_workers":min_workers,
             "peak_active_workers":peak_active_workers,"final_active_workers":final_active_workers,
@@ -1233,7 +1233,9 @@ class AlphaDiscoveryRun:
             plan=PairPlan.compile([item.feature_id for item in specs],alias_hashes); plan.write(self.root/"cache"/"pair_plans"/f"{grid}.npz")
             scanner=DualTileScanner(bins=10,device_name=self.config.compute.gpu_device,prefer_cuda=self.config.compute.prefer_cuda,
                                     memory_fraction=self.config.compute.dynamic_memory_fraction)
-            backend=scanner.backend; maximum_pairs=self.runtime_pair_cap or 8192; block=scanner.recommended_shape(len(observations),targets=max(1,len(target_ids)),maximum_pairs=maximum_pairs)[1]
+            backend=scanner.backend; maximum_pairs=self.runtime_pair_cap or 8192
+            runtime_block=scanner.recommended_shape(len(observations),targets=max(1,len(target_ids)),maximum_pairs=maximum_pairs)[1]
+            block=1024  # Stable logical membership; runtime_block only subdivides execution.
             full_pairs=len(all_specs)*(len(all_specs)-1)//2; canonical_pairs=len(specs)*(len(specs)-1)//2
             excluded+=((full_pairs-canonical_pairs)+(canonical_pairs-len(plan.left)))*len(target_ids)
             exclusions=[{"pair_id":None,"feature_a":alias,"feature_b":canonical,"target_id":None,"eligible":False,"reason":"noncanonical_concept_variant"} for alias,canonical in structural_aliases.items()]
@@ -1245,10 +1247,10 @@ class AlphaDiscoveryRun:
             for index,(left_index,right_index) in enumerate(zip(plan.left,plan.right)):
                 batch.append((plan.pair_ids[index],plan.feature_ids[left_index],plan.feature_ids[right_index]))
                 if len(batch)<block: continue
-                chunks+=self._write_fused_dual_tile(scanner,batch,feature_bins,target_matrix,output_roots,grid,part,cluster_codes,fold_codes,target_ids)
+                chunks+=self._write_fused_dual_tile(scanner,batch,feature_bins,target_matrix,output_roots,grid,part,cluster_codes,fold_codes,target_ids,runtime_block)
                 attempted+=len(batch)*len(target_ids); part+=1; self._useful_progress(f"duals:{grid}",attempted,len(plan.left)*len(target_ids)); batch=[]
             if batch:
-                chunks+=self._write_fused_dual_tile(scanner,batch,feature_bins,target_matrix,output_roots,grid,part,cluster_codes,fold_codes,target_ids)
+                chunks+=self._write_fused_dual_tile(scanner,batch,feature_bins,target_matrix,output_roots,grid,part,cluster_codes,fold_codes,target_ids,runtime_block)
                 attempted+=len(batch)*len(target_ids)
                 self._useful_progress(f"duals:{grid}",attempted,len(plan.left)*len(target_ids))
         elapsed=time.perf_counter()-started
@@ -1263,20 +1265,58 @@ class AlphaDiscoveryRun:
                 "resolution_tests_per_second":attempted*len(resolutions)/max(elapsed,1e-9)}
 
     @staticmethod
-    def _write_fused_dual_tile(scanner,batch,feature_bins,targets,output_roots,grid,part,cluster_codes,fold_codes,target_ids) -> int:
+    def _write_fused_dual_tile(scanner,batch,feature_bins,targets,output_roots,grid,part,cluster_codes,fold_codes,target_ids,runtime_block=None) -> int:
+        from quant_pipeline.production.evidence_identity import file_digest
         destinations={(resolution,target_index):output_roots[resolution]/grid/target_id/f"part-{part:08d}.parquet"
                       for resolution in output_roots for target_index,target_id in enumerate(target_ids)}
-        if all(path.exists() for path in destinations.values()): return 0
-        arrays={}; unique=list(dict.fromkeys([value for _,left,right in batch for value in (left,right)])); lookup={name:index for index,name in enumerate(unique)}
-        left_index=np.asarray([lookup[left] for _,left,_ in batch]); right_index=np.asarray([lookup[right] for _,_,right in batch])
-        def reader(start,end):
-            matrix=np.empty((end-start,len(unique)),dtype=np.uint8)
-            for out_index,name in enumerate(unique):
-                path,index=feature_bins[name]
-                if path not in arrays: arrays[path]=np.load(path,mmap_mode="r",allow_pickle=False)
-                matrix[:,out_index]=arrays[path][start:end,index]
-            return matrix,left_index,right_index,targets[start:end]
-        results=scanner.scan_packed_resolutions(len(targets),len(batch),reader,resolutions=tuple(output_roots),target_count=len(target_ids),cluster_codes=cluster_codes,fold_codes=fold_codes)
+        run_root=next(iter(output_roots.values())).parent
+        marker=run_root/"cache"/"fused_dual_tasks"/grid/f"part-{part:08d}.json"
+        identity=sha256(json.dumps({"grid":grid,"pairs":batch,"targets":target_ids,
+                                    "resolutions":sorted(output_roots)},sort_keys=True).encode()).hexdigest()
+        if marker.exists():
+            saved=json.loads(marker.read_text(encoding="utf-8"))
+            if saved.get("identity")!=identity: raise ValueError("Fused dual logical tile identity mismatch")
+            if all(path.exists() and path.stat().st_size==saved["files"].get(str(path.relative_to(run_root)),{}).get("bytes")
+                   and file_digest(path)==saved["files"][str(path.relative_to(run_root))]["sha256"]
+                   for path in destinations.values()): return 0
+        expected_pairs=[(pair,left,right) for pair,left,right in batch]
+        for (resolution,target_index),path in destinations.items():
+            if not path.exists(): continue
+            existing=pd.read_parquet(path,columns=["pair_id","feature_a","feature_b","target_id","resolution"])
+            actual=list(existing[["pair_id","feature_a","feature_b"]].itertuples(index=False,name=None))
+            if (actual!=expected_pairs or not existing.target_id.eq(target_ids[target_index]).all()
+                    or not existing.resolution.eq(resolution).all()):
+                raise ValueError(f"Fused dual shard membership mismatch: {path}")
+        if all(path.exists() for path in destinations.values()):
+            results={}
+        else:
+            arrays={}; results={resolution:[] for resolution in output_roots}
+            step=max(1,min(len(batch),int(runtime_block or len(batch))))
+            offset=0
+            while offset<len(batch):
+                sub=batch[offset:offset+step]
+                unique=list(dict.fromkeys([value for _,left,right in sub for value in (left,right)]))
+                lookup={name:index for index,name in enumerate(unique)}
+                left_index=np.asarray([lookup[left] for _,left,_ in sub]); right_index=np.asarray([lookup[right] for _,_,right in sub])
+                def reader(start,end):
+                    matrix=np.empty((end-start,len(unique)),dtype=np.uint8)
+                    for out_index,name in enumerate(unique):
+                        path,index=feature_bins[name]
+                        if path not in arrays: arrays[path]=np.load(path,mmap_mode="r",allow_pickle=False)
+                        matrix[:,out_index]=arrays[path][start:end,index]
+                    return matrix,left_index,right_index,targets[start:end]
+                try:
+                    scanned=scanner.scan_packed_resolutions(len(targets),len(sub),reader,resolutions=tuple(output_roots),target_count=len(target_ids),cluster_codes=cluster_codes,fold_codes=fold_codes)
+                except (MemoryError,RuntimeError) as error:
+                    if step<=1 or not (isinstance(error,MemoryError) or "out of memory" in str(error).lower()): raise
+                    step=max(1,step//2)
+                    if scanner.device.type=="cuda": scanner.torch.cuda.empty_cache()
+                    continue
+                for resolution,frame in scanned.items():
+                    frame["pair_index"]+=offset
+                    results[resolution].append(frame)
+                offset+=len(sub)
+            results={resolution:pd.concat(parts,ignore_index=True) for resolution,parts in results.items()}
         written=0
         for resolution,result in results.items():
             pair_index=result.pair_index.to_numpy(int); result.insert(0,"pair_id",[batch[index][0] for index in pair_index])
@@ -1287,6 +1327,13 @@ class AlphaDiscoveryRun:
                 table=result[result.target_index.eq(target_index)].drop(columns="target_index").copy(); table["target_id"]=target_id
                 destination.parent.mkdir(parents=True,exist_ok=True); temporary=destination.with_suffix(".tmp.parquet")
                 table.to_parquet(temporary,index=False); temporary.replace(destination); written+=1
+        files={str(path.relative_to(run_root)):{"bytes":path.stat().st_size,"sha256":file_digest(path)}
+               for path in destinations.values()}
+        marker.parent.mkdir(parents=True,exist_ok=True)
+        temporary=marker.with_suffix(".tmp.json")
+        temporary.write_text(json.dumps({"identity":identity,"files":files,"pairs":len(batch),
+                                         "targets":len(target_ids),"resolutions":sorted(output_roots)},sort_keys=True),encoding="utf-8")
+        temporary.replace(marker)
         if scanner.device.type=="cuda":
             del results
             scanner.torch.cuda.empty_cache()

@@ -2,6 +2,7 @@ import numpy as np,pandas as pd
 import duckdb
 from quant_pipeline.alpha_discovery.cache.rank_store import build_packed_bins,unpack_bins
 from quant_pipeline.alpha_discovery.scan.dual_coarse import DualTileScanner
+from quant_pipeline.alpha_discovery.run import AlphaDiscoveryRun
 from quant_pipeline.production.cell_specialist import _summaries
 from quant_pipeline.production.cell_temporal import _reduce
 from quant_pipeline.production.surface_math import reconstruct_surface
@@ -15,6 +16,26 @@ def test_full_surface_packed_parity_all_resolutions():
         left=reconstruct_surface(counts=row.surface_counts,sums=row.surface_sums,sumsq=row.surface_sumsq,resolution=resolution); right=reconstruct_surface(counts=direct.surface_counts,sums=direct.surface_sums,sumsq=direct.surface_sumsq,resolution=resolution)
         np.testing.assert_allclose(left["mean"],right["mean"],equal_nan=True); np.testing.assert_allclose(left["interaction"],right["interaction"],equal_nan=True); assert row.selected_cell==direct.selected_cell
         selected=int(row.selected_cell); np.testing.assert_allclose(left["mean"][selected]*1e4,row.selected_state_bps); np.testing.assert_allclose(left["interaction"][selected]*1e4,row.selected_interaction_lift_bps)
+
+def test_fused_tile_runtime_subdivision_preserves_logical_shard(tmp_path):
+    rng=np.random.default_rng(27); n=60
+    packed=build_packed_bins(rng.normal(size=(n,3)),np.repeat(np.arange(6),10))
+    source=tmp_path/"packed.npy"; np.save(source,packed)
+    features={name:(str(source),index) for index,name in enumerate("abc")}
+    batch=[("ab","a","b"),("ac","a","c"),("bc","b","c")]
+    y=rng.normal(size=(n,1)); codes=np.repeat(np.arange(6),10)
+    def scan(root,cap):
+        roots={r:root/f"r{r}" for r in (3,5,10)}
+        scanner=DualTileScanner(bins=10,prefer_cuda=False)
+        return AlphaDiscoveryRun._write_fused_dual_tile(scanner,batch,features,y,roots,"g",0,codes,codes,["t"],cap)
+    left,right=tmp_path/"small",tmp_path/"full"
+    assert scan(left,1)==3 and scan(right,3)==3
+    assert scan(left,3)==0
+    for resolution in (3,5,10):
+        a=pd.read_parquet(left/f"r{resolution}/g/t/part-00000000.parquet")
+        b=pd.read_parquet(right/f"r{resolution}/g/t/part-00000000.parquet")
+        assert a.pair_id.tolist()==b.pair_id.tolist()==["ab","ac","bc"]
+        for x,z in zip(a.surface_sums,b.surface_sums): np.testing.assert_allclose(x,z)
 
 def test_hidden_cells_receive_specialist_and_temporal_metrics():
     counts=np.zeros((1,4,4),int); sums=np.zeros((1,4,4),float); counts[0,:,0]=20; sums[0,:,0]=np.array([.2,.2,-.2,-.2]); counts[0,:,3]=20; sums[0,:,3]=.4
