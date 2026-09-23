@@ -728,9 +728,19 @@ class AlphaDiscoveryRun:
                                                    shape=(observation_count, len(batch)))
                 pending_global.append((name,batch,values,temporary,target,expected_columns))
             if pending_global and grid.startswith("intraday"):
-                emitted_count,telemetry=self._build_global_feature_chunks(calculation_path,[(name,batch,values) for name,batch,values,_,_,_ in pending_global])
-                global_telemetry.append({"grid":grid}|telemetry)
-                if emitted_count!=observation_count: raise ValueError(f"Chunked global panel emitted {emitted_count:,}/{observation_count:,} rows")
+                streaming=[]; conventional=[]
+                for name,batch,values,_,_,_ in pending_global:
+                    for index,spec in enumerate(batch):
+                        item=(name,[spec],values[:,index:index+1])
+                        (streaming if spec.concept_id=="same_bucket_return_rank" and spec.representation=="raw" else conventional).append(item)
+                if streaming:
+                    emitted_count,telemetry=self._build_same_bucket_rank_stream(calculation_path,streaming)
+                    global_telemetry.append({"grid":grid,"method":"incremental_same_bucket_rank"}|telemetry)
+                    if emitted_count!=observation_count: raise ValueError(f"Streamed global rank emitted {emitted_count:,}/{observation_count:,} rows")
+                if conventional:
+                    emitted_count,telemetry=self._build_global_feature_chunks(calculation_path,conventional)
+                    global_telemetry.append({"grid":grid,"method":"bounded_history"}|telemetry)
+                    if emitted_count!=observation_count: raise ValueError(f"Chunked global panel emitted {emitted_count:,}/{observation_count:,} rows")
             if pending_global and not grid.startswith("intraday"):
                 panel = pd.read_parquet(calculation_path)
                 self._compact_feature_frame(panel); builder = FeatureBuilder(panel)
@@ -779,6 +789,50 @@ class AlphaDiscoveryRun:
         for column in ("open","high","low","close","vwap","research_open","research_high","research_low","research_close","split_factor"):
             if column in frame: frame[column]=pd.to_numeric(frame[column],downcast="float")
 
+    def _build_same_bucket_rank_stream(self,calculation_path: Path,work: list[tuple[str,list,np.memmap]]) -> tuple[int,dict]:
+        """Exact prior-20 cross-sectional ranks with bounded per-security/bucket state."""
+        from collections import deque
+        import duckdb,psutil
+        with duckdb.connect() as connection:
+            all_sessions=[pd.Timestamp(row[0]) for row in connection.execute(
+                "SELECT DISTINCT session_date FROM read_parquet(?) ORDER BY session_date",[str(calculation_path)]).fetchall()]
+            emitted=[pd.Timestamp(row[0]) for row in connection.execute(
+                "SELECT DISTINCT session_date FROM read_parquet(?) WHERE emit ORDER BY session_date",[str(calculation_path)]).fetchall()]
+        history=max(25,max(int(spec.minimum_history) for _,batch,_ in work for spec in batch))
+        start=max(0,all_sessions.index(emitted[0])-history)
+        state={}; written=0; read_seconds=build_seconds=0.0; peak=0; selected=all_sessions[start:all_sessions.index(emitted[-1])+1]
+        for session in selected:
+            tick=time.perf_counter()
+            frame=pd.read_parquet(calculation_path,columns=["observation_id","security_id","decision_ts","emit","bucket_return"],
+                                  filters=[("session_date","=",session.date())])
+            read_seconds+=time.perf_counter()-tick
+            tick=time.perf_counter()
+            ranks=frame.bucket_return.astype(float).groupby(frame.decision_ts,sort=False).rank(method="average",pct=True).to_numpy(float)
+            bucket=pd.to_datetime(frame.decision_ts,utc=True).dt.tz_convert("America/New_York").dt.strftime("%H:%M").to_numpy()
+            security=frame.security_id.to_numpy(); result=np.full(len(frame),np.nan,dtype=np.float32)
+            for index,(sid,clock,rank) in enumerate(zip(security,bucket,ranks)):
+                key=(sid,clock)
+                entry=state.get(key)
+                if entry is None:
+                    entry=[deque(),0.0,0]; state[key]=entry
+                queue,total,valid=entry
+                if valid>=10:result[index]=total/valid
+                if len(queue)==20:
+                    old=queue.popleft()
+                    if np.isfinite(old):total-=old; valid-=1
+                queue.append(rank)
+                if np.isfinite(rank):total+=rank; valid+=1
+                entry[1]=total; entry[2]=valid
+            emit=frame.emit.to_numpy(bool)&~frame.observation_id.duplicated().to_numpy()
+            ids=frame.observation_id.to_numpy(np.int64)[emit]
+            for _,_,values in work:values[ids,0]=result[emit]; values.flush()
+            written+=len(ids); build_seconds+=time.perf_counter()-tick
+            peak=max(peak,int(psutil.Process().memory_info().rss))
+            del frame,ranks,bucket,security,result,emit,ids
+        return written,{"chunks":len(selected),"history_sessions":history,
+                        "panel_read_seconds":read_seconds,"feature_build_seconds":build_seconds,
+                        "peak_process_rss_bytes":peak,"state_keys":len(state)}
+
     def _build_global_feature_chunks(self,calculation_path: Path,work: list[tuple[str,list,np.memmap]]) -> tuple[int,dict]:
         """Build intraday cross-sectional features with bounded chronological history."""
         import duckdb
@@ -790,13 +844,17 @@ class AlphaDiscoveryRun:
         from .features.base import FeatureBuilder
         sample=pd.read_parquet(calculation_path,filters=[("session_date","=",sessions[0].date())]); self._compact_feature_frame(sample)
         sample_bytes=max(1,int(sample.memory_usage(index=True,deep=True).sum())); sample_rows=max(1,len(sample))
+        del sample
         try:
             import psutil
             vm=psutil.virtual_memory(); rss_process=psutil.Process(); available=int(vm.available); total=int(vm.total)
         except ImportError:
             rss_process=None; available=total=32*(1<<30)
         reserve=max(4*(1<<30),int(total*(1-float(self.config.compute.host_memory_fraction))))
-        budget=max(512*(1<<20),min(available-reserve,int(total*.60)))
+        # Retained history, a newly read chunk, and builder temporaries coexist.
+        # Leave headroom below the machine reserve rather than sizing to every
+        # available byte from the small single-session sample.
+        budget=max(512*(1<<20),min(int(max(0,available-reserve)*.70),int(total*.60)))
         feature_count=sum(len(batch) for _,batch,_ in work)
         per_session=max(sample_bytes*3,sample_bytes+sample_rows*8*(feature_count+16))
         included_capacity=max(1,budget//max(per_session,1)); chunk_size=max(1,min(40,int(included_capacity)-history))
@@ -812,6 +870,7 @@ class AlphaDiscoveryRun:
                 if loaded_end<included[-1]:
                     appended=pd.read_parquet(calculation_path,filters=[("session_date",">",loaded_end.date()),("session_date","<=",included[-1].date())])
                     retained=pd.concat([retained,appended],ignore_index=True)
+                    del appended
             read_seconds+=time.perf_counter()-tick
             loaded_end=included[-1]; self._compact_feature_frame(retained)
             builder=FeatureBuilder(retained); dates=pd.to_datetime(builder.frame.session_date)
@@ -828,6 +887,7 @@ class AlphaDiscoveryRun:
             for _,_,values in work: values.flush()
             flush_seconds+=time.perf_counter()-tick
             if rss_process is not None: peak_rss=max(peak_rss,int(rss_process.memory_info().rss))
+            del builder,dates,emit,ids
         return written,{"emitted_sessions_per_chunk":chunk_size,"history_sessions":history,"budget_bytes":budget,
                         "sample_session_bytes":sample_bytes,"estimated_bytes_per_session":per_session,"peak_process_rss_bytes":peak_rss,
                         "chunks":chunks,"panel_read_seconds":read_seconds,"feature_build_seconds":build_seconds,

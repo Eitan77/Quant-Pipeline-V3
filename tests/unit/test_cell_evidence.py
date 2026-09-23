@@ -1,4 +1,5 @@
 import numpy as np,pandas as pd
+from types import SimpleNamespace
 import duckdb
 from quant_pipeline.alpha_discovery.cache.rank_store import build_packed_bins,unpack_bins
 from quant_pipeline.alpha_discovery.scan.dual_coarse import DualTileScanner
@@ -36,6 +37,21 @@ def test_fused_tile_runtime_subdivision_preserves_logical_shard(tmp_path):
         b=pd.read_parquet(right/f"r{resolution}/g/t/part-00000000.parquet")
         assert a.pair_id.tolist()==b.pair_id.tolist()==["ab","ac","bc"]
         for x,z in zip(a.surface_sums,b.surface_sums): np.testing.assert_allclose(x,z)
+
+def test_incremental_bucket_rank_matches_prior_rolling_definition(tmp_path):
+    days=pd.date_range("2025-04-01",periods=16,freq="D")
+    rows=[{"observation_id":2*day+security,"security_id":security,
+           "session_date":date.date(),"decision_ts":date+pd.Timedelta(hours=14,minutes=35),
+           "emit":True,"bucket_return":np.nan if day==2 and security==0 else float((day+security)%4)}
+          for day,date in enumerate(days) for security in range(2)]
+    frame=pd.DataFrame(rows); source=tmp_path/"panel.parquet"; frame.to_parquet(source)
+    rank=frame.bucket_return.groupby(frame.decision_ts).rank(method="average",pct=True)
+    expected=rank.groupby(frame.security_id).transform(lambda x:x.shift(1).rolling(20,min_periods=10).mean())
+    output=np.lib.format.open_memmap(tmp_path/"rank.npy",mode="w+",dtype=np.float32,shape=(len(frame),1))
+    spec=SimpleNamespace(minimum_history=25)
+    written,_=AlphaDiscoveryRun._build_same_bucket_rank_stream(None,source,[("rank",[spec],output)])
+    assert written==len(frame)
+    np.testing.assert_allclose(output[:,0],expected.to_numpy(float),equal_nan=True,atol=1e-7)
 
 def test_hidden_cells_receive_specialist_and_temporal_metrics():
     counts=np.zeros((1,4,4),int); sums=np.zeros((1,4,4),float); counts[0,:,0]=20; sums[0,:,0]=np.array([.2,.2,-.2,-.2]); counts[0,:,3]=20; sums[0,:,3]=.4
