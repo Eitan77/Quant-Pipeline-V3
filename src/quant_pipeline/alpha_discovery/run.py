@@ -800,9 +800,11 @@ class AlphaDiscoveryRun:
         feature_count=sum(len(batch) for _,batch,_ in work)
         per_session=max(sample_bytes*3,sample_bytes+sample_rows*8*(feature_count+16))
         included_capacity=max(1,budget//max(per_session,1)); chunk_size=max(1,min(40,int(included_capacity)-history))
-        retained=None; loaded_end=None; peak_rss=0
+        retained=None; loaded_end=None; peak_rss=0; read_seconds=build_seconds=flush_seconds=0.0; chunks=0
         for offset in range(0,len(sessions),chunk_size):
+            chunks+=1
             current=sessions[offset:offset+chunk_size]; first=max(0,positions[current[0]]-history); included=all_sessions[first:positions[current[-1]]+1]
+            tick=time.perf_counter()
             if retained is None:
                 retained=pd.read_parquet(calculation_path,filters=[("session_date",">=",included[0].date()),("session_date","<=",included[-1].date())])
             else:
@@ -810,19 +812,26 @@ class AlphaDiscoveryRun:
                 if loaded_end<included[-1]:
                     appended=pd.read_parquet(calculation_path,filters=[("session_date",">",loaded_end.date()),("session_date","<=",included[-1].date())])
                     retained=pd.concat([retained,appended],ignore_index=True)
+            read_seconds+=time.perf_counter()-tick
             loaded_end=included[-1]; self._compact_feature_frame(retained)
             builder=FeatureBuilder(retained); dates=pd.to_datetime(builder.frame.session_date)
             emit=builder.frame.emit.to_numpy(bool)&dates.isin(current).to_numpy()
             emit = emit & ~builder.frame["observation_id"].duplicated().to_numpy()
             ids=builder.frame.loc[emit,"observation_id"].to_numpy(np.int64)
+            tick=time.perf_counter()
             for _,batch,values in work:
                 if len(ids): values[ids,:]=builder.build_many(batch).to_numpy(dtype=np.float32,na_value=np.nan)[emit]
                 builder._direct_cache.clear()
+            build_seconds+=time.perf_counter()-tick
             written+=len(ids)
+            tick=time.perf_counter()
             for _,_,values in work: values.flush()
+            flush_seconds+=time.perf_counter()-tick
             if rss_process is not None: peak_rss=max(peak_rss,int(rss_process.memory_info().rss))
         return written,{"emitted_sessions_per_chunk":chunk_size,"history_sessions":history,"budget_bytes":budget,
-                        "sample_session_bytes":sample_bytes,"estimated_bytes_per_session":per_session,"peak_process_rss_bytes":peak_rss}
+                        "sample_session_bytes":sample_bytes,"estimated_bytes_per_session":per_session,"peak_process_rss_bytes":peak_rss,
+                        "chunks":chunks,"panel_read_seconds":read_seconds,"feature_build_seconds":build_seconds,
+                        "flush_seconds":flush_seconds}
 
     def _ensure_local_feature_panel(self, grid: str, calculation_path: Path) -> Path:
         """Create a resume-safe, security-partitioned panel for local workers."""
