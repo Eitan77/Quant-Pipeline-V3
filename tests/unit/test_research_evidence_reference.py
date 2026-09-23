@@ -10,12 +10,13 @@ from types import SimpleNamespace
 
 import numpy as np
 import pandas as pd
+import pytest
 
 from quant_pipeline.production.evidence_identity import atomic_json, inside, task_identity
-from quant_pipeline.production.evidence_store import EvidenceReader
+from quant_pipeline.production.evidence_store import EvidenceReader,build_groupings
 from quant_pipeline.production.evidence_query import group_cells, open_catalog
 from quant_pipeline.production.research_jobs import JobStore, worker_lock, run_one
-from quant_pipeline.production.segmented_scan import SegmentedMoments, encode_groups, local_group_codes
+from quant_pipeline.production.segmented_scan import SegmentedMoments, encode_groups, local_group_codes, prepare_tile
 from quant_pipeline.production.segmented_task import execute_segmented_task
 from quant_pipeline.production.variant_batches import plan_batches
 
@@ -147,6 +148,27 @@ def test_moment_reference():
     check_moments()
 
 
+def test_cuda_shared_prepared_tile_parity():
+    torch=pytest.importorskip("torch")
+    if not torch.cuda.is_available():pytest.skip("CUDA unavailable")
+    rng=np.random.default_rng(74)
+    packed=rng.integers(0,150,(97,3),dtype=np.uint8)
+    packed[::11,1]=255
+    y=rng.normal(size=(97,2)).astype(np.float64)/10000
+    y[::7,0]=np.nan
+    groups=rng.integers(-1,5,97)
+    prepared=prepare_tile(packed,y,"cuda:0")
+    for resolution in (3,5,10):
+        cpu=SegmentedMoments(pairs=2,targets=2,groups=5,resolution=resolution,
+                             max_state_bytes=1_000_000)
+        gpu=SegmentedMoments(pairs=2,targets=2,groups=5,resolution=resolution,
+                             max_state_bytes=1_000_000,device="cuda:0")
+        cpu.update(packed,[0,2],[1,0],y,groups)
+        gpu.update_prepared(prepared,[0,2],[1,0],groups)
+        for actual,expected in zip(gpu.numpy(),cpu.numpy()):
+            np.testing.assert_allclose(actual,expected,rtol=1e-12,atol=1e-16)
+
+
 def test_hidden_joint_store_and_query(tmp_path):
     check_store_query(tmp_path / "evidence")
 
@@ -155,6 +177,65 @@ def test_planner_and_job_recovery(tmp_path):
     check_planner_jobs(tmp_path)
 
 
+def test_windows_worker_exclusion(tmp_path):
+    lock=tmp_path/"numerical.lock"
+    with worker_lock(lock):
+        with pytest.raises(OSError):
+            with worker_lock(lock):
+                pass
+
+
+def test_job_blocked_retry_and_cancel(tmp_path):
+    store=JobStore(tmp_path/"jobs.sqlite")
+    blocked=store.submit({"kind":"check","request":"blocked"})
+    assert run_one(store,{"check":lambda spec,cancelled:{"status":"blocked_storage"}})
+    assert store.get(blocked)["status"]=="blocked_storage"
+    store.retry(blocked)
+    assert run_one(store,{"check":lambda spec,cancelled:{"status":"complete","rows":2}})
+    assert store.get(blocked)["status"]=="complete" and store.get(blocked)["attempt"]==2
+    cancelled=store.submit({"kind":"check","request":"cancel"})
+    store.cancel(cancelled)
+    assert store.get(cancelled)["status"]=="cancelled"
+    store.close()
+
+
 def test_opportunity_replacement_parity():
     repo = Path(__file__).resolve().parents[2]
     check_overlap(repo)
+
+
+def test_early_close_grouping_excludes_after_session(tmp_path):
+    observations=pd.DataFrame({"security_id":["A","A"],"session_date":["2025-07-03"]*2,
+        "decision_ts":pd.to_datetime(["2025-07-03 16:30Z","2025-07-03 17:30Z"])})
+    groups=build_groupings(tmp_path,"g",observations,"obs",definitions=[("time_bucket",)],folds=1)
+    codes=np.load(tmp_path/groups["time_bucket"]["path"])
+    assert codes[0]>=0 and codes[1]==-1
+
+
+def test_replay_preparer_uses_exact_governed_benchmark_leg(tmp_path,monkeypatch):
+    from quant_pipeline.production import replay
+    grid="intraday_5m"
+    adjusted=f"target_5m__benchmark_adjusted__{grid}"
+    raw=f"target_5m__raw__{grid}"
+    stamp=pd.Timestamp("2025-05-01 14:30Z")
+    events=tmp_path/"events.parquet"
+    pd.DataFrame({"observation_id":[1],"security_id":["A"],"session_date":[stamp.date()],
+                  "decision_ts":[stamp]}).to_parquet(events,index=False)
+    ledger=tmp_path/"cache"/"targets"/f"{grid}.parquet"
+    ledger.parent.mkdir(parents=True)
+    pd.DataFrame({"observation_id":[1,2],"security_id":["A","BENCH"],
+                  "session_date":[stamp.date()]*2,"decision_ts":[stamp]*2,
+                  "target_id":[adjusted,raw],"target_basis":["benchmark_adjusted","raw"],
+                  "entry_ts":[stamp+pd.Timedelta(minutes=5)]*2,
+                  "entry_price":[100.,400.],"exit_ts":[stamp+pd.Timedelta(minutes=20)]*2,
+                  "exit_price":[101.,402.],"beta_prior":[0.8,0.0]}).to_parquet(ledger,index=False)
+    monkeypatch.setattr(replay,"prepare_state_events",lambda *args,**kw:(events,"event"))
+    original=replay.pd.read_parquet
+    monkeypatch.setattr(replay.pd,"read_parquet",lambda path,**kw:
+        pd.DataFrame({"security_id":["A","BENCH"],"symbol":["AAA","SPY"]})
+        if str(path).endswith("security_master.parquet") else original(path,**kw))
+    signals,meta=replay.prepare_replay_inputs(tmp_path,{"evidence_id":"e"},
+        {"grid":grid,"target_id":adjusted,"direction":1,"return_basis":"benchmark_adjusted",
+         "benchmark_symbol":"SPY"})
+    assert meta["benchmark_security_id"]=="BENCH"
+    assert len(signals)==1 and signals.iloc[0].benchmark_exit_price==402.

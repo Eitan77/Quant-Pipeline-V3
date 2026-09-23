@@ -80,6 +80,7 @@ class LegacyCoreAdapter:
                     initial_plan_workers=configured_feature_worker_cap(run.config.compute)
                     result=run_with_resource_recovery(attempt,ResourcePlan(tile_pairs=int(self.machine.get("pair_cap",8192)),workers=initial_plan_workers),on_retry=lambda exc,plan:self.telemetry.event("resource_retry",stage=f"core:{stage}",error=str(exc),tile_pairs=plan.tile_pairs,workers=plan.workers) if self.telemetry else None)
                     cache.publish(stage,key,run.root,result); result={**result,"shared_cache_reused":False,"shared_cache_key":key}
+                    run._atomic_json(f"checkpoints/{stage}.json",result)
             else: result=run.execute(stage)
             results.append(result)
             if self.telemetry:self.telemetry.progress(f"core:{stage}",index+1,len(LOW_LEVEL_STAGES))

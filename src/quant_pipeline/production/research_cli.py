@@ -27,11 +27,12 @@ def add_parser(commands):
             mode.add_argument("--poll",action="store_true")
     jobs=leaves.add_parser("job")
     actions=jobs.add_subparsers(dest="job_command",required=True)
-    for name in ("status","results","cancel","retry"):
+    for name in ("status","results","cancel","retry","journal"):
         parser=actions.add_parser(name)
         parser.add_argument("--machine",type=Path,required=True)
         parser.add_argument("--run-id",required=True)
-        parser.add_argument("--job-id",required=True)
+        if name=="journal":parser.add_argument("--limit",type=int,default=100)
+        else:parser.add_argument("--job-id",required=True)
 
 
 def _read_spec(path):
@@ -45,6 +46,7 @@ def _worker(service,machine,poll):
     store=JobStore(service.root/"research"/"jobs.sqlite")
     handlers={
         "subgroup_search":lambda spec,cancelled:service.search(spec["payload"],cancelled),
+        "stored_query":lambda spec,cancelled:service.query(spec["payload"]),
         "diagnostic":lambda spec,cancelled:service.inspect(spec["payload"],cancelled),
         "neighbor_scan":lambda spec,cancelled:service.experiment(spec["payload"],cancelled),
         "backtest":lambda spec,cancelled:service.experiment(spec["payload"],cancelled),
@@ -63,12 +65,29 @@ def _worker(service,machine,poll):
     return {"status":"stopped","jobs_processed":completed}
 
 
+def _worker_available(run_root):
+    try:
+        with worker_lock(Path(run_root)/"research_worker.lock"):
+            return False
+    except OSError:
+        return True
+
+
 def main(args):
     machine=load_machine_config(args.machine)
     service=ResearchService(machine,args.run_id)
     command=args.research_command
     if command=="describe": return service.describe(include_definitions=args.details)
-    if command=="query": return service.query(_read_spec(args.spec))
+    if command=="query":
+        payload=_read_spec(args.spec)
+        if not payload.pop("async",False):
+            with worker_lock(Path(machine["run_root"])/"numerical_owner.lock"):
+                return service.query(payload)
+        store=JobStore(service.root/"research"/"jobs.sqlite")
+        try:job_id=store.submit({"kind":"stored_query","run_id":args.run_id,
+                                 "evidence_id":service.describe()["evidence_id"],"payload":payload})
+        finally:store.close()
+        return {"job_id":job_id,"status":"queued","worker_available":_worker_available(machine["run_root"])}
     if command in {"search","inspect","experiment"}:
         payload=_read_spec(args.spec)
         identity=service.describe()["evidence_id"]
@@ -77,9 +96,14 @@ def main(args):
         store=JobStore(service.root/"research"/"jobs.sqlite")
         try: job_id=store.submit({"kind":kind,"run_id":args.run_id,"evidence_id":identity,"payload":payload})
         finally: store.close()
-        return {"job_id":job_id,"status":"queued","worker_available":"unknown","worker_command":f"research worker --machine {args.machine} --run-id {args.run_id} --once"}
+        return {"job_id":job_id,"status":"queued","worker_available":_worker_available(machine["run_root"]),
+                "worker_command":f"research worker --machine {args.machine} --run-id {args.run_id} --once"}
     if command=="worker": return _worker(service,machine,args.poll)
     if command=="job":
+        if args.job_command=="journal":
+            store=JobStore(service.root/"research"/"jobs.sqlite")
+            try:return {"events":store.journal(args.limit)}
+            finally:store.close()
         if args.job_command=="status": return service.job_status(args.job_id)
         if args.job_command=="results": return service.job_results(args.job_id)
         if args.job_command=="cancel": return service.cancel(args.job_id)

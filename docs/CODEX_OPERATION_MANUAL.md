@@ -2,7 +2,46 @@
 
 ## Comprehensive evidence status
 
-The optional `evidence.profile: comprehensive` path currently stops at storage preflight for the full discovery request. `research describe` reports coverage; `research query` and `research search` operate on committed subgroup catalogs when present. `research inspect` supports stored symbol/time/month/fold moments; neighbor and backtest jobs return `unavailable` until their verified adapters exist. Use [implementation status](RESEARCH_IMPLEMENTATION_STATUS.md) before starting the comprehensive request. The existing analysis bundle remains a legacy summary, not complete subgroup coverage.
+The `evidence.profile: comprehensive` path passed a bounded real-core gate with mandatory subgroup coverage, stored/evicted queries, recomputation, search, diagnostic, neighbor scan, and raw execution replay. The configured year-long request has **not** run and the full handoff is not yet certified; see [implementation status](RESEARCH_IMPLEMENTATION_STATUS.md). A dense byte estimate is not a permanent disk requirement. The existing analysis bundle remains a legacy summary, not complete subgroup coverage.
+
+## Local comprehensive workflow (Windows PowerShell)
+
+Run from the repository root with the configured `configs\machines\local.yaml`. The short gate uses real source data and all configured subgroup types. The year-long command is listed for an authorized production start; it has not been launched for this handoff.
+
+```powershell
+.\.venv\Scripts\python -m quant_pipeline run --request configs\research\v3_comprehensive_gate.yaml --machine configs\machines\local.yaml
+.\.venv\Scripts\python -m quant_pipeline resume --run-id v3_comprehensive_gate --machine configs\machines\local.yaml
+.\.venv\Scripts\python -m quant_pipeline run --request configs\research\v3_comprehensive_20260922.yaml --machine configs\machines\local.yaml
+.\.venv\Scripts\python -m quant_pipeline resume --run-id v3_comprehensive_20260922 --machine configs\machines\local.yaml
+.\.venv\Scripts\python -m quant_pipeline status --run-id v3_comprehensive_20260922 --machine configs\machines\local.yaml
+.\.venv\Scripts\python -m quant_pipeline research describe --machine configs\machines\local.yaml --run-id v3_comprehensive_20260922 --details
+```
+
+After coverage planning, select an actual pair/target from the run's saved plan. This builds request JSON from the run's IDs instead of assuming an example ID exists in a different scope. The request can be changed to another planned pair, target, resolution, grouping, or group ID.
+
+```powershell
+$run = 'v3_comprehensive_20260922'
+$root = "D:\AlgoResearch\Quant-Pipeline-V3\runs\$run"
+$task = Get-Content "$root\evidence\coverage_plan.jsonl" | ForEach-Object { $_ | ConvertFrom-Json } | Where-Object { $_.task.grouping_id -eq 'security_time_bucket' -and $_.task.state_kind -eq 'dual' -and $_.task.resolution -eq 3 } | Select-Object -First 1
+$base = @{grid=$task.grid; grouping='security_time_bucket'; state_kind='dual'; pair_id=$task.task.pair_ids[0]; target_id=$task.task.target_ids[0]; resolution=3; group_id=$task.task.group_start}
+$base | ConvertTo-Json | Set-Content "$root\research-query.json"
+(@{grid=$base.grid; grouping=$base.grouping; state_kind='dual'; pair_id=$base.pair_id; target_id=$base.target_id; resolution=3; limit=100} | ConvertTo-Json) | Set-Content "$root\research-search.json"
+(@{kind='symbol'; grid=$base.grid; state_kind='dual'; pair_id=$base.pair_id; target_id=$base.target_id; resolution=3; cells=@(0)} | ConvertTo-Json) | Set-Content "$root\research-diagnostic.json"
+(@{kind='neighbor'; grid=$base.grid; grouping=$base.grouping; state_kind='dual'; pair_ids=@($base.pair_id); target_id=$base.target_id; resolution=3} | ConvertTo-Json) | Set-Content "$root\research-neighbor.json"
+(@{kind='backtest'; grid=$base.grid; state_kind='dual'; pair_id=$base.pair_id; target_id=$base.target_id; resolution=3; cells=@(0); direction=1; return_basis='raw'} | ConvertTo-Json) | Set-Content "$root\research-backtest.json"
+.\.venv\Scripts\python -m quant_pipeline research query --machine configs\machines\local.yaml --run-id $run --spec "$root\research-query.json"
+.\.venv\Scripts\python -m quant_pipeline research search --machine configs\machines\local.yaml --run-id $run --spec "$root\research-search.json"
+.\.venv\Scripts\python -m quant_pipeline research inspect --machine configs\machines\local.yaml --run-id $run --spec "$root\research-diagnostic.json"
+.\.venv\Scripts\python -m quant_pipeline research experiment --machine configs\machines\local.yaml --run-id $run --spec "$root\research-neighbor.json"
+.\.venv\Scripts\python -m quant_pipeline research experiment --machine configs\machines\local.yaml --run-id $run --spec "$root\research-backtest.json"
+.\.venv\Scripts\python -m quant_pipeline research worker --machine configs\machines\local.yaml --run-id $run --poll
+.\.venv\Scripts\python -m quant_pipeline research job status --machine configs\machines\local.yaml --run-id $run --job-id '<returned-job-id>'
+.\.venv\Scripts\python -m quant_pipeline research job results --machine configs\machines\local.yaml --run-id $run --job-id '<returned-job-id>'
+```
+
+Search, diagnostic, neighbor, and backtest submissions return durable job IDs. Start the worker in a second PowerShell session. For a bounded one-job pass, use `research worker ... --once`. The `results` command returns the run-local artifact path. Raw replay is an isolated candidate diagnostic with explicit costs and rejected entries; it is not a portfolio return. Benchmark-adjusted and beta-residual replay additionally require a governed `benchmark_symbol` and exact benchmark target windows.
+
+The older dossier sections below describe the frozen-candidate and promotion workflow. `research inspect` and `research experiment` can investigate an exact verified discovery state without first generating an unrelated dossier. Sealed replication/final-holdout procedures remain separate.
 
 ## Purpose
 

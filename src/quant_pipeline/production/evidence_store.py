@@ -16,7 +16,8 @@ DEFAULT_GROUPINGS=(("security",),("month",),("fold",),("time_bucket",),
                    ("security","time_bucket"),("security","month"))
 
 
-def build_groupings(root, grid, observations, observation_id, definitions=DEFAULT_GROUPINGS, folds=5):
+def build_groupings(root, grid, observations, observation_id, definitions=DEFAULT_GROUPINGS, folds=5,
+                    condition_definitions=(), bin_refs=None):
     """Encode requested complete-grid groups once, with durable dictionaries."""
     root=Path(root)
     frame=pd.DataFrame(index=observations.index)
@@ -26,12 +27,44 @@ def build_groupings(root, grid, observations, observation_id, definitions=DEFAUL
     ordered=np.sort(sessions.dt.normalize().unique())
     fold_lookup={session:index for index,part in enumerate(np.array_split(ordered,folds)) for session in part}
     frame["fold"]=sessions.dt.normalize().map(fold_lookup).astype("Int64")
+    import exchange_calendars as xcals
+    calendar=xcals.get_calendar("XNYS")
+    trading_sessions=calendar.sessions_in_range(str(sessions.min().date()),str(sessions.max().date()))
+    open_minute={pd.Timestamp(day).date():calendar.session_open(day).tz_convert("America/New_York").hour*60+
+                 calendar.session_open(day).tz_convert("America/New_York").minute for day in trading_sessions}
+    close_minute={pd.Timestamp(day).date():calendar.session_close(day).tz_convert("America/New_York").hour*60+
+                  calendar.session_close(day).tz_convert("America/New_York").minute for day in trading_sessions}
     times=pd.to_datetime(observations.decision_ts,utc=True).dt.tz_convert("America/New_York")
     clock=times.dt.hour*60+times.dt.minute
-    last=clock.groupby(sessions.dt.normalize()).transform("max")
-    buckets=np.select([clock>=np.minimum(930,last-60),clock<630,clock<720,clock<840],
+    session_days=sessions.dt.date
+    opening=session_days.map(open_minute)
+    closing=session_days.map(close_minute)
+    valid_session=opening.notna() & closing.notna() & (clock>=opening) & (clock<=closing)
+    buckets=np.select([clock>=closing-60,clock<630,clock<720,clock<840],
                       ["close","open","morning","midday"],default="afternoon")
-    frame["time_bucket"]=pd.Series(buckets,index=frame.index)
+    frame["time_bucket"]=pd.Series(buckets,index=frame.index,dtype="string").where(valid_session,pd.NA)
+    unavailable=set()
+    for definition in condition_definitions:
+        name=definition["id"]
+        if definition["source"]=="decision_minute":
+            values=clock.to_numpy(dtype=float)
+        else:
+            reference=(bin_refs or {}).get(definition["feature_id"])
+            if reference is None:
+                unavailable.add(name)
+                frame[name]=pd.Series(pd.NA,index=frame.index,dtype="string")
+                continue
+            packed=np.load(root/reference["path"],mmap_mode="r",allow_pickle=False)[:,reference["column"]]
+            values=np.where(packed==255,np.nan,packed//15).astype(float)
+        cuts=np.asarray(definition["cutpoints"],dtype=float)
+        codes=np.searchsorted(cuts,values,side="right")
+        labels=np.asarray(definition["labels"],dtype=object)
+        result_values=pd.Series(labels[np.minimum(codes,len(labels)-1)],index=frame.index,dtype="string")
+        if definition.get("missing","unavailable")=="category":
+            result_values.loc[~np.isfinite(values)]="missing"
+        else:
+            result_values.loc[~np.isfinite(values)]=pd.NA
+        frame[name]=result_values
     result={}
     for columns in definitions:
         columns=tuple(columns)
@@ -43,12 +76,14 @@ def build_groupings(root, grid, observations, observation_id, definitions=DEFAUL
         path=group_dir/f"{grouping_id}.npy"; pending=path.with_suffix(".tmp.npy")
         np.save(pending,codes,allow_pickle=False); os.replace(pending,path)
         labels_path=group_dir/f"{grouping_id}.parquet"; labels.to_parquet(labels_path,index=False)
+        relevant=[item for item in condition_definitions if item["id"] in columns]
         definition_id=digest({"columns":columns,"observation_id":observation_id,"folds":folds,
-                              "time_bucket_version":1,"missing":"excluded"})
+                              "time_bucket_version":2,"conditions":relevant,"missing":"excluded"})
         result[grouping_id]={"path":path.relative_to(root).as_posix(),"shape":list(codes.shape),
                              "dtype":str(codes.dtype),"observation_id":observation_id,
                              "definition_id":definition_id,"labels":labels_path.relative_to(root).as_posix(),
-                             "groups":len(labels),"expected_folds":folds if "fold" in columns else None,
+                             "groups":len(labels),"availability":"unavailable" if set(columns)&unavailable else "available",
+                             "expected_folds":folds if "fold" in columns else None,
                              "missing_folds":sorted(set(range(folds))-set(frame["fold"].dropna().astype(int))) if "fold" in columns else []}
     return result
 
@@ -59,7 +94,8 @@ def publish_evidence(legacy_run,resolved_scope,committed_inputs,research):
     grids={}
     active_features={item["id"]:item for item in resolved_scope["features"]}
     active_targets={item["id"]:item for item in resolved_scope["targets"]}
-    definitions=research.get("evidence",{}).get("mandatory_groupings",DEFAULT_GROUPINGS)
+    evidence=research.get("evidence",{})
+    definitions=list(evidence.get("mandatory_groupings",DEFAULT_GROUPINGS))+list(evidence.get("condition_groupings",[]))
     for grid in resolved_scope["grids"]:
         obs_path=root/"cache"/"features"/grid/"observations.parquet"
         observations=pd.read_parquet(obs_path,columns=["observation_id","security_id","session_date","decision_ts"])
@@ -103,7 +139,8 @@ def publish_evidence(legacy_run,resolved_scope,committed_inputs,research):
         required={item for item,record in active_features.items() if record["grid"]==grid}
         if set(bin_refs)!=required: raise ValueError(f"Missing verified packed bins for {grid}: {sorted(required-set(bin_refs))[:5]}")
         group_refs=build_groupings(root,grid,observations,observation_id,definitions,
-                                   folds=int(legacy_run.config.stability["chronological_folds"]))
+                                   folds=int(legacy_run.config.stability["chronological_folds"]),
+                                   condition_definitions=evidence.get("condition_definitions",[]),bin_refs=bin_refs)
         grids[grid]={"rows":len(ids),"observation_id":observation_id,"observations":obs_path.relative_to(root).as_posix(),
                      "bins":bin_refs,"targets":target_refs,"groups":group_refs,
                      "source_stage_ids":committed_inputs}

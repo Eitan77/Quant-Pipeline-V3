@@ -66,6 +66,22 @@ class SegmentedMoments:
                 raise ValueError("Feature index out of range")
         if np.any(groups < -1) or np.any(groups >= group_count):
             raise ValueError("Codes must be local to this group partition; -1 means excluded")
+        prepared = prepare_tile(packed, y, self.device if self.torch is not None else "cpu")
+        self.update_prepared(prepared, left, right, groups)
+
+    def update_prepared(self, prepared, left, right, group_codes):
+        """Accumulate a tile already staged once for several grouping families."""
+        packed, y = prepared
+        left = np.asarray(left, np.int64)
+        right = None if right is None else np.asarray(right, np.int64)
+        groups = np.asarray(group_codes, np.int64)
+        targets, pairs, group_count, cells = self.shape
+        if tuple(packed.shape)[1] <= int(max(left.max(initial=-1), -1 if right is None else right.max(initial=-1))):
+            raise ValueError("Feature index out of range")
+        if tuple(y.shape) != (len(packed), targets) or groups.shape != (len(packed),):
+            raise ValueError("Prepared observation axes disagree")
+        if np.any(groups < -1) or np.any(groups >= group_count):
+            raise ValueError("Codes must be local to this group partition")
         r = self.resolution
         if self.torch is None:
             pa = packed[:, left]
@@ -87,7 +103,7 @@ class SegmentedMoments:
                 np.add.at(self.q[target].reshape(-1), indices, values * values)
         else:
             t = self.torch
-            raw = t.as_tensor(packed, dtype=t.uint8, device=self.device)
+            raw = packed
             pa = raw.index_select(1, t.as_tensor(left, device=self.device)).to(t.int64)
             pb = None if self.singles else raw.index_select(1, t.as_tensor(right, device=self.device)).to(t.int64)
             decode = lambda x: x.remainder(3) if r == 3 else x.div(3, rounding_mode="floor").remainder(5) if r == 5 else x.div(15, rounding_mode="floor")
@@ -98,7 +114,7 @@ class SegmentedMoments:
             g = t.as_tensor(groups, device=self.device)
             valid &= g[:, None] >= 0
             keys = ((t.arange(pairs, device=self.device)[None, :] * group_count + g[:, None]) * cells + cell)
-            values_y = t.as_tensor(y, dtype=t.float64, device=self.device)
+            values_y = y
             for target in range(targets):
                 keep = valid & t.isfinite(values_y[:, target, None])
                 indices = keys[keep]
@@ -111,6 +127,22 @@ class SegmentedMoments:
         if self.torch is None:
             return self.n, self.s, self.q
         return tuple(x.detach().cpu().numpy() for x in (self.n, self.s, self.q))
+
+
+def prepare_tile(packed, y, device="cpu"):
+    """Validate and stage shared inputs once per observation chunk."""
+    packed = np.asarray(packed)
+    y = np.asarray(y)
+    y = y[:, None] if y.ndim == 1 else y
+    if packed.ndim != 2 or packed.dtype != np.uint8 or y.ndim != 2 or len(y) != len(packed):
+        raise ValueError("Invalid packed/target tile")
+    if np.any((packed >= 150) & (packed != 255)):
+        raise ValueError("Invalid packed feature code")
+    if device == "cpu":
+        return packed, y
+    import torch
+    return (torch.as_tensor(packed, dtype=torch.uint8, device=device),
+            torch.as_tensor(y, dtype=torch.float64, device=device))
 
 
 def local_group_codes(global_codes, start, stop):

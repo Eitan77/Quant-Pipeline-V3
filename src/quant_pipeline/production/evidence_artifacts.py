@@ -92,3 +92,33 @@ def commit_tile(root, task, moments, *, rows_per_group=1024):
         return manifest
     finally:
         temporary.unlink(missing_ok=True)
+
+
+class _StoredMoments:
+    def __init__(self, task, arrays):
+        self.resolution = task["resolution"]
+        self.singles = task["state_kind"] == "single"
+        self.cells = self.resolution if self.singles else self.resolution ** 2
+        self.arrays = arrays
+
+    def numpy(self):
+        return self.arrays
+
+
+def load_tile(root, task):
+    """Restore an exact committed tile, including zero-count groups."""
+    manifest = committed_tile(root, task)
+    if manifest is None:
+        return None
+    shape = (len(task["target_ids"]), len(task["pair_ids"]),
+             task["group_stop"] - task["group_start"],
+             task["resolution"] if task["state_kind"] == "single" else task["resolution"] ** 2)
+    arrays = (np.zeros(shape, np.int64), np.zeros(shape, np.float64), np.zeros(shape, np.float64))
+    targets = {value: i for i, value in enumerate(task["target_ids"])}
+    pairs = {value: i for i, value in enumerate(task["pair_ids"])}
+    for batch in pq.ParquetFile(inside(root, manifest["artifact"])).iter_batches(batch_size=1024):
+        for row in batch.to_pylist():
+            key = (targets[row["target_id"]], pairs[row["pair_id"]], row["group_id"] - task["group_start"])
+            for array, column in zip(arrays, ("counts", "sums", "sumsq")):
+                array[key] = row[column]
+    return _StoredMoments(task, arrays)

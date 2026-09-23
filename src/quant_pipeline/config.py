@@ -33,9 +33,29 @@ def load_research_config(path: Path) -> dict:
         if evidence.get("profile","comprehensive") not in {"comprehensive","legacy"}: raise ConfigurationError("Unsupported evidence profile")
         if evidence.get("retention","budgeted") not in {"budgeted","durable"}: raise ConfigurationError("Unsupported evidence retention")
         if evidence.get("dossier_policy","on_request") not in {"on_request","legacy"}: raise ConfigurationError("Unsupported dossier policy")
-        if evidence.get("condition_definitions",[]): raise ConfigurationError("Condition definitions are unavailable until a causal registered builder is supplied")
-        if evidence.get("condition_groupings",[]): raise ConfigurationError("Condition groupings require causal condition definitions")
-        if "mandatory_groupings" in evidence and (not isinstance(evidence["mandatory_groupings"],list) or any(not isinstance(group,list) or not group or any(key not in {"security","month","fold","time_bucket"} for key in group) for group in evidence["mandatory_groupings"])):
+        conditions=evidence.get("condition_definitions",[])
+        if not isinstance(conditions,list): raise ConfigurationError("condition_definitions must be a list")
+        names=set()
+        for definition in conditions:
+            if not isinstance(definition,dict) or set(definition)-{"id","source","feature_id","cutpoints","labels","missing"}:
+                raise ConfigurationError("Invalid condition definition")
+            name=definition.get("id")
+            if not isinstance(name,str) or not name.startswith("condition_") or name in names:
+                raise ConfigurationError("Condition IDs must be unique and start with condition_")
+            names.add(name)
+            if definition.get("source") not in {"decision_minute","feature_decile"}:
+                raise ConfigurationError("Conditions require a known-at-decision source")
+            if definition["source"]=="feature_decile" and not isinstance(definition.get("feature_id"),str):
+                raise ConfigurationError("feature_decile conditions require feature_id")
+            cuts=definition.get("cutpoints")
+            if not isinstance(cuts,list) or any(not isinstance(x,(int,float)) or isinstance(x,bool) for x in cuts) or cuts!=sorted(set(cuts)):
+                raise ConfigurationError("Condition cutpoints must be strictly ordered numbers")
+            if not isinstance(definition.get("labels"),list) or len(definition["labels"])!=len(cuts)+1 or any(not isinstance(x,str) for x in definition["labels"]):
+                raise ConfigurationError("Condition labels must match the cutpoint intervals")
+            if definition.get("missing","unavailable") not in {"unavailable","category"}:
+                raise ConfigurationError("Invalid condition missing policy")
+        groupings=evidence.get("mandatory_groupings",[])+evidence.get("condition_groupings",[])
+        if not isinstance(groupings,list) or any(not isinstance(group,list) or not group or len(set(group))!=len(group) or any(key not in {"security","month","fold","time_bucket"}|names for key in group) for group in groupings):
             raise ConfigurationError("Invalid mandatory_groupings")
     zoom=c.get("zoom",{}); selection_mode=zoom.get("selection_mode","automatic")
     if selection_mode not in {"automatic","explicit","explicit_plus_rules"}: raise ConfigurationError("zoom.selection_mode must be automatic, explicit, or explicit_plus_rules")

@@ -18,12 +18,17 @@ class JobStore:
             id TEXT PRIMARY KEY, spec TEXT NOT NULL, status TEXT NOT NULL,
             attempt INTEGER NOT NULL DEFAULT 0, cancel INTEGER NOT NULL DEFAULT 0,
             result TEXT, error TEXT)''')
+        self.con.execute('''CREATE TABLE IF NOT EXISTS journal (
+            event_id INTEGER PRIMARY KEY AUTOINCREMENT, job_id TEXT NOT NULL,
+            event TEXT NOT NULL, spec TEXT, outcome TEXT, created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP)''')
 
     def submit(self, spec):
         # Caller validates kind, discovery scope, definitions and resource limits first.
         job_id = digest(spec)
         self.con.execute("INSERT OR IGNORE INTO jobs(id,spec,status) VALUES(?,?,'queued')",
                          (job_id, json.dumps(spec, sort_keys=True, allow_nan=False)))
+        self.con.execute("INSERT INTO journal(job_id,event,spec) VALUES(?,'submitted',?)",
+                         (job_id,json.dumps(spec,sort_keys=True,allow_nan=False)))
         return job_id
 
     def claim(self):
@@ -44,7 +49,8 @@ class JobStore:
         return bool(self.con.execute("SELECT cancel FROM jobs WHERE id=?", (job_id,)).fetchone()[0])
 
     def cancel(self, job_id):
-        self.con.execute("UPDATE jobs SET cancel=1,status=CASE WHEN status='queued' THEN 'cancelled' ELSE status END WHERE id=?", (job_id,))
+        changed=self.con.execute("UPDATE jobs SET cancel=1,status=CASE WHEN status='queued' THEN 'cancelled' ELSE status END WHERE id=?", (job_id,)).rowcount
+        if changed:self.con.execute("INSERT INTO journal(job_id,event) VALUES(?,'cancel_requested')",(job_id,))
 
     def finish(self, job_id, attempt, *, result=None, error=None):
         outcome=result.get("status") if isinstance(result,dict) else None
@@ -55,13 +61,20 @@ class JobStore:
         ).rowcount
         if changed != 1:
             raise RuntimeError("Stale completion or invalid job state")
+        self.con.execute("INSERT INTO journal(job_id,event,outcome) VALUES(?,'finished',?)",
+                         (job_id,json.dumps({"status":status,"attempt":attempt,"result":result,"error":error},allow_nan=False)))
 
     def recover_after_lock(self):
         # Only call after obtaining the exclusive OS worker lock, never by timeout alone.
         self.con.execute("UPDATE jobs SET status=CASE WHEN cancel=1 THEN 'cancelled' ELSE 'queued' END WHERE status='running'")
 
     def retry(self, job_id):
-        self.con.execute("UPDATE jobs SET status='queued',cancel=0,error=NULL,result=NULL WHERE id=? AND status IN ('failed','cancelled','blocked_storage','blocked_memory','unavailable')", (job_id,))
+        changed=self.con.execute("UPDATE jobs SET status='queued',cancel=0,error=NULL,result=NULL WHERE id=? AND status IN ('failed','cancelled','blocked_storage','blocked_memory','unavailable')", (job_id,)).rowcount
+        if changed:self.con.execute("INSERT INTO journal(job_id,event) VALUES(?,'retried')",(job_id,))
+
+    def journal(self, limit=100):
+        if not 1<=limit<=1000:raise ValueError("Journal limit out of range")
+        return [dict(row) for row in self.con.execute("SELECT * FROM journal ORDER BY event_id DESC LIMIT ?",(limit,))]
 
     def get(self, job_id):
         row = self.con.execute("SELECT * FROM jobs WHERE id=?", (job_id,)).fetchone()

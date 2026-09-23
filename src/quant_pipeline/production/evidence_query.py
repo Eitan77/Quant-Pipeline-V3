@@ -2,16 +2,36 @@ from __future__ import annotations
 
 import json
 import re
+import uuid
 
 import duckdb
 
 from .evidence_identity import inside
+from .evidence_cache import EvidenceCache
+
+
+class _PinnedConnection:
+    def __init__(self, con, cache, pin_id):
+        self.con, self.cache, self.pin_id = con, cache, pin_id
+
+    def __getattr__(self, name):
+        return getattr(self.con, name)
+
+    def close(self):
+        if self.con is not None:
+            self.con.close()
+            self.cache.unpin(self.pin_id)
+            self.cache.close()
+            self.con = None
 
 
 def open_catalog(root, manifest_path, *, memory_gib=4, threads=2):
     """Manifest is a committed snapshot listing exact files, never wildcard directories."""
     if not 1 <= memory_gib <= 24 or not 1 <= threads <= 16:
         raise ValueError("Query resource limits out of range")
+    cache = EvidenceCache(root)
+    pin_id = uuid.uuid4().hex
+    cache.pin(pin_id)
     manifest = json.loads(inside(root, manifest_path).read_text(encoding="utf-8"))
     con = duckdb.connect()
     try:
@@ -24,9 +44,11 @@ def open_catalog(root, manifest_path, *, memory_gib=4, threads=2):
                 raise ValueError("Use a typed empty Parquet file for an empty published table")
             paths = [str(inside(root, p)) for p in entry["files"]]
             con.read_parquet(paths, union_by_name=True).create_view(name)
-        return con, manifest
+        return _PinnedConnection(con, cache, pin_id), manifest
     except Exception:
         con.close()
+        cache.unpin(pin_id)
+        cache.close()
         raise
 
 

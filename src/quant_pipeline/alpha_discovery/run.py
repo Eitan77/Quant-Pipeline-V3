@@ -1092,6 +1092,8 @@ class AlphaDiscoveryRun:
                     payload["observation_id_sha256"]=observation_ids_hash
                     payload["observations_sha256"]=observations_file_hash
                     payload["feature_definition_hashes"]={item.feature_id:item.definition_hash for item in self.compile_registry().features if item.feature_id in feature_ids}
+                    payload["realized_hashes"]={name:sha256(np.ascontiguousarray(packed[:,index]).tobytes()).hexdigest()
+                                                for index,name in enumerate(feature_ids)}
                     temporary=packed_meta.with_suffix(".tmp.json"); temporary.write_text(json.dumps(payload,sort_keys=True),encoding="utf-8"); os.replace(temporary,packed_meta)
                 elif packed_columns!=feature_ids: raise ValueError(f"Packed feature columns disagree for {grid}/{stem}")
                 temporary=result_path.with_suffix(".tmp.parquet"); result.to_parquet(temporary,index=False); temporary.replace(result_path)
@@ -1116,8 +1118,15 @@ class AlphaDiscoveryRun:
             packed, feature_ids = store.read(metadata.stem)
             path = str(store.root / f"{metadata.stem}.npy")
             feature_bins.update({name: (path, index) for index, name in enumerate(feature_ids)})
-            for index, name in enumerate(feature_ids):
-                alias_hashes[name] = sha256(np.ascontiguousarray(packed[:, index]).tobytes()).hexdigest()
+            saved=json.loads(metadata.read_text(encoding="utf-8"))
+            realized=saved.get("realized_hashes",{})
+            if set(realized)==set(feature_ids):
+                from quant_pipeline.production.evidence_identity import file_digest
+                if file_digest(path)!=saved["sha256"]:raise ValueError(f"Packed-bin checksum mismatch: {path}")
+                alias_hashes.update(realized)
+            else:
+                for index, name in enumerate(feature_ids):
+                    alias_hashes[name] = sha256(np.ascontiguousarray(packed[:, index]).tobytes()).hexdigest()
         alias_path = self.root / "cache" / "bins" / grid / "aliases.json"; alias_path.parent.mkdir(parents=True, exist_ok=True)
         self._atomic_json(str(alias_path.relative_to(self.root)), {"realized_hashes": alias_hashes})
         return feature_bins, alias_hashes
@@ -1465,10 +1474,14 @@ class AlphaDiscoveryRun:
         output=np.full((len(observations),len(specs)),np.nan,dtype=np.float32); calculation=self.root/"cache"/"calculation_panels"/f"{grid}.parquet"
         local=[(i,s) for i,s in enumerate(specs) if not _alpha_feature_is_global(s)]; global_specs=[(i,s) for i,s in enumerate(specs) if _alpha_feature_is_global(s)]
         if local:
-            worker_cap=min(16,self.runtime_worker_cap) if self.runtime_worker_cap else 16; partitions=self._ensure_finalist_partitions(grid,calculation,worker_cap)
+            from quant_pipeline.production.resource_policy import ResourcePolicy
+            worker_cap=ResourcePolicy.feature_workers(self.config.compute,self.runtime_worker_cap)
+            partitions=self._ensure_finalist_partitions(grid,calculation,worker_cap)
             from concurrent.futures import ProcessPoolExecutor,as_completed
+            from .resources import child_numeric_thread_limits
             part_root=store.root/".parts"/cache_name; part_root.mkdir(parents=True,exist_ok=True); selected=[s for _,s in local]
-            with ProcessPoolExecutor(max_workers=min(worker_cap,len(partitions))) as pool:
+            with child_numeric_thread_limits(blas_threads=self.config.compute.blas_threads_per_worker,
+                                             omp_threads=self.config.compute.omp_threads_per_worker), ProcessPoolExecutor(max_workers=min(worker_cap,len(partitions))) as pool:
                 futures=[pool.submit(_build_alpha_symbol_part,str(partition),selected,None,str(part_root/f"part-{index:05d}")) for index,partition in enumerate(partitions)]
                 for future in as_completed(futures):
                     ids_path,values_path=future.result(); ids=np.load(ids_path,mmap_mode="r"); values=np.load(values_path,mmap_mode="r"); output[np.asarray(ids,dtype=np.int64)[:,None],[i for i,_ in local]]=values; del ids,values; Path(ids_path).unlink(); Path(values_path).unlink()

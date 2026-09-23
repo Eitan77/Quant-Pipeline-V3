@@ -1,6 +1,6 @@
 # Quant Pipeline V3
 
-**Comprehensive research handoff status:** the new local subgroup evidence path is implemented for bounded fixtures, but the configured full discovery request is blocked at storage preflight. See [implementation status](docs/RESEARCH_IMPLEMENTATION_STATUS.md). Existing `v3_discovery` artifacts retain their legacy coverage meaning.
+**Comprehensive research handoff status:** the bounded real-core gate completed mandatory subgroup coverage and a local query/recomputation/diagnostic/replay loop. The configured full discovery request has not been launched, and the 19-task handoff is still in progress. Its dense storage estimate does not block the bounded recomputable path. See [implementation status](docs/RESEARCH_IMPLEMENTATION_STATUS.md). Existing `v3_discovery` artifacts retain their legacy coverage meaning.
 
 > A single-machine, GPU-accelerated quantitative research engine for searching large spaces of equity features, interactions, tails, and specialist effects without throwing away useful evidence too early.
 

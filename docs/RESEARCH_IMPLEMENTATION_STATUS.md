@@ -1,27 +1,30 @@
 # Research handoff implementation status (2026-09-22)
 
-The attached 19-task handoff is **not complete**. The full comprehensive request is blocked before core execution. Existing discovery runs remain legacy evidence; none was relabeled as comprehensive.
+The 19-task comprehensive handoff is still in progress. The configured year-long run has **not** been launched. Its 2.72 TB security-only dense estimate is a nonmaterialized bound; the implementation uses measured compressed tiles and a bounded recomputable cache. Existing discovery artifacts retain their narrower legacy meaning.
 
-| Tasks | Status | Evidence / remaining work |
+| Tasks | Status | Evidence and remaining condition |
 |---|---|---|
-| 1 | Implemented | Baseline `675e38d` inspected; nine reference modules and focused reference tests added. |
-| 2 | Implemented for explicit core scope | Exact feature/target selectors reach feature construction, target ledger/alignment, dual scope, and audit. Governed discovery subranges validate. A full production-path selected-scope fixture remains to be run. |
-| 3-4 | Partial | Stage-specific checkpoint IDs, packed-bin observation/definition lineage, and stage-namespaced specialist/temporal partials added. Fused tile resume and OOM parent/child reconciliation still need replacement. |
-| 5 | Partial | Production and worker use one machine numerical lock. Shared memory admission across all feature/zoom/query entrypoints remains. |
-| 6-8 | Partial | Verified array importer, group dictionaries, exact logical task planner, and bounded task executor work in a small integration fixture. Full-scale streaming plan and condition predicates remain. |
-| 9-10 | Blocked | Existing specialist/temporal passes still duplicate subgroup work. Streaming reducer, eviction, recomputation, and query pins are needed for the configured full scope. |
-| 11-12 | Partial | Local describe/query/search and durable queue/CLI work for committed materialized evidence. Full-scope recomputation, journal, and real neighbor/backtest handlers remain. |
-| 13-15 | Pending | Batched zoom integration, independent full diagnostics, and replay adapter remain. These are explicitly unavailable in the new service. |
-| 16 | Partial | Opportunity overlap calculation and bounded legacy target/rank caches improved; measured production optimizations remain. |
-| 17 | Partial | Comprehensive and legacy completion meanings are separate. README/manual still need a complete workflow revision after handlers are integrated. |
-| 18-19 | Blocked | Small publication→coverage→query→search fixture passes. Full production-path, CUDA parity, interruption, streaming, and execution-aware replay gates have not passed. The full request is **not ready to run**. |
+| 1–3 | Implemented | Explicit discovery scope, scientific/stage identities, sealed-period checks, and resolved scope publication. |
+| 4 | Partial | Atomic tiles, integrity checks, durable task provenance, and resume exist. A real-core gate exposed and fixed a first-run checkpoint-key omission; a fresh bounded run/resume then retained one evidence and task-stage identity. Full orphan/core reconciliation remains. |
+| 5 | Implemented for numerical entrypoints | Shared owner lock and memory policy cover coverage, query workers, and feature worker admission. |
+| 6–8 | Implemented for bounded coverage | Verified reader, causal group dictionaries, condition availability, exhaustive singles/duals planning independent of promotion, and fixed logical task IDs. Fine tails require exact raw feature data or a separate dependency. |
+| 9 | Implemented for tested path | Security/fold compatibility tables are reduced from live shared moments during coverage, before those tiles can be evicted. A bounded real-core gate produced both tables; full-scale throughput remains unmeasured. |
+| 10 | Implemented for bounded path | Dispersed tile sampling, measured density/compression, streaming reducer, LRU recomputable cache, catalog publication, snapshot pins, and recomputation. Full-scale throughput and sustained cache budget have not been measured. |
+| 11–12 | Implemented for tested requests | Exact queries, stable query-bound cursors, full-scope search, durable job journal/retry/cancel and real worker handlers. Large production evidence remains unbuilt. |
+| 13 | Implemented for zoom batching | Multi-pair/multi-target scanning preserves request provenance and reuses one bounded packed feature tile across compatible target batches. Full production parity remains to be checked. |
+| 14 | Partial | Independent symbol/time/opportunity diagnostics work on exact events and share an integrity-checked event file; full dossier consumption, paths and fine-tail dependency are outstanding. |
+| 15 | Partial | Isolated replay uses governed target windows, raw snapshot bars, execution assumptions, trade and rejection ledgers. A real raw replay and a focused exact benchmark-leg test passed. Hedged production replay still needs verification; portfolio replay remains separate. |
+| 16 | Partial | Shared device transfers and bounded resource policy are measured. Feature/target assembly, alias hash persistence, rolling callbacks, and inference second-pass evaluations remain. |
+| 17 | Partial | Comprehensive status distinguishes core, mandatory coverage and materialization; old runs remain readable. Metric-definition/docs audit remains. |
+| 18 | Partial gate passed | Focused reference/integration checks pass (43). Actual GPU parity and Windows lock checks pass. The bounded real-core comprehensive gate completed 162/162 mandatory tasks and the stored query → forced eviction → exact recomputation/search → diagnostic → neighbor → raw execution replay loop. A fresh second run/resume verified stable evidence/stage IDs. Additional specified cancellation/retry, missing-worker, and same-workload performance comparisons remain. |
+| 19 | Partial | Request, scope, machine budget and Windows commands are documented. Mark ready only after Task 18 passes and all outstanding production conditions are resolved. |
 
-## Actual workstation preflight
+## Local preflight
 
-`configs/research/v3_comprehensive_20260922.yaml` resolves to the discovery year only. The local source catalog exists and CUDA reports an RTX 3080 Ti. The output drive had 213.7 GiB free. The pre-core estimate for **security grouping alone** is 2,721,032,244,000 dense bytes, versus an 86,040,176,640-byte conservative output budget. Alias exclusions and compression are not yet measured. `D:/AlgoResearch/Quant-Pipeline-V3/runs/v3_comprehensive_20260922/evidence/preflight_storage.json` records the estimate. No core/production workload was launched for this request.
+`configs/research/v3_comprehensive_20260922.yaml` resolves to the discovery year only. The local source catalog and RTX 3080 Ti exist. The last measured free output space was about 213.7 GiB. The security-only dense upper estimate was 2,721,032,244,000 bytes; it is **not** a required permanent allocation. The local preflight status is `admitted_streaming`. Populated density, compressed bytes and throughput cannot be known for the full request before core publication and representative tile sampling.
 
-The full request stops with `blocked_storage` until a streaming reducer, eviction and recomputation path is integrated and verified. Do not interpret the reference-module tests or the small publication fixture as full-run readiness.
+## Verification
 
-## Focused checks
+`python -m pytest tests/unit/test_research_evidence_reference.py tests/integration/test_research_publication.py tests/unit/test_variant_batch_execution.py tests/unit/test_explicit_zoom.py tests/unit/test_production_repair.py tests/unit/test_cell_evidence.py -q` — 43 passed after the bounded real-core gate. The integration fixture covers publication, interruption/resume, mandatory coverage, stored and recomputed query/search, diagnostics, neighbor job, raw replay, and worker handlers. CUDA moment parity and Windows numerical lock were exercised on this PC.
 
-`python -m pytest tests/unit/test_research_evidence_reference.py tests/integration/test_research_publication.py tests/unit/test_explicit_zoom.py tests/unit/test_production_repair.py tests/unit/test_cell_evidence.py -q` — 37 passed after the compatibility fix.
+The separate `v3_comprehensive_gate` used the real core builder against governed local source data. It completed 162/162 mandatory subgroup tasks over all six grouping families and three resolutions. Representative tile compression was measured at 0.303 of dense bytes for this **small** gate; this ratio is not a full-run storage forecast. Its raw replay produced 138 executed trades and an inspectable rejection ledger, with an isolated net result of about -18.86%; that is a negative diagnostic result, not a strategy claim. The long full request was not launched. A warm resume took 19–29 seconds in the bounded gate, after the original 74-second run. A fresh `v3_comprehensive_gate_v2` run and warm resume retained the same evidence ID and one 162-task stage after the checkpoint fix.
