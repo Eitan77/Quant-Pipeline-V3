@@ -45,8 +45,9 @@ class ResearchService:
                 "materialization":{"stored_tasks":(coverage or {}).get("stored_tasks"),
                                    "recomputable_tasks":(coverage or {}).get("recomputable_tasks"),
                                    "unavailable_groupings":(coverage or {}).get("unavailable_groupings",[])},
-                "diagnostics":{"symbol":"on_request" if reader else "unavailable",
+                "diagnostics":{"symbol":"on_request" if reader else "legacy_cell_summary_only" if (self.root/"cell_specialist_summary.parquet").exists() else "unavailable",
                                "time":"on_request" if reader else "unavailable",
+                               "fold":"on_request" if reader else "legacy_cell_summary_only" if (self.root/"cell_temporal_summary.parquet").exists() else "unavailable",
                                "opportunities":"requires_exact_target_ledger",
                                "fine_tails":"requires_raw_feature_rank_dependency"},
                 "metric_definitions":{
@@ -245,6 +246,28 @@ class ResearchService:
 
     def inspect(self,spec,cancelled=lambda:False):
         kind=spec.get("kind")
+        if not (self.root/"evidence"/"reader.json").exists() and kind in {"symbol","fold"}:
+            path=self.root/("cell_specialist_summary.parquet" if kind=="symbol" else "cell_temporal_summary.parquet")
+            if path.exists() and all(key in spec for key in ("pair_id","target_id","resolution")):
+                import duckdb
+                with duckdb.connect() as con:
+                    cursor=con.execute("SELECT * FROM read_parquet(?) WHERE pair_id=? AND target_id=? AND resolution=? LIMIT 2",
+                                       [str(path),spec["pair_id"],spec["target_id"],int(spec["resolution"])])
+                    names=[column[0] for column in cursor.description]
+                    rows=cursor.fetchall()
+                if len(rows)>1:raise ValueError("Duplicate legacy summary key")
+                if not rows:return {"status":"unavailable","reason":"Legacy summary key is absent"}
+                record=dict(zip(names,rows[0])); unavailable={}
+                if kind=="fold":
+                    for field,field_type in (("populated_fold_count","list<uint32>"),
+                                             ("expected_fold_count","list<uint32>"),
+                                             ("minimum_fold_n_including_empty","list<uint64>")):
+                        if field not in record:
+                            record[field]=None
+                            unavailable[field]={"type":field_type,"reason":"absent_in_legacy_schema"}
+                return {"status":"complete","evidence_status":"legacy_cell_summary_only",
+                        "basis":"legacy canonical cell summaries; not comprehensive subgroup coverage",
+                        "record":record,"unavailable_fields":unavailable}
         if "cells" in spec and kind=="dossier":
             from .diagnostics import inspect_state
             reader=self._json("evidence/reader.json")

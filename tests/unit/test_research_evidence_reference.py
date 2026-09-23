@@ -19,6 +19,18 @@ from quant_pipeline.production.research_jobs import JobStore, worker_lock, run_o
 from quant_pipeline.production.segmented_scan import SegmentedMoments, encode_groups, local_group_codes, prepare_tile
 from quant_pipeline.production.segmented_task import execute_segmented_task
 from quant_pipeline.production.variant_batches import plan_batches
+from quant_pipeline.production.research_service import ResearchService
+
+
+def test_legacy_fold_summary_exposes_missing_fields_without_inventing_counts(tmp_path):
+    root=tmp_path/"legacy"; root.mkdir()
+    pd.DataFrame([{"pair_id":"p","target_id":"t","resolution":3,
+                   "fold_positive_fraction":[0.5]*9}]).to_parquet(root/"cell_temporal_summary.parquet")
+    result=ResearchService({"run_root":str(tmp_path)},"legacy").inspect(
+        {"kind":"fold","pair_id":"p","target_id":"t","resolution":3})
+    assert result["evidence_status"]=="legacy_cell_summary_only"
+    assert result["record"]["populated_fold_count"] is None
+    assert result["unavailable_fields"]["expected_fold_count"]["type"]=="list<uint32>"
 
 
 def check_moments():
