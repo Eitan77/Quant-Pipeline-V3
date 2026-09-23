@@ -60,8 +60,14 @@ def run_pipeline(*,research,machine,resume=False):
     if research.get("fixture") in ("external_port",None):
         from quant_pipeline.production.runner import V3ProductionRunner
         from quant_pipeline.production.research_jobs import worker_lock
-        with worker_lock(Path(machine["run_root"])/"numerical_owner.lock"):
-            result=V3ProductionRunner(research=research,machine=machine,repo_root=Path(__file__).resolve().parents[2],telemetry=telemetry).run()
+        try:
+            with worker_lock(Path(machine["run_root"])/"numerical_owner.lock"):
+                result=V3ProductionRunner(research=research,machine=machine,repo_root=Path(__file__).resolve().parents[2],telemetry=telemetry).run()
+        except Exception as error:
+            telemetry.status.update({"stage":"failed","last_error":f"{type(error).__name__}: {error}",
+                                     "elapsed_seconds":time.perf_counter()-start})
+            telemetry.event("run_failed",stage="failed",error=telemetry.status["last_error"])
+            raise
         comprehensive=result.get("mandatory_coverage_complete")
         complete=bool(result.get("evidence_complete",False) if comprehensive is None else comprehensive)
         telemetry.status.update({"stage":"complete" if complete else "partial","completed":int(complete),"expected":1,"elapsed_seconds":time.perf_counter()-start,"replication_accessed":False,"final_holdout_accessed":False,"production_result":result})

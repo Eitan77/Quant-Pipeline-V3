@@ -623,7 +623,9 @@ class AlphaDiscoveryRun:
                 part_root=store.root/".parts"/"security_lifecycle"; part_root.mkdir(parents=True,exist_ok=True)
                 bytes_per_block=max(1,observation_count*block_size*4)
                 wave_budget=min(4*(1<<30),int(resource_telemetry["worker_memory_budget_bytes"])//4)
-                wave_size=max(8,min(32,wave_budget//bytes_per_block))
+                if bytes_per_block > wave_budget:
+                    raise MemoryError(f"Feature block for {grid} exceeds admitted output-wave budget")
+                wave_size=min(len(pending),max(1,wave_budget//bytes_per_block))
                 wave_sizes[grid]=wave_size
                 controller=(AdaptiveFeatureConcurrency(minimum=min_workers,maximum=max_workers,initial=initial_workers,
                     step=self.config.compute.feature_step_workers,tuning_window_seconds=self.config.compute.feature_tuning_window_seconds,

@@ -80,6 +80,8 @@ def check_store_query(root):
                 observation_id="obs", row_chunk=3, max_state_bytes=1_000_000)
     result = execute_segmented_task(**args)
     assert result == execute_segmented_task(**args)
+    (root / result["artifact"]).parent.joinpath("complete.json").unlink()
+    assert execute_segmented_task(**args)["sha256"] == result["sha256"]
     atomic_json(root / "catalog.json", {"tables": {"joint": {"files": [result["artifact"]]}}})
     con, _ = open_catalog(root, "catalog.json", memory_gib=1, threads=1)
     page = group_cells(con, table="joint", pair_id="a-b", target_id="t", resolution=3, group_id=0, limit=2)

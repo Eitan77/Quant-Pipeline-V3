@@ -28,9 +28,34 @@ def _task_dir(root, task):
 
 
 def committed_tile(root, task):
-    marker = _task_dir(root, task) / "complete.json"
+    directory = _task_dir(root, task)
+    marker = directory / "complete.json"
     if not marker.exists():
-        return None
+        orphan = directory / "moments.parquet"
+        if not orphan.exists():
+            return None
+        # The shard was atomically renamed before a crash wrote its marker.
+        # Recover only exact membership; a numeric filename is not sufficient.
+        expected_cells = task["resolution"] if task["state_kind"] == "single" else task["resolution"] ** 2
+        allowed_pairs, allowed_targets = set(task["pair_ids"]), set(task["target_ids"])
+        seen = set()
+        parquet = pq.ParquetFile(orphan)
+        if not parquet.schema_arrow.equals(SCHEMA):
+            raise ValueError("Orphan tile schema mismatch")
+        for batch in parquet.iter_batches(batch_size=1024):
+            for row in batch.to_pylist():
+                key = (row["pair_id"], row["target_id"], row["group_id"])
+                if (key in seen or key[0] not in allowed_pairs or key[1] not in allowed_targets
+                        or not task["group_start"] <= key[2] < task["group_stop"]
+                        or row["resolution"] != task["resolution"]
+                        or any(len(row[name]) != expected_cells for name in ("counts", "sums", "sumsq"))):
+                    raise ValueError("Orphan tile membership mismatch")
+                seen.add(key)
+        root = Path(root).resolve()
+        atomic_json(marker, dict(schema_version=1, task=task, compute_status="complete",
+                                 materialization_status="durable", populated_groups=len(seen),
+                                 artifact=orphan.relative_to(root).as_posix(),
+                                 bytes=orphan.stat().st_size, sha256=file_digest(orphan)))
     manifest = json.loads(marker.read_text(encoding="utf-8"))
     if manifest.get("task") != task or manifest.get("schema_version") != 1:
         raise ValueError("Incompatible task manifest")
