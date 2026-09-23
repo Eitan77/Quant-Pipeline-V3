@@ -108,23 +108,32 @@ def _build_alpha_security_lifecycle(panel_path: str, work: list[tuple[str, list]
     except ImportError:
         process=None; peak_rss_bytes=0
     _wait_for_worker_headroom(reserve_bytes)
+    load_started=time.perf_counter()
     frame=pd.read_parquet(panel_path,filters=[("security_id","=",security_id)])
+    panel_load_seconds=time.perf_counter()-load_started
     builder=FeatureBuilder(frame); emitted=builder.frame.emit.to_numpy(bool) if "emit" in builder.frame else np.ones(len(builder.frame),bool)
     emitted = emitted & ~builder.frame["observation_id"].duplicated().to_numpy()
     ids=builder.frame.loc[emitted,"observation_id"].to_numpy(np.int64); results=[]
     root=Path(base_root); root.mkdir(parents=True,exist_ok=True)
+    feature_build_seconds=0.0;partition_write_seconds=0.0
     for name,specs in work:
         # Active workers pause only while the machine is at its configured RAM
         # ceiling. They resume automatically as soon as memory is released.
         _wait_for_worker_headroom(reserve_bytes)
+        tick=time.perf_counter()
         values=builder.build_many(specs).to_numpy(dtype=np.float32,na_value=np.nan)[emitted]
+        feature_build_seconds+=time.perf_counter()-tick
         stem=root/f"{security_id.replace(':','_')}__{name}"; ids_path=str(stem)+"_ids.npy"; values_path=str(stem)+"_values.npy"
+        tick=time.perf_counter()
         np.save(ids_path,ids,allow_pickle=False); np.save(values_path,values.astype(np.float32,copy=False),allow_pickle=False)
+        partition_write_seconds+=time.perf_counter()-tick
         results.append((name,ids_path,values_path))
         if process: peak_rss_bytes=max(peak_rss_bytes,int(process.memory_info().rss))
     feature_columns=sum(len(specs) for _,specs in work)
     return {"artifacts":results,"emitted_rows":int(len(ids)),"feature_columns":int(feature_columns),
-            "work_units":int(len(ids)*feature_columns),"peak_rss_bytes":int(peak_rss_bytes)}
+            "work_units":int(len(ids)*feature_columns),"peak_rss_bytes":int(peak_rss_bytes),
+            "panel_load_seconds":panel_load_seconds,"feature_build_seconds":feature_build_seconds,
+            "partition_write_seconds":partition_write_seconds}
 
 
 def _edge_autopsy_parallel_capacity(compute, candidate_count: int, available_bytes: int,
@@ -549,7 +558,9 @@ class AlphaDiscoveryRun:
         from .features.base import FeatureBuilder
         started=time.perf_counter(); self._require("build-panel"); bundle = self.compile_registry(); blocks = 0; columns = 0; resumed_blocks = 0
         global_telemetry=[]; autoscale_event_count=0; peak_active_workers=0; peak_worker_rss_bytes=0
-        best_workers_by_grid={}; final_active_workers=0
+        best_workers_by_grid={}; final_active_workers=0; wave_sizes={}
+        feature_io_seconds={"panel_load_worker_sum":0.0,"feature_build_worker_sum":0.0,
+                            "partition_write_worker_sum":0.0,"parent_scatter":0.0}
         panel_root = self.root / "cache" / "panels"; feature_root = self.root / "cache" / "features"
         from .resources import (calibrated_resources,child_numeric_thread_limits,
                                 configured_feature_worker_cap,host_memory_headroom)
@@ -610,7 +621,10 @@ class AlphaDiscoveryRun:
                 pending.append((name,batch))
             if pending:
                 part_root=store.root/".parts"/"security_lifecycle"; part_root.mkdir(parents=True,exist_ok=True)
-                wave_size=8
+                bytes_per_block=max(1,observation_count*block_size*4)
+                wave_budget=min(4*(1<<30),int(resource_telemetry["worker_memory_budget_bytes"])//4)
+                wave_size=max(8,min(32,wave_budget//bytes_per_block))
+                wave_sizes[grid]=wave_size
                 controller=(AdaptiveFeatureConcurrency(minimum=min_workers,maximum=max_workers,initial=initial_workers,
                     step=self.config.compute.feature_step_workers,tuning_window_seconds=self.config.compute.feature_tuning_window_seconds,
                     tuning_min_completions=self.config.compute.feature_tuning_min_completions,min_gain_fraction=self.config.compute.feature_min_gain_fraction,
@@ -656,6 +670,10 @@ class AlphaDiscoveryRun:
                                 done,_=wait(futures,timeout=0.1,return_when=FIRST_COMPLETED) if futures else (set(),set())
                                 for future in done:
                                     security_id=futures.pop(future)["security_id"]; row_count=None; result=future.result()
+                                    feature_io_seconds["panel_load_worker_sum"]+=result["panel_load_seconds"]
+                                    feature_io_seconds["feature_build_worker_sum"]+=result["feature_build_seconds"]
+                                    feature_io_seconds["partition_write_worker_sum"]+=result["partition_write_seconds"]
+                                    scatter_started=time.perf_counter()
                                     for name,ids_path,values_path in result["artifacts"]:
                                         ids=np.load(ids_path,mmap_mode="r"); part_values=np.load(values_path,mmap_mode="r"); dense_ids=np.array(ids,dtype=np.int64,copy=True)
                                         if len(dense_ids) and (dense_ids.min()<0 or dense_ids.max()>=observation_count): raise ValueError(f"Worker returned out-of-range observation IDs for {grid}")
@@ -663,6 +681,7 @@ class AlphaDiscoveryRun:
                                         elif row_count!=len(dense_ids): raise ValueError(f"Worker block row counts disagree for {security_id}")
                                         outputs[name][0][dense_ids,:]=part_values; written[name]+=len(dense_ids)
                                         del ids,part_values; Path(ids_path).unlink(); Path(values_path).unlink()
+                                    feature_io_seconds["parent_scatter"]+=time.perf_counter()-scatter_started
                                     peak_worker_rss_bytes=max(peak_worker_rss_bytes,int(result["peak_rss_bytes"]))
                                     if controller: controller.observe(work_units=result["work_units"],peak_rss_bytes=result["peak_rss_bytes"],now=time.monotonic())
                                     uncommitted[security_id]=int(row_count or 0)
@@ -748,7 +767,8 @@ class AlphaDiscoveryRun:
         elapsed=time.perf_counter()-started
         return {"feature_blocks":blocks,"feature_columns":columns,"resumed_blocks":resumed_blocks,
                 "cpu_workers":max_workers,"host_memory_fraction":self.config.compute.host_memory_fraction,
-                "wall_seconds":elapsed,"features_per_second":columns/max(elapsed,1e-9)}
+                "wall_seconds":elapsed,"features_per_second":columns/max(elapsed,1e-9),
+                "feature_wave_sizes":wave_sizes,"feature_io_seconds":feature_io_seconds}
 
     @staticmethod
     def _compact_feature_frame(frame: pd.DataFrame) -> None:
@@ -1495,7 +1515,7 @@ class AlphaDiscoveryRun:
         store.write(cache_name,output,names)
 
     def _ensure_finalist_partitions(self, grid: str, calculation: Path, buckets: int) -> list[Path]:
-        """Scan the large calculation panel once and persist 16 independent worker buckets."""
+        """Scan the calculation panel once and persist its populated worker buckets."""
         import duckdb
         import shutil
         root=self.root/"cache"/"finalist_partitions_v1"/grid
@@ -1503,7 +1523,7 @@ class AlphaDiscoveryRun:
         expected={"source_size":source.st_size,"source_mtime_ns":source.st_mtime_ns,"buckets":int(buckets)}
         if marker.exists() and json.loads(marker.read_text(encoding="utf-8"))==expected:
             parts=sorted(path for path in root.glob("worker_bucket=*") if path.is_dir())
-            if len(parts)==buckets: return parts
+            if 1 <= len(parts) <= buckets: return parts
         cache_root=(self.root/"cache"/"finalist_partitions_v1").resolve()
         resolved=root.resolve()
         if not resolved.is_relative_to(cache_root): raise RuntimeError("Unsafe finalist partition cache path")
@@ -1521,7 +1541,7 @@ class AlphaDiscoveryRun:
         temporary=marker.with_suffix(".tmp.json")
         temporary.write_text(json.dumps(expected,indent=2),encoding="utf-8"); temporary.replace(marker)
         parts=sorted(path for path in root.glob("worker_bucket=*") if path.is_dir())
-        if len(parts)!=buckets: raise RuntimeError(f"Expected {buckets} finalist partitions, found {len(parts)}")
+        if not 1 <= len(parts) <= buckets: raise RuntimeError(f"Expected 1 to {buckets} finalist partitions, found {len(parts)}")
         return parts
 
     def _stage_distill_ml(self) -> dict:

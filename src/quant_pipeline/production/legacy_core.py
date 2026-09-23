@@ -1,6 +1,6 @@
 from __future__ import annotations
 import json,threading
-from dataclasses import dataclass
+from dataclasses import dataclass,replace
 from datetime import datetime,timezone
 from pathlib import Path
 from quant_pipeline.alpha_discovery.run import AlphaDiscoveryRun
@@ -82,6 +82,32 @@ class LegacyCoreAdapter:
                     cache.publish(stage,key,run.root,result); result={**result,"shared_cache_reused":False,"shared_cache_key":key}
                     run._atomic_json(f"checkpoints/{stage}.json",result)
             else: result=run.execute(stage)
+            if stage=="scan-singles":
+                import pandas as pd
+                from quant_pipeline.alpha_discovery.cache.target_store import TargetStore
+                for grid,enabled in run.config.decision_grids.items():
+                    if not enabled:continue
+                    store=TargetStore(run.root/"cache"/"target_store"/grid)
+                    if not (store.root/"aligned.npy").exists() or not (store.root/"aligned.json").exists():
+                        observations=pd.read_parquet(run.root/"cache"/"features"/grid/"observations.parquet",
+                                                     columns=["observation_id"])
+                        run._build_aligned_target_store(grid,observations,store)
+            if stage=="scan-duals-coarse":
+                import pandas as pd
+                for grid,enabled in run.config.decision_grids.items():
+                    if enabled and not (run.root/"cache"/"bins"/grid/"aliases.json").exists():
+                        observations=pd.read_parquet(run.root/"cache"/"features"/grid/"observations.parquet",
+                                                     columns=["observation_id"])
+                        run._ensure_bin_cache(grid,observations)
+            if stage=="audit-exhaustiveness":
+                audit=run.root/"exhaustiveness_manifest.json"
+                if audit.exists():
+                    saved=json.loads(audit.read_text(encoding="utf-8"))
+                    if (saved.get("attempted_pair_target_tests",0)>0 and
+                            saved.get("expected_pair_target_tests")!=saved.get("attempted_pair_target_tests")):
+                        details=run._stage_audit_exhaustiveness()
+                        result={**result,**details,"reconciled_after_target_restore":True}
+                        run._atomic_json("checkpoints/audit-exhaustiveness.json",result)
             results.append(result)
             if self.telemetry:self.telemetry.progress(f"core:{stage}",index+1,len(LOW_LEVEL_STAGES))
         return run,results

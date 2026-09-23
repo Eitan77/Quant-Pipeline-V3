@@ -26,7 +26,12 @@ class EvidenceCache:
             rows_evaluated INTEGER NOT NULL DEFAULT 0, last_used INTEGER NOT NULL DEFAULT 0)""")
         self.con.execute("""CREATE TABLE IF NOT EXISTS pins (
             id TEXT PRIMARY KEY, pid INTEGER NOT NULL, process_start REAL NOT NULL,
-            created INTEGER NOT NULL)""")
+            created INTEGER NOT NULL, scope_type TEXT NOT NULL DEFAULT 'all', scope_key TEXT)""")
+        columns={row[1] for row in self.con.execute("PRAGMA table_info(pins)")}
+        if "scope_type" not in columns:
+            self.con.execute("ALTER TABLE pins ADD COLUMN scope_type TEXT NOT NULL DEFAULT 'all'")
+        if "scope_key" not in columns:
+            self.con.execute("ALTER TABLE pins ADD COLUMN scope_key TEXT")
 
     def close(self):
         self.con.close()
@@ -71,9 +76,12 @@ class EvidenceCache:
         atomic_json(self.root / "evidence" / "catalog.json",
                     {"evidence_id": evidence_id, "tables": tables})
 
-    def pin(self, pin_id):
-        self.con.execute("INSERT INTO pins VALUES(?,?,?,unixepoch())",
-                         (pin_id, os.getpid(), psutil.Process().create_time()))
+    def pin(self, pin_id, scope_type="all", scope_key=None):
+        if scope_type not in {"all","table","task"} or (scope_type!="all" and not scope_key):
+            raise ValueError("Invalid query pin scope")
+        self.con.execute("""INSERT INTO pins(id,pid,process_start,created,scope_type,scope_key)
+            VALUES(?,?,?,unixepoch(),?,?)""",
+            (pin_id,os.getpid(),psutil.Process().create_time(),scope_type,scope_key))
 
     def unpin(self, pin_id):
         self.con.execute("DELETE FROM pins WHERE id=?", (pin_id,))
@@ -86,14 +94,16 @@ class EvidenceCache:
                 try: live=abs(psutil.Process(row["pid"]).create_time()-row["process_start"])<1
                 except psutil.Error: live=False
                 if not live:self.con.execute("DELETE FROM pins WHERE id=?",(row["id"],))
-            if self.con.execute("SELECT count(*) FROM pins").fetchone()[0]:
-                self.con.execute("COMMIT")
-                return 0
+            active_pins=[(row["scope_type"],row["scope_key"]) for row in
+                         self.con.execute("SELECT scope_type,scope_key FROM pins")]
             total = self.con.execute("SELECT coalesce(sum(bytes),0) FROM blocks WHERE stage_id=? AND materialization_status='stored'",(stage_id,)).fetchone()[0]
             victims = []
-            for row in self.con.execute("SELECT task_id,artifact,bytes FROM blocks WHERE stage_id=? AND materialization_status='stored' ORDER BY CASE WHEN table_name LIKE '%_security_dual' OR table_name LIKE '%_fold_dual' THEN 1 ELSE 0 END,last_used,task_id",(stage_id,)):
+            for row in self.con.execute("SELECT task_id,table_name,artifact,bytes FROM blocks WHERE stage_id=? AND materialization_status='stored' ORDER BY CASE WHEN table_name LIKE '%_security_dual' OR table_name LIKE '%_fold_dual' THEN 1 ELSE 0 END,last_used,task_id",(stage_id,)):
                 if total <= cache_bytes:
                     break
+                if any(kind=="all" or kind=="table" and key==row["table_name"] or
+                       kind=="task" and key==row["task_id"] for kind,key in active_pins):
+                    continue
                 victims.append(dict(row))
                 total -= row["bytes"]
             for row in victims:

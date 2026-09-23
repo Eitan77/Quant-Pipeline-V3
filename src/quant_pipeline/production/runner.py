@@ -178,7 +178,10 @@ class V3ProductionRunner:
         zoom={"enabled":False,"variants":0,"candidates":0,"dossiers":0}
         if self.research.get("zoom",{}).get("enabled",False):
             duals=self._zoom_pool(resolution_path); selected_specialist=root/"specialist_summary.parquet"; variant_mode=self.research.get("variant_expansion",{}).get("mode","automatic"); resolved_variants=resolve_explicit_variant_requests(legacy_run=legacy_run,canonical_path=resolution_path,research=self.research) if variant_mode in {"explicit","automatic_plus_explicit"} else None
-            variants,variant_trials,variant_metrics=execute_variant_expansion(legacy_run=legacy_run,duals=duals,research=self.research,canonical_path=resolution_path,resolved_requests=resolved_variants); materialization_input=pd.concat([duals,variants],ignore_index=True,sort=False) if len(variants) else duals.copy(); materialization_input["state_key"]=[state_key(x) for x in materialization_input.to_dict("records")]; materialization_input=materialization_input.drop_duplicates("state_key",keep="last"); selection_mode=self.research.get("zoom",{}).get("selection_mode","automatic")
+            variants,variant_trials,variant_metrics=execute_variant_expansion(legacy_run=legacy_run,duals=duals,research=self.research,canonical_path=resolution_path,resolved_requests=resolved_variants)
+            if variant_metrics.get("failed",0):
+                raise RuntimeError(f"Zoom failed {variant_metrics['failed']} variant resolution tasks; inspect variant_trial_ledger.parquet")
+            materialization_input=pd.concat([duals,variants],ignore_index=True,sort=False) if len(variants) else duals.copy(); materialization_input["state_key"]=[state_key(x) for x in materialization_input.to_dict("records")]; materialization_input=materialization_input.drop_duplicates("state_key",keep="last"); selection_mode=self.research.get("zoom",{}).get("selection_mode","automatic")
             if selection_mode=="automatic":
                 exact_rows=self._automatic_materialization_states(materialization_input); run_production_specialist_probe(legacy_run=legacy_run,duals=exact_rows,research=self.research); specialist=pd.read_parquet(selected_specialist)
             else:

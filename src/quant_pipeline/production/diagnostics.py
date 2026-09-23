@@ -7,6 +7,7 @@ from pathlib import Path
 
 import duckdb
 import numpy as np
+import pandas as pd
 import pyarrow as pa
 import pyarrow.parquet as pq
 
@@ -85,10 +86,14 @@ def prepare_state_events(root, reader_manifest, spec, *, cancelled=lambda:False)
     return destination,identity
 
 
-def inspect_state(root,reader_manifest,spec,*,cancelled=lambda:False):
+def inspect_state(root,reader_manifest,spec,*,machine=None,cancelled=lambda:False):
     root=Path(root)
     kind=spec["kind"]
-    if kind not in {"symbol","time","opportunities"}:raise ValueError("Unsupported independent diagnostic")
+    if kind not in {"symbol","time","opportunities","path","fine_tail"}:
+        raise ValueError("Unsupported independent diagnostic")
+    if kind=="fine_tail":
+        return {"status":"unavailable","dependency":"exact_raw_feature_percentile_ranks",
+                "reason":"The requested raw feature ranks were not retained with packed subgroup evidence"}
     events,identity=prepare_state_events(root,reader_manifest,spec,cancelled=cancelled)
     destination=events.parent/f"{kind}.json"
     if destination.exists():return {"status":"complete","result":destination.relative_to(root).as_posix()}
@@ -98,9 +103,36 @@ def inspect_state(root,reader_manifest,spec,*,cancelled=lambda:False):
                 sum(target)*10000 sum_bps FROM read_parquet(?) GROUP BY 1 ORDER BY n DESC,security_id""",[str(events)]).fetchall()
             result={"basis":"valid_active_observations","rows":[dict(security_id=s,n=n,mean_bps=m,sum_bps=v) for s,n,m,v in rows]}
         elif kind=="time":
-            rows=con.execute("""SELECT strftime(session_date,'%Y-%m') month,count(*) n,
+            rows=con.execute("""SELECT strftime(session_date,'%Y-%m') AS month_label,count(*) n,
                 avg(target)*10000 mean_bps FROM read_parquet(?) GROUP BY 1 ORDER BY 1""",[str(events)]).fetchall()
             result={"basis":"valid_active_observations","rows":[dict(month=m,n=n,mean_bps=v) for m,n,v in rows]}
+        elif kind=="path":
+            if machine is None:return {"status":"unavailable","reason":"Raw-bar source is not configured"}
+            from .replay import prepare_replay_inputs,_raw_opens
+            path_spec={**spec,"direction":int(spec.get("direction",1)),
+                       "return_basis":spec.get("return_basis","raw")}
+            signals,preparation=prepare_replay_inputs(root,reader_manifest,path_spec,cancelled=cancelled)
+            if preparation["status"]!="complete":return preparation
+            prices=_raw_opens(machine,signals,root=root,cancelled=cancelled) if len(signals) else {}
+            paths=[]
+            for row in signals.itertuples():
+                if cancelled():raise InterruptedError("Path diagnostic cancelled")
+                bars=prices.get(str(row.security_id))
+                if (bars is None or not len(bars) or not np.isfinite(row.governed_entry_price)
+                        or not np.isfinite(row.exit_price) or row.governed_entry_price<=0):
+                    paths.append({"observation_id":int(row.observation_id),"status":"missing_raw_path"})
+                    continue
+                window=bars[(bars.index>=row.governed_entry_ts)&(bars.index<row.exit_ts)]
+                if window.empty:
+                    paths.append({"observation_id":int(row.observation_id),"status":"missing_raw_path"})
+                    continue
+                ratios=int(path_spec["direction"])*(window.to_numpy(float)/float(row.governed_entry_price)-1)
+                paths.append({"observation_id":int(row.observation_id),"status":"complete",
+                              "bars":len(window),"raw_mfe_bps":float(np.max(ratios)*1e4),
+                              "raw_mae_bps":float(np.min(ratios)*1e4),
+                              "raw_terminal_bps":float(int(path_spec["direction"])*(row.exit_price/row.governed_entry_price-1)*1e4)})
+            result={"basis":"governed_raw_entry_to_exact_exit; descriptive not execution P&L",
+                    "rows":paths,"independent_opportunities":len(signals)}
         else:
             ledger=root/"cache"/"targets"/f"{spec['grid']}.parquet"
             if not ledger.exists():
@@ -108,7 +140,8 @@ def inspect_state(root,reader_manifest,spec,*,cancelled=lambda:False):
             step=5 if spec["grid"]=="intraday_5m" else 1 if spec["grid"]=="intraday_1m" else None
             if step is None and spec["grid"] not in {"daily_close","preclose_1555"}:
                 return {"status":"unavailable","reason":"Exact episode adjacency is undefined for this grid"}
-            query="""SELECT e.observation_id,e.security_id,e.session_date,e.decision_ts,t.exit_ts
+            query="""SELECT e.observation_id,e.security_id,e.session_date,
+                CAST(e.decision_ts AS VARCHAR),CAST(t.exit_ts AS VARCHAR)
                 FROM read_parquet(?) e JOIN read_parquet(?) t
                   ON e.observation_id=t.observation_id AND t.target_id=?
                 ORDER BY e.security_id,e.session_date,e.decision_ts"""
@@ -117,6 +150,8 @@ def inspect_state(root,reader_manifest,spec,*,cancelled=lambda:False):
             while batch:=cursor.fetchmany(10000):
                 if cancelled():raise InterruptedError("Diagnostic cancelled")
                 for obs_id,security,session,decision,exit_ts in batch:
+                    decision=pd.Timestamp(decision)
+                    exit_ts=pd.Timestamp(exit_ts) if exit_ts is not None else None
                     key=(security,session)
                     prior=previous.get(key)
                     if step is not None and prior is not None and decision-prior==__import__("datetime").timedelta(minutes=step):

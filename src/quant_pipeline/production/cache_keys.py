@@ -41,8 +41,8 @@ STAGE_PATHS={
     "build-panel":("cache/calculation_panels","cache/panels","cache/indexes"),
     "build-features":("cache/features","cache/local_feature_panels","feature_registry.parquet"),
     "build-targets":("cache/targets","cache/target_store","target_registry.parquet"),
-    "scan-singles":("single_results","cache/bins"),
-    "scan-duals-coarse":("dual_coarse_results","dual_fine_results","dual_exact_results","dual_trial_ledger","cache/pair_plans","cache/fused_dual_scan.json"),
+    "scan-singles":("single_results","cache/bins","cache/target_store"),
+    "scan-duals-coarse":("dual_coarse_results","dual_fine_results","dual_exact_results","dual_trial_ledger","cache/pair_plans","cache/bins","cache/fused_dual_scan.json"),
 }
 
 class SharedStageCache:

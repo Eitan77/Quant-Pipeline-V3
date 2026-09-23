@@ -2,7 +2,7 @@
 
 ## Comprehensive evidence status
 
-The `evidence.profile: comprehensive` path passed a bounded real-core gate with mandatory subgroup coverage, stored/evicted queries, recomputation, search, diagnostic, neighbor scan, and raw execution replay. The configured year-long request has **not** run and the full handoff is not yet certified; see [implementation status](RESEARCH_IMPLEMENTATION_STATUS.md). A dense byte estimate is not a permanent disk requirement. The existing analysis bundle remains a legacy summary, not complete subgroup coverage.
+The `evidence.profile: comprehensive` path passed a bounded real-core gate with mandatory subgroup coverage, stored/evicted queries, recomputation, search, diagnostic, neighbor scan, and raw and benchmark-adjusted execution replay. The configured year-long request has **not** run and the full handoff is not yet certified; see [implementation status](RESEARCH_IMPLEMENTATION_STATUS.md). A dense byte estimate is not a permanent disk requirement. The existing analysis bundle remains a legacy summary, not complete subgroup coverage.
 
 ## Local comprehensive workflow (Windows PowerShell)
 
@@ -40,6 +40,8 @@ $base | ConvertTo-Json | Set-Content "$root\research-query.json"
 ```
 
 Search, diagnostic, neighbor, and backtest submissions return durable job IDs. Start the worker in a second PowerShell session. For a bounded one-job pass, use `research worker ... --once`. The `results` command returns the run-local artifact path. Raw replay is an isolated candidate diagnostic with explicit costs and rejected entries; it is not a portfolio return. Benchmark-adjusted and beta-residual replay additionally require a governed `benchmark_symbol` and exact benchmark target windows.
+
+For the same exact state, change the inspect JSON `kind` to `time`, `opportunities`, `path`, or `dossier` to request independent diagnostics or an on-demand composite. `fine_tail` reports unavailable until exact raw feature percentile ranks are supplied; it does not prevent symbol or time diagnostics. A beta-residual replay needs a causal `beta_prior` for each signal; missing values become explicit rejections, never fabricated hedge returns.
 
 The older dossier sections below describe the frozen-candidate and promotion workflow. `research inspect` and `research experiment` can investigate an exact verified discovery state without first generating an unrelated dossier. Sealed replication/final-holdout procedures remain separate.
 

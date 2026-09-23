@@ -1,7 +1,9 @@
 from __future__ import annotations
 from pathlib import Path
 import numpy as np,pandas as pd,pyarrow.dataset as ds
-from quant_pipeline.alpha_discovery.cache.rank_store import build_percentile_ranks,unpack_bins
+from quant_pipeline.alpha_discovery.cache.rank_store import build_percentile_ranks,build_packed_bins,unpack_bins
+from quant_pipeline.alpha_discovery.cache.bin_store import PackedBinStore
+from quant_pipeline.hashing import content_hash
 from quant_pipeline.production.evidence_store import ByteLRU
 
 DUAL_TREES={3:"dual_coarse_results",5:"dual_fine_results",10:"dual_exact_results"}
@@ -32,7 +34,17 @@ class ProductionData:
         if key not in self._bin_sources:
             if grid not in self._bin_mappings:self._bin_mappings[grid],_=self.run._ensure_bin_cache(grid,self.observations(grid))
             mapping=self._bin_mappings[grid]
-            if feature_id not in mapping: raise KeyError(f"Packed bins missing for {feature_id}")
+            if feature_id not in mapping:
+                observations,values=self.run._load_features(grid,[feature_id])
+                expected=self.observations(grid)
+                if not np.array_equal(observations.observation_id.to_numpy(),expected.observation_id.to_numpy()):
+                    raise RuntimeError("Zoom feature/observation alignment mismatch")
+                codes=pd.factorize(observations.decision_ts,sort=True)[0]
+                store=PackedBinStore(self.run.root/"cache"/"bins"/"packed"/grid)
+                name="zoom-"+content_hash({"feature":feature_id})[:20]
+                try:store.read(name)
+                except FileNotFoundError:store.write(name,build_packed_bins(values,codes),[feature_id])
+                mapping[feature_id]=(str(store.root/f"{name}.npy"),0)
             path,column=mapping[feature_id]; self._bin_sources[key]=(np.load(path,mmap_mode="r",allow_pickle=False),int(column))
         return self._bin_sources[key]
     def bins_slice(self,grid,feature_id,resolution,start,end):

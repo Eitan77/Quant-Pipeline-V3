@@ -159,9 +159,14 @@ def run_backtest(root,reader_manifest,machine,spec,*,cancelled=lambda:False):
     directory.mkdir(parents=True,exist_ok=True)
     trades.to_parquet(directory/"trades.parquet",index=False)
     rejected.to_parquet(directory/"rejected.parquet",index=False)
+    aggregate=aggregate_returns(trades,"net_trade_return")
+    aggregate={key:(float(value) if len(trades) and np.isfinite(value) else None)
+               for key,value in aggregate.items()}
     summary={"status":"complete","experiment_id":identity,"evidence_id":reader_manifest["evidence_id"],
              "preparation":preparation,"signals":len(signals),"executed_trades":len(trades),
-             "rejected_signals":len(rejected),"isolated_candidate_diagnostic":aggregate_returns(trades,"net_trade_return"),
+             "rejected_signals":len(rejected),"isolated_candidate_diagnostic":aggregate,
+             "rejection_reasons":{str(key):int(value) for key,value in
+                                  rejected.rejection_reason.value_counts().items()} if len(rejected) else {},
              "assumptions":assumptions.__dict__,"portfolio_return_claim":False,
              "trades":"trades.parquet","rejections":"rejected.parquet"}
     atomic_json(directory/"summary.json",summary)

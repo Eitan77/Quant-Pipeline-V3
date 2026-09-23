@@ -105,6 +105,10 @@ def publish_evidence(legacy_run,resolved_scope,committed_inputs,research):
         if len(ids)==0 or not np.array_equal(ids,np.arange(len(ids),dtype=np.int64)):
             raise ValueError(f"Noncanonical observation order: {grid}")
         target_path=root/"cache"/"target_store"/grid/"aligned.npy"
+        if not target_path.exists():
+            from quant_pipeline.alpha_discovery.cache.target_store import TargetStore
+            store=TargetStore(root/"cache"/"target_store"/grid)
+            legacy_run._build_aligned_target_store(grid,observations,store)
         target_meta=json.loads(target_path.with_suffix(".json").read_text(encoding="utf-8"))
         target_obs=np.load(target_path.with_name("aligned.observations.npy"),mmap_mode="r",allow_pickle=False)
         if not np.array_equal(ids,target_obs): raise ValueError(f"Target observation mismatch: {grid}")

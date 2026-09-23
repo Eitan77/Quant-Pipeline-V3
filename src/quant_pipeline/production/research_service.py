@@ -49,6 +49,12 @@ class ResearchService:
                                "time":"on_request" if reader else "unavailable",
                                "opportunities":"requires_exact_target_ledger",
                                "fine_tails":"requires_raw_feature_rank_dependency"},
+                "metric_definitions":{
+                    "n":{"unit":"observations","denominator":None,"basis":"valid target and selected cell","family":"subgroup_moments"},
+                    "raw_mean_bps":{"unit":"basis_points","denominator":"n","basis":"stored target return, descriptive and not executable P&L","family":"subgroup_moments"},
+                    "frequency":{"unit":"fraction","denominator":"all valid target observations in the same pair, target, group and resolution","basis":"selected cell count","family":"subgroup_moments"},
+                    "interaction_lift_bps":{"unit":"basis_points","denominator":"cell and marginal valid counts","basis":"cell mean minus row mean minus column mean plus group mean","family":"dual_subgroup_moments"},
+                    "net_trade_return":{"unit":"decimal_return","denominator":"executed isolated trades","basis":"explicit raw stock and optional governed hedge legs after costs and slippage","family":"execution_replay"}},
                 "journal":"research/jobs.sqlite" if (self.root/"research"/"jobs.sqlite").exists() else None,
                 "available":bool(reader and catalog)}
 
@@ -136,10 +142,10 @@ class ResearchService:
             token=json.loads(base64.urlsafe_b64decode(spec["cursor"]+"="*(-len(spec["cursor"])%4)))
             if token.get("query")!=query_key: raise ValueError("Cursor belongs to another evidence query")
             after_cell=int(token["after_cell"])
-        cache=EvidenceCache(self.root); pin_id=uuid.uuid4().hex; cache.pin(pin_id)
+        table=f"{spec['grid']}_{spec['grouping']}_{spec['state_kind']}"
+        cache=EvidenceCache(self.root); pin_id=uuid.uuid4().hex; cache.pin(pin_id,"table",table)
         try:
             moments=self._ensure_tile(matches[0],cache,lambda:False)
-            table=f"{spec['grid']}_{spec['grouping']}_{spec['state_kind']}"
             if "cell_union" in spec:
                 cells=list(map(int,spec["cell_union"]))
                 maximum=int(spec["resolution"]) if spec["state_kind"]=="single" else int(spec["resolution"])**2
@@ -216,7 +222,7 @@ class ResearchService:
         try:
             for row in self._matching_tasks(spec):
                 if cancelled(): raise InterruptedError("Search cancelled")
-                pin_id=uuid.uuid4().hex;cache.pin(pin_id)
+                pin_id=uuid.uuid4().hex;cache.pin(pin_id,"task",row["task"]["task_id"])
                 try:
                     moments=self._ensure_tile(row,cache,cancelled)
                     consume_block(state,moments,{"task":row["task"],"rows_evaluated":reader["grids"][grid]["rows"]})
@@ -239,11 +245,23 @@ class ResearchService:
 
     def inspect(self,spec,cancelled=lambda:False):
         kind=spec.get("kind")
-        if "cells" in spec and kind in {"symbol","time","opportunities"}:
+        if "cells" in spec and kind=="dossier":
             from .diagnostics import inspect_state
             reader=self._json("evidence/reader.json")
             if not reader:return {"status":"unavailable","reason":"Verified evidence reader is absent"}
-            return inspect_state(self.root,reader,spec,cancelled=cancelled)
+            components={name:inspect_state(self.root,reader,{**spec,"kind":name},
+                              machine=self.machine,cancelled=cancelled)
+                        for name in ("symbol","time","opportunities","path","fine_tail")}
+            identity=digest({"evidence":reader["evidence_id"],"spec":spec,"schema":1})
+            path=self.root/"research"/"dossiers"/f"{identity}.json"
+            atomic_json(path,{"status":"complete","evidence_id":reader["evidence_id"],
+                              "requested_state":spec,"components":components})
+            return {"status":"complete","result":path.relative_to(self.root).as_posix()}
+        if "cells" in spec and kind in {"symbol","time","opportunities","path","fine_tail"}:
+            from .diagnostics import inspect_state
+            reader=self._json("evidence/reader.json")
+            if not reader:return {"status":"unavailable","reason":"Verified evidence reader is absent"}
+            return inspect_state(self.root,reader,spec,machine=self.machine,cancelled=cancelled)
         if kind not in {"symbol","time","month","fold"}:
             return {"status":"unavailable","reason":f"Diagnostic {kind!r} needs a separate verified adapter"}
         grouping={"symbol":"security","time":"time_bucket","month":"month","fold":"fold"}[kind]
