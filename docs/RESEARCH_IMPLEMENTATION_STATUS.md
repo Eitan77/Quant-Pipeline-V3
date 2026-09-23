@@ -1,6 +1,6 @@
 # Research handoff implementation status (2026-09-22)
 
-The 19-task comprehensive handoff is still in progress. The configured year-long run has **not** been launched. Its 2.72 TB security-only dense estimate is a nonmaterialized bound; the implementation uses measured compressed tiles and a bounded recomputable cache. Existing discovery artifacts retain their narrower legacy meaning.
+The 19-task comprehensive implementation is **ready for the configured run** after bounded production-path checks. The configured year-long run has **not** been launched. Its 2.72 TB security-only dense estimate is a nonmaterialized bound; the implementation uses measured compressed tiles and a bounded recomputable cache. Existing discovery artifacts retain their narrower legacy meaning.
 
 | Tasks | Status | Evidence and remaining condition |
 |---|---|---|
@@ -16,12 +16,14 @@ The 19-task comprehensive handoff is still in progress. The configured year-long
 | 15 | Implemented for isolated discovery replay | Raw and benchmark-adjusted execution replay use governed windows and explicit legs. A bounded production benchmark replay executed 138 trades; beta-residual replay correctly rejected 138 signals lacking causal beta. Portfolio replay remains a separate question. |
 | 16 | Implemented for measured paths | Feature waves use the admitted output budget; packed-bin alias hashes and timing telemetry are integrated. A measured global rank hotspot was replaced by an exact incremental prior-20 reducer. On the same 5,639,295-row slice, old callback wall time was 195.24 seconds and peak RSS 3.16 GiB; the new path took 69.27 seconds and 1.03 GiB. Bounded numerical parity was exact. The 17-column gate spent 7.52 worker-seconds in feature construction versus 0.26 in panel reads, 0.044 in partition writes and 0.227 in scatter; target construction took about 1.45 seconds and fused coarse dual scan 0.21 seconds. Those measurements do not justify more invasive staging, target, GPU-buffer or inference rewrites on this fixture. |
 | 17 | Implemented for tested legacy/current paths | Comprehensive status distinguishes core, mandatory coverage and materialization; production exceptions publish a failed run status. The existing 3,026,670-row legacy temporal table remains readable by exact key and reports absent fold counts as typed NULL/unavailable, without inventing coverage. Metric definitions expose units, denominators and basis. |
-| 18 | Partial gate passed | Focused reference/integration checks pass (46). Actual GPU parity and Windows lock checks pass. The bounded real-core comprehensive gate completed 162/162 mandatory tasks and the stored query → forced eviction → exact recomputation/search → diagnostic → neighbor → raw execution replay loop. Fresh zoom gates executed 9/9 variants under both legacy dossiers and comprehensive on-demand policy. A stable-logical-tile core gate completed 162/162 tasks. A fixed feature workload now has measured before/after time and memory; equivalent zoom/subgroup comparisons remain. |
-| 19 | Partial | Request, scope, machine budget and Windows commands are documented. Mark ready only after Task 18 passes and all outstanding production conditions are resolved. |
+| 18 | Bounded readiness gate passed | 46 focused checks pass. The real-core loop completed 162/162 mandatory tasks and stored query → eviction → exact recomputation/search → diagnostic → neighbor → execution-aware replay. Resume, cancellation/retry, missing-worker behavior, moved catalog, changed runtime pair caps, CUDA parity, memory admission and Windows lock/publication were checked. Fresh zoom gates executed 9/9 variants. Fixed before/after zoom, subgroup and feature workloads preserved numerical results; diagnostic cold/warm times were measured. This does not predict full-year duration. |
+| 19 | Ready for configured run | The 668-feature/63-target, three-grid year request resolves; local sources and GPU exist; current streaming preflight has a positive bounded disk budget. Exact Windows run/resume, worker, query/search, inspect, neighbor and backtest commands are in the operation manual. Full-year execution remains unstarted as requested. |
 
 ## Local preflight
 
-`configs/research/v3_comprehensive_20260922.yaml` resolves to the discovery year only. The local source catalog and RTX 3080 Ti exist. The last measured free output space was about 186.5 GiB after bounded gates. The security-only dense upper estimate was 2,721,032,244,000 bytes; it is **not** a required permanent allocation. The local preflight status is `admitted_streaming`. Populated density, compressed bytes and throughput cannot be known for the full request before core publication and representative tile sampling.
+`configs/research/v3_comprehensive_20260922.yaml` resolves to the discovery year only: 668 features, 63 targets and three grids. The local source catalog and RTX 3080 Ti exist. Current output space is 200,038,371,328 bytes free, with a 50,009,592,832-byte reserve and a 75,014,389,248-byte bounded evidence budget. The security-only dense upper estimate is 2,721,032,244,000 bytes; it is **not** a required permanent allocation. Preflight status is `admitted_streaming`. A reliable full-year time estimate requires measured populated density, compressed bytes and throughput after core publication; the bounded gate's times must not be extrapolated as a completion date.
+
+The exact resolved feature/target IDs, definition hashes, machine plan, dependency checks, storage snapshot and honest time-estimate status are saved in `configs/research/v3_comprehensive_20260922.preflight.json`. Disk free space is a snapshot; the run repeats admission against live space.
 
 ## Verification
 
@@ -42,3 +44,16 @@ The focused `v3_global_profile_gate` completed 36/36 mandatory subgroup tasks wi
 A fixed 31-session slice from the preserved `v3_discovery` calculation panel contained 5,639,295 rows and 144,158 emitted observations. The previous global rank callback wrote that slice in 195.24 seconds, with 3.16 GiB peak RSS. The incremental reducer wrote the same 144,158 observations in 69.27 seconds, with 1.03 GiB peak RSS and 29 bounded session chunks. On the smaller governed gate, old/new arrays matched exactly (maximum absolute error zero). The larger slice was timed separately; no full-year speed claim follows from it.
 
 The fresh `v3_global_stream_gate` production path completed 36/36 mandatory tasks with the incremental reducer. Its three dual surfaces matched the previous bounded gate exactly: identical pair/target/resolution/cell keys and zero maximum surface-sum difference.
+
+## Fixed-workload performance and limits
+
+| Workload | Previous path | Current path | Same-result check |
+|---|---:|---:|---|
+| Four zoom pair/target requests, 5,000 rows | 1.577 s, four feature loads | 0.120 s, one feature load | Zero maximum surface-sum difference across r3/r5/r10 |
+| Two subgroup families, 5,000 rows | 0.032 s, 40 bin/target reads | 0.021 s, 20 reads | Exact count/sum/sumsq equality |
+| Global rolling rank, 5,639,295 source rows | 195.24 s, 3.16 GiB peak RSS, 0.574 s panel reads | 69.27 s, 1.03 GiB peak RSS, 2.672 s panel reads | Exact bounded-array and three production-surface parity; same 144,158 emitted rows on large slice |
+| Independent diagnostic, fixed bounded state | 0.038 s cold | 0.009 s warm | Same requested state; cache comparison, not a code speedup claim |
+
+The 162-task bounded coverage phase recorded 5.037 seconds, 14,784,084 estimated input bytes, 4,200,549 output bytes, 1,129,340,928 peak process RSS bytes and 5,278,720 peak CUDA allocation bytes. Zoom/subgroup synthetic timings are tiny-fixture measurements. The year-scale cache eviction rate, throughput and completion time remain unknown until the configured run starts; the cache remains bounded and evicted evidence is exactly recomputable.
+
+Scientific invariants retained: exact observation order and pair/target identity, r3/r5/r10 cells, both signs and low-N evidence, pairwise-valid masks, prior-only feature history, explicit raw/hedged execution legs, and sealed replication/final-holdout boundaries. The target-ledger rewrite, broader GPU buffer reuse and canonical inference second-pass replacement were evaluated against bounded stage timings and retained pending evidence of a material benefit; no unmeasured speedup is claimed. The implementation changes are in `src/quant_pipeline/alpha_discovery/run.py` and `src/quant_pipeline/production/`, with focused checks in `tests/unit/` and `tests/integration/`.

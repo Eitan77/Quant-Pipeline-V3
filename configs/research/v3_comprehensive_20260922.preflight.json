@@ -1,0 +1,4389 @@
+{
+  "dependencies": {
+    "cuda_available": true,
+    "gpu_name": "NVIDIA GeForce RTX 3080 Ti",
+    "source_catalog_exists": true
+  },
+  "machine_path": "C:\\Users\\decla\\Desktop\\AlgoResearch\\Quant-Pipeline-V3\\configs\\machines\\local.yaml",
+  "machine_plan": {
+    "cache_root": "D:/AlgoResearch/Quant-Pipeline-V3/cache",
+    "data_root": "D:/AlgoResearch/data",
+    "duckdb_memory_limit_gb": 18,
+    "duckdb_temp": "D:/AlgoResearch/Quant-Pipeline-V3/scratch/duckdb",
+    "gpu_device": "cuda:0",
+    "resource_budget": {
+      "ram_gb": 32,
+      "reserve_ram_gb": 6,
+      "vram_soft_limit_gb": 10.0
+    },
+    "run_root": "D:/AlgoResearch/Quant-Pipeline-V3/runs",
+    "scratch_root": "D:/AlgoResearch/Quant-Pipeline-V3/scratch",
+    "source_catalog": "D:/AlgoResearch/data/catalog.duckdb"
+  },
+  "request_path": "C:\\Users\\decla\\Desktop\\AlgoResearch\\Quant-Pipeline-V3\\configs\\research\\v3_comprehensive_20260922.yaml",
+  "request_sha256": "b68240e5321c8b6fd1cbba72fdc5bb44815ff9fda233dedaaa825fb67b06ac82",
+  "resolved_scope": {
+    "discovery": {
+      "end": "2026-04-30",
+      "start": "2025-05-01"
+    },
+    "exclusions": [],
+    "feature_mode": "canonical_defaults",
+    "features": [
+      {
+        "concept": "abs_return_autocorr_lag1",
+        "definition_hash": "50db66eb4da5ba24427e046c4269e3edf332a1c93ac0140209db1583aafae7de",
+        "grid": "intraday_5m",
+        "id": "abs_return_autocorr_lag1__60m__raw__intraday_5m"
+      },
+      {
+        "concept": "abs_return_per_dollar_volume",
+        "definition_hash": "32e75c3dd2d59010cd3b327698b36ae74fa30861cabbd9ae38652f07ac853617",
+        "grid": "intraday_5m",
+        "id": "abs_return_per_dollar_volume__30m__raw__intraday_5m"
+      },
+      {
+        "concept": "abs_return_x_rvol",
+        "definition_hash": "2f6a2edc84bd409606ca70687289adb2690d9c3d618a378e27f4e317485cf227",
+        "grid": "intraday_5m",
+        "id": "abs_return_x_rvol__30m__raw__intraday_5m"
+      },
+      {
+        "concept": "absolute_return_hhi",
+        "definition_hash": "ef94dc7c80a12a9b07eec79d4475aaabef2094b801916bcdacfe07583aff5ce9",
+        "grid": "intraday_5m",
+        "id": "absolute_return_hhi__30m__raw__intraday_5m"
+      },
+      {
+        "concept": "absreturn_volume_corr",
+        "definition_hash": "b29e7f41bc6b9a3159f85d5932d50c2b78ccb78c340e3947822252a843f9d3d3",
+        "grid": "intraday_5m",
+        "id": "absreturn_volume_corr__30m__raw__intraday_5m"
+      },
+      {
+        "concept": "amihud_illiquidity",
+        "definition_hash": "81c2dd4320cb0afa89d0ca01a544cb9ec90100cf98d0b1ef2aa60b69c39a4674",
+        "grid": "intraday_5m",
+        "id": "amihud_illiquidity__30m__raw__intraday_5m"
+      },
+      {
+        "concept": "atr_band_z",
+        "definition_hash": "f441a4a9e56b1bcc1e89fd57c40269b13dbc937e961e6b4b4d0c8feb6c2efc32",
+        "grid": "intraday_5m",
+        "id": "atr_band_z__30m__raw__intraday_5m"
+      },
+      {
+        "concept": "atr_pct",
+        "definition_hash": "868cc60460a61d1115f1680aeba816e3f6a7b21b383ee825cd9a990845165726",
+        "grid": "intraday_5m",
+        "id": "atr_pct__30m__raw__intraday_5m"
+      },
+      {
+        "concept": "average_signed_run_length",
+        "definition_hash": "1871704fc4ce262694f55888f4fc8ee917a2bbbe7e01aa20c79b56b98963d0b5",
+        "grid": "intraday_5m",
+        "id": "average_signed_run_length__30m__raw__intraday_5m"
+      },
+      {
+        "concept": "average_trade_size",
+        "definition_hash": "452fc820f3fde5283d0ac2ef5b9436c326b126a4adef9d2e89e05d17aec96faf",
+        "grid": "intraday_5m",
+        "id": "average_trade_size__30m__raw__intraday_5m"
+      },
+      {
+        "concept": "bars_or_days_since_high",
+        "definition_hash": "5b2cc444ce3f746fb0aa35ea6045677fea72cf33885bf4ef55c88281cef4d37a",
+        "grid": "intraday_5m",
+        "id": "bars_or_days_since_high__30m__raw__intraday_5m"
+      },
+      {
+        "concept": "bars_or_days_since_low",
+        "definition_hash": "0557f86cbd61221760adce267d2b67005a87d268de5aacd88c64740f227f4b6b",
+        "grid": "intraday_5m",
+        "id": "bars_or_days_since_low__30m__raw__intraday_5m"
+      },
+      {
+        "concept": "benchmark_excess_return",
+        "definition_hash": "668b9bf8dc1d23d1623a9153a5bd63b904e7026e2e0111c290d1861f73b10109",
+        "grid": "intraday_5m",
+        "id": "benchmark_excess_return__30m__raw__intraday_5m"
+      },
+      {
+        "concept": "beta_change",
+        "definition_hash": "224d6214388499394a3a41ccf656d200bc79775c51400e1931cec6e213a5a21d",
+        "grid": "intraday_5m",
+        "id": "beta_change__30m__raw__intraday_5m"
+      },
+      {
+        "concept": "beta_residual_return",
+        "definition_hash": "d771e615ac8201908b438583e21b4c21889b708b59e70d668be8041f6d26be48",
+        "grid": "intraday_5m",
+        "id": "beta_residual_return__30m__raw__intraday_5m"
+      },
+      {
+        "concept": "body_to_range",
+        "definition_hash": "a29969ae7135a0ee8f3aa1b3a8f3cb4e0ab8a7250f9601ac6d5e7c9fae8ffbbc",
+        "grid": "intraday_5m",
+        "id": "body_to_range__30m__raw__intraday_5m"
+      },
+      {
+        "concept": "bollinger_z",
+        "definition_hash": "ae9a7bbc35699de4a859f35822fe43809badd5016e9178b001803123fcfc6238",
+        "grid": "intraday_5m",
+        "id": "bollinger_z__30m__raw__intraday_5m"
+      },
+      {
+        "concept": "breakdown_distance",
+        "definition_hash": "4a0bbe1fcd5f20af0db29fb9930272ef6217b071eb38b0138bd257b8544404f8",
+        "grid": "intraday_5m",
+        "id": "breakdown_distance__30m__raw__intraday_5m"
+      },
+      {
+        "concept": "breakout_distance",
+        "definition_hash": "8fd62115dc3e3b0e7f65a0b942c4f73922813f5172b72687040170ce6a9f59a0",
+        "grid": "intraday_5m",
+        "id": "breakout_distance__30m__raw__intraday_5m"
+      },
+      {
+        "concept": "close_location_bar",
+        "definition_hash": "d4e2e231589a4638d7d5ef512402826c226be6636b870f6ee6224b05e9b54a4e",
+        "grid": "intraday_5m",
+        "id": "close_location_bar__30m__raw__intraday_5m"
+      },
+      {
+        "concept": "close_to_close_vol",
+        "definition_hash": "f3ca0ac516fb50befbd025f6157bd406dc68e0d3713d6545bae868f9e10d7279",
+        "grid": "intraday_5m",
+        "id": "close_to_close_vol__30m__raw__intraday_5m"
+      },
+      {
+        "concept": "close_vs_path_mean",
+        "definition_hash": "640acfd18def0cd2a0998eea94fa689e76121c7d3d81757646a34d7061554245",
+        "grid": "intraday_5m",
+        "id": "close_vs_path_mean__30m__raw__intraday_5m"
+      },
+      {
+        "concept": "close_vs_path_median",
+        "definition_hash": "051946d4852919dbd18a394ac0054feeb42e86fdd16f453591d3db8ff37ab464",
+        "grid": "intraday_5m",
+        "id": "close_vs_path_median__30m__raw__intraday_5m"
+      },
+      {
+        "concept": "close_vs_vwap",
+        "definition_hash": "ae132740c9e30ecd6584a1bcc86d366396e204cee754e86904422ad47e353157",
+        "grid": "intraday_5m",
+        "id": "close_vs_vwap__30m__raw__intraday_5m"
+      },
+      {
+        "concept": "correlation_change",
+        "definition_hash": "2d99a4fa715966af8c56e2bade4ff44c121139c43d3efaa4fb33f7a3934726e1",
+        "grid": "intraday_5m",
+        "id": "correlation_change__30m__raw__intraday_5m"
+      },
+      {
+        "concept": "corwin_schultz_spread_proxy",
+        "definition_hash": "b85b606fa33817d736e47de39bfa468a729c3b453bcac29867dab400461a762a",
+        "grid": "intraday_5m",
+        "id": "corwin_schultz_spread_proxy__30m__raw__intraday_5m"
+      },
+      {
+        "concept": "day_of_week",
+        "definition_hash": "8fefceb9476704933a2800d845b333c199daba41a796dac2a77f3c9ff2876111",
+        "grid": "intraday_5m",
+        "id": "day_of_week__context__raw__intraday_5m"
+      },
+      {
+        "concept": "distance_from_high",
+        "definition_hash": "ee9b7cec673042675bcf64f8977c38481f8782004ddb8d806dc5b0387dde7346",
+        "grid": "intraday_5m",
+        "id": "distance_from_high__30m__raw__intraday_5m"
+      },
+      {
+        "concept": "distance_from_low",
+        "definition_hash": "de483dcebe82be221a94069f9f1335cd9d67cad0fce3001adb2239ebaff82def",
+        "grid": "intraday_5m",
+        "id": "distance_from_low__30m__raw__intraday_5m"
+      },
+      {
+        "concept": "dollar_volume",
+        "definition_hash": "a187b24cbe4af2e4f8914220ad165e6b6fafa2d53ea0fcec496296b0053f6da3",
+        "grid": "intraday_5m",
+        "id": "dollar_volume__30m__raw__intraday_5m"
+      },
+      {
+        "concept": "dollar_volume_zscore",
+        "definition_hash": "e34dfc921a36e14f727ae9b5f83b4b685239be7e9dec4d6fbda101e06ea4e60f",
+        "grid": "intraday_5m",
+        "id": "dollar_volume_zscore__30m__raw__intraday_5m"
+      },
+      {
+        "concept": "down_bar_volume_share",
+        "definition_hash": "ffba653e245d331f6d8c0992b4a06b000eb725ab0e0521671076f062240f109f",
+        "grid": "intraday_5m",
+        "id": "down_bar_volume_share__30m__raw__intraday_5m"
+      },
+      {
+        "concept": "down_up_vol_ratio",
+        "definition_hash": "18e52d1936311ed05238e7d47a128f356c33b27c31adc7572d19650e3668a4df",
+        "grid": "intraday_5m",
+        "id": "down_up_vol_ratio__30m__raw__intraday_5m"
+      },
+      {
+        "concept": "downside_beta",
+        "definition_hash": "d74185e8f1935bbae53ce381833ff38d57c8cd7189b1f92c2c21b91949168026",
+        "grid": "intraday_5m",
+        "id": "downside_beta__30m__raw__intraday_5m"
+      },
+      {
+        "concept": "downside_semivariance",
+        "definition_hash": "1fb2934bb7726260fafca9c3e6ea4b9fe7f18a4ecc189055d01709803898c41b",
+        "grid": "intraday_5m",
+        "id": "downside_semivariance__30m__raw__intraday_5m"
+      },
+      {
+        "concept": "downside_vol",
+        "definition_hash": "32dc70cbb02aa9f3a5d6fa7933a33f63e22e1db801a2bf32527693793ae4fe0b",
+        "grid": "intraday_5m",
+        "id": "downside_vol__30m__raw__intraday_5m"
+      },
+      {
+        "concept": "downside_vol_acceleration",
+        "definition_hash": "f034396417b0e09ffb8ebf64964898df68e5cccae4023bbb17014025494b3bb6",
+        "grid": "intraday_5m",
+        "id": "downside_vol_acceleration__30m__raw__intraday_5m"
+      },
+      {
+        "concept": "drawdown_from_high",
+        "definition_hash": "c1445c2835573b71f00a0c70229905abb92a91a14cba08eeaed66ebb0560865b",
+        "grid": "intraday_5m",
+        "id": "drawdown_from_high__30m__raw__intraday_5m"
+      },
+      {
+        "concept": "ema_distance",
+        "definition_hash": "79dcd8da1319763c4423138e225dbd5b6603c395607d623a91241d72b811b566",
+        "grid": "intraday_5m",
+        "id": "ema_distance__30m__raw__intraday_5m"
+      },
+      {
+        "concept": "ema_slope",
+        "definition_hash": "af23ef57b1755b5f6eb5e5820093f50947e4a63a45565b17df15aefd2d26e671",
+        "grid": "intraday_5m",
+        "id": "ema_slope__30m__raw__intraday_5m"
+      },
+      {
+        "concept": "failed_breakdown_strength",
+        "definition_hash": "07bc14e8c373c5adb1a868d7fbcb685af8194030c197b81662417ea189a87ad6",
+        "grid": "intraday_5m",
+        "id": "failed_breakdown_strength__30m__raw__intraday_5m"
+      },
+      {
+        "concept": "failed_breakout_strength",
+        "definition_hash": "97ef88aaa845c04202ea3a2d5905ab9e3a644cba4cd3aaaf8bf211ecb41f7e69",
+        "grid": "intraday_5m",
+        "id": "failed_breakout_strength__30m__raw__intraday_5m"
+      },
+      {
+        "concept": "fast_minus_slow_cross_sectional_rank",
+        "definition_hash": "ac3dda01a000d6fbbdc64bf4104f670526fd39ade0780c22d5a182d316319107",
+        "grid": "intraday_5m",
+        "id": "fast_minus_slow_cross_sectional_rank__5m_30m__raw__intraday_5m"
+      },
+      {
+        "concept": "fast_minus_slow_return",
+        "definition_hash": "38431d0213d3c53fca3cf648a85ace7ad0c981150c0bb02cd1e39e3a601199f9",
+        "grid": "intraday_5m",
+        "id": "fast_minus_slow_return__5m_30m__raw__intraday_5m"
+      },
+      {
+        "concept": "fast_minus_slow_risk_adjusted_momentum",
+        "definition_hash": "508c41553f7f454a5af2be87794c6383ac9415a66871111e6803c61a75c41358",
+        "grid": "intraday_5m",
+        "id": "fast_minus_slow_risk_adjusted_momentum__5m_30m__raw__intraday_5m"
+      },
+      {
+        "concept": "fast_slow_ema_gap",
+        "definition_hash": "2b5dc6d06f9bb690a8ccb75d3c14a1758aa27703cbb423704ba9d31d91ec94cb",
+        "grid": "intraday_5m",
+        "id": "fast_slow_ema_gap__30m__raw__intraday_5m"
+      },
+      {
+        "concept": "fast_slow_sma_gap",
+        "definition_hash": "fb9bac51cf53a38c5ac1ed48c590a65ff1b29946103a3f5f502cf094380c74db",
+        "grid": "intraday_5m",
+        "id": "fast_slow_sma_gap__30m__raw__intraday_5m"
+      },
+      {
+        "concept": "fast_slow_sma_ratio",
+        "definition_hash": "1a1fa0611d1426960a7305c84d807068d0f833e3ae569b70cc7bb79d09c4ed07",
+        "grid": "intraday_5m",
+        "id": "fast_slow_sma_ratio__30m__raw__intraday_5m"
+      },
+      {
+        "concept": "garman_klass_vol",
+        "definition_hash": "ac495d45b4374c53a3c753a515a41366119a852fe9d9ab7608f3ce51a47c3e74",
+        "grid": "intraday_5m",
+        "id": "garman_klass_vol__30m__raw__intraday_5m"
+      },
+      {
+        "concept": "gross_to_net_path_ratio",
+        "definition_hash": "475aec4375d52f2edde220964a6816a2e2f4cc7bcd97e056f6e574ea589ff5de",
+        "grid": "intraday_5m",
+        "id": "gross_to_net_path_ratio__30m__raw__intraday_5m"
+      },
+      {
+        "concept": "high_low_asymmetry",
+        "definition_hash": "72f93a692cdd919b6934dbdb110f037128687ed66e06bfcff906ae2b5900c82c",
+        "grid": "intraday_5m",
+        "id": "high_low_asymmetry__30m__raw__intraday_5m"
+      },
+      {
+        "concept": "hurst_exponent",
+        "definition_hash": "d56374757842cc3ca11d18231fb9eea15971118de50654294604b565aedbd6b3",
+        "grid": "intraday_5m",
+        "id": "hurst_exponent__60m__raw__intraday_5m"
+      },
+      {
+        "concept": "idiosyncratic_vol",
+        "definition_hash": "629e59205dd280a6d9f2eaeeef52a9671cc22ec34833265315b9132704f9d470",
+        "grid": "intraday_5m",
+        "id": "idiosyncratic_vol__30m__raw__intraday_5m"
+      },
+      {
+        "concept": "information_discreteness",
+        "definition_hash": "c648c2c8b3d12c8f96218883ebe7efac7f9ea2391bb984d3bd5b14988d3a36d2",
+        "grid": "intraday_5m",
+        "id": "information_discreteness__30m__raw__intraday_5m"
+      },
+      {
+        "concept": "jump_fraction",
+        "definition_hash": "d8aff1f7628d8e5d37350bd20af4e5d5ec0f9a53d62b20e0c5d829256448d7fd",
+        "grid": "intraday_5m",
+        "id": "jump_fraction__30m__raw__intraday_5m"
+      },
+      {
+        "concept": "jump_variance_share",
+        "definition_hash": "dd52fbdc31be71aea7a91dff50bf26fe748fe7ad042c4771f3eadda4f5ec40b9",
+        "grid": "intraday_5m",
+        "id": "jump_variance_share__30m__raw__intraday_5m"
+      },
+      {
+        "concept": "largest_abs_return_share",
+        "definition_hash": "49bad25220e32fe29234d676cb149e91a67e37b8f0c536f67b7bc2637ab21c1f",
+        "grid": "intraday_5m",
+        "id": "largest_abs_return_share__30m__raw__intraday_5m"
+      },
+      {
+        "concept": "largest_bar_volume_share",
+        "definition_hash": "cb36b4c302f53f088956f11729f2503f14e6a732c18396e670e207951220388e",
+        "grid": "intraday_5m",
+        "id": "largest_bar_volume_share__30m__raw__intraday_5m"
+      },
+      {
+        "concept": "left_expected_shortfall",
+        "definition_hash": "52c06ab64a2c6ec17281e4445df0aa722ba17d723f70edefbe938d772bb4f88b",
+        "grid": "intraday_5m",
+        "id": "left_expected_shortfall__30m__raw__intraday_5m"
+      },
+      {
+        "concept": "log_return",
+        "definition_hash": "87fda49c1ac7e01dbdfd4dc61a2652e6dcaa7a25a5ea8419a3185d0c97415ec4",
+        "grid": "intraday_5m",
+        "id": "log_return__30m__raw__intraday_5m"
+      },
+      {
+        "concept": "longest_down_run",
+        "definition_hash": "69e6ac0cbe63ff649595fcfe57060f4d22400ec14a04702aed6693935c7eb184",
+        "grid": "intraday_5m",
+        "id": "longest_down_run__30m__raw__intraday_5m"
+      },
+      {
+        "concept": "longest_up_run",
+        "definition_hash": "150519fe53163b580003eabeaa8086f22e1f3893251494a7399308305db0f7ca",
+        "grid": "intraday_5m",
+        "id": "longest_up_run__30m__raw__intraday_5m"
+      },
+      {
+        "concept": "lower_wick_fraction",
+        "definition_hash": "79865fe0270f88bb9da7d1e7119600ee0459772adedf8dbd4a6d76814c6f9874",
+        "grid": "intraday_5m",
+        "id": "lower_wick_fraction__30m__raw__intraday_5m"
+      },
+      {
+        "concept": "market_beta",
+        "definition_hash": "6d6b859fdef4ac6d11cd62b300e10a144a6cd202bc0bde9079e726f230c550da",
+        "grid": "intraday_5m",
+        "id": "market_beta__30m__raw__intraday_5m"
+      },
+      {
+        "concept": "market_correlation",
+        "definition_hash": "21bb0c6d4c005ec6cd86e5f76292fda9047872c4b13f43f43e3e77f3643e6919",
+        "grid": "intraday_5m",
+        "id": "market_correlation__30m__raw__intraday_5m"
+      },
+      {
+        "concept": "market_downside_vol",
+        "definition_hash": "f4e089f4025bb3f7024ee312b152bbfb11ae1e9d5908bf1dca256817ade2234d",
+        "grid": "intraday_5m",
+        "id": "market_downside_vol__30m__raw__intraday_5m"
+      },
+      {
+        "concept": "market_drawdown",
+        "definition_hash": "f77b0d074f9058555cfd753c49799b66c44554645329b7ddb40ed7f36148dd00",
+        "grid": "intraday_5m",
+        "id": "market_drawdown__30m__raw__intraday_5m"
+      },
+      {
+        "concept": "market_gap",
+        "definition_hash": "2a4cfb64fac91e2e09dd66c1dbfd8e144067bd2c071f7cbf19eaed0ccbee341d",
+        "grid": "intraday_5m",
+        "id": "market_gap__30m__raw__intraday_5m"
+      },
+      {
+        "concept": "market_intraday_return",
+        "definition_hash": "fb0dfea98f26fb7c51333c3b6a933ab5bed20944866f865a67888f70b821a667",
+        "grid": "intraday_5m",
+        "id": "market_intraday_return__30m__raw__intraday_5m"
+      },
+      {
+        "concept": "market_lead_response",
+        "definition_hash": "e669b7964b9987c3b624594f237a219255ad036e9f81d67c7bda1f47ab041fb1",
+        "grid": "intraday_5m",
+        "id": "market_lead_response__30m__raw__intraday_5m"
+      },
+      {
+        "concept": "market_return",
+        "definition_hash": "cb4e84a89e43dcc6bd662f840a969fcb3d2b29474171f902535bab6f648cac85",
+        "grid": "intraday_5m",
+        "id": "market_return__30m__raw__intraday_5m"
+      },
+      {
+        "concept": "market_risk_adjusted_momentum",
+        "definition_hash": "dbd36979d9910ca5c66bcbd850d755113061a4da59df0de91ec9883ba9c33d2e",
+        "grid": "intraday_5m",
+        "id": "market_risk_adjusted_momentum__30m__raw__intraday_5m"
+      },
+      {
+        "concept": "market_vol_percentile",
+        "definition_hash": "aed59f5e78115bc3b077c0156664f08214a8d4f8bfe739be1fe3336020453131",
+        "grid": "intraday_5m",
+        "id": "market_vol_percentile__30m__raw__intraday_5m"
+      },
+      {
+        "concept": "market_volatility",
+        "definition_hash": "355e1f48657fb6f7c92e473cfd6823e581d9b1acc7b712c31dc01cf2f315c618",
+        "grid": "intraday_5m",
+        "id": "market_volatility__30m__raw__intraday_5m"
+      },
+      {
+        "concept": "max_subreturn",
+        "definition_hash": "d71e643053f0f4d29410eca1a6c4a6251a985b3170507418384496ade43e993b",
+        "grid": "intraday_5m",
+        "id": "max_subreturn__30m__raw__intraday_5m"
+      },
+      {
+        "concept": "mean_median_return_gap",
+        "definition_hash": "6dd2f8c034bbe78b37f1e80a4485db699c2923e62f660313b5ce0463310f35d4",
+        "grid": "intraday_5m",
+        "id": "mean_median_return_gap__30m__raw__intraday_5m"
+      },
+      {
+        "concept": "min_subreturn",
+        "definition_hash": "cb4d8d543df6ae49aa0b0066c1a3549fd7888fbe66d50c789d30f3a5ce00dc6a",
+        "grid": "intraday_5m",
+        "id": "min_subreturn__30m__raw__intraday_5m"
+      },
+      {
+        "concept": "minute_of_day_cos",
+        "definition_hash": "88ffb2ac67441f7aef6c95a5d7800014861171b32aea1fb28822b41897083a4e",
+        "grid": "intraday_5m",
+        "id": "minute_of_day_cos__context__raw__intraday_5m"
+      },
+      {
+        "concept": "minute_of_day_sin",
+        "definition_hash": "11a34bf92b253266442241cfc0a12724be7045bacf413b384e3a1f0e0530514c",
+        "grid": "intraday_5m",
+        "id": "minute_of_day_sin__context__raw__intraday_5m"
+      },
+      {
+        "concept": "momentum_acceleration",
+        "definition_hash": "b6c1dbe873823dce8b4affab60cf09c34cf8658243f851a31e9b541816fb60ed",
+        "grid": "intraday_5m",
+        "id": "momentum_acceleration__5m_30m__raw__intraday_5m"
+      },
+      {
+        "concept": "momentum_deceleration",
+        "definition_hash": "4cc787111a2b212c5bfdd251fc3dc16c2b247fe541e02d4cfdef2967cf659620",
+        "grid": "intraday_5m",
+        "id": "momentum_deceleration__5m_30m__raw__intraday_5m"
+      },
+      {
+        "concept": "momentum_sign_agreement",
+        "definition_hash": "f928ba3d823214fa701ab7ee8c9cc35bfe981232c6852a9300e7ad2d072a3260",
+        "grid": "intraday_5m",
+        "id": "momentum_sign_agreement__5m_30m__raw__intraday_5m"
+      },
+      {
+        "concept": "money_flow_proxy",
+        "definition_hash": "5e55646042bfacb0df9f9198262ea3b7964975a7de790487a4c0d8c12ce32630",
+        "grid": "intraday_5m",
+        "id": "money_flow_proxy__30m__raw__intraday_5m"
+      },
+      {
+        "concept": "month_end_distance",
+        "definition_hash": "800e99adbdad9ba30352d6f341fed62e2a8f8df50dcfd16de7ce270edb4188e9",
+        "grid": "intraday_5m",
+        "id": "month_end_distance__context__raw__intraday_5m"
+      },
+      {
+        "concept": "negative_bar_fraction",
+        "definition_hash": "20d74ca91262a4c1862ff043ad7362bae018dddcb4c98317842406d0f5ec7538",
+        "grid": "intraday_5m",
+        "id": "negative_bar_fraction__30m__raw__intraday_5m"
+      },
+      {
+        "concept": "negative_jump_fraction",
+        "definition_hash": "e5ae36599434db917ad5c22c43326f8f5b136b86968e1ba8cc7528192702ed5c",
+        "grid": "intraday_5m",
+        "id": "negative_jump_fraction__30m__raw__intraday_5m"
+      },
+      {
+        "concept": "negative_return_sum_abs",
+        "definition_hash": "e426fa655520d4ec8d072878ccc542ab121bb55b1b65bb807d31f7232520d29f",
+        "grid": "intraday_5m",
+        "id": "negative_return_sum_abs__30m__raw__intraday_5m"
+      },
+      {
+        "concept": "new_high_count",
+        "definition_hash": "44a218802d2378f7dad548a97eccc0284a8a0639b3f1fcdf6c5863782ef178cf",
+        "grid": "intraday_5m",
+        "id": "new_high_count__30m__raw__intraday_5m"
+      },
+      {
+        "concept": "new_low_count",
+        "definition_hash": "7b2db09b8cf4b66ce8ef93332d72b1d695feeb86d62f4b5ff2b2bf9ca04bbb7d",
+        "grid": "intraday_5m",
+        "id": "new_low_count__30m__raw__intraday_5m"
+      },
+      {
+        "concept": "obv_slope",
+        "definition_hash": "2706120cda884b457ba9ff7ab6c30456a3b0f8441ef3c303c271fb20ce51ee84",
+        "grid": "intraday_5m",
+        "id": "obv_slope__30m__raw__intraday_5m"
+      },
+      {
+        "concept": "p05_subreturn",
+        "definition_hash": "b4f64e3d4fbc2610458daa633df3a231122887931aa0963fd8809cb8d77d0ae4",
+        "grid": "intraday_5m",
+        "id": "p05_subreturn__30m__raw__intraday_5m"
+      },
+      {
+        "concept": "p95_subreturn",
+        "definition_hash": "4c665bf98884d829240620b3df6da3bc2909bfc31cc51281e0f8ab3dad2e4ec3",
+        "grid": "intraday_5m",
+        "id": "p95_subreturn__30m__raw__intraday_5m"
+      },
+      {
+        "concept": "parkinson_vol",
+        "definition_hash": "de5aa8f47fb471920b4d3f7c1ed131f744d985ed58465ccc79ba7baffa037e50",
+        "grid": "intraday_5m",
+        "id": "parkinson_vol__30m__raw__intraday_5m"
+      },
+      {
+        "concept": "path_chord_convexity",
+        "definition_hash": "eeb10aec68a8fbd6fe35333a497034a7a8c9e2408a39bf57e314a71301f45df0",
+        "grid": "intraday_5m",
+        "id": "path_chord_convexity__30m__raw__intraday_5m"
+      },
+      {
+        "concept": "path_efficiency",
+        "definition_hash": "0fa8b35222549a07ce6a81cf9b02229c048b0e892247cb4d47db2924dfd151bf",
+        "grid": "intraday_5m",
+        "id": "path_efficiency__30m__raw__intraday_5m"
+      },
+      {
+        "concept": "path_quadratic_curvature",
+        "definition_hash": "96ec371e9e8f832b0a0766dfe21926aa0bb38099d4102558120b1ea7f7ffbb59",
+        "grid": "intraday_5m",
+        "id": "path_quadratic_curvature__30m__raw__intraday_5m"
+      },
+      {
+        "concept": "permutation_entropy",
+        "definition_hash": "5ee3bd8adeb1c3f0cf8b685f2c98e3045491d5f564055f098cf5691f00606ea8",
+        "grid": "intraday_5m",
+        "id": "permutation_entropy__60m__raw__intraday_5m"
+      },
+      {
+        "concept": "positive_bar_fraction",
+        "definition_hash": "a1e44050017467bfd6ea0ed90332ba0e3ecb5b1e1f0a42be12bfd3ba43e3484a",
+        "grid": "intraday_5m",
+        "id": "positive_bar_fraction__30m__raw__intraday_5m"
+      },
+      {
+        "concept": "positive_jump_fraction",
+        "definition_hash": "18d489fe21adca25a5858ba6392067d598fcf0453c7265d5ca7fe44368c33ac1",
+        "grid": "intraday_5m",
+        "id": "positive_jump_fraction__30m__raw__intraday_5m"
+      },
+      {
+        "concept": "positive_return_sum",
+        "definition_hash": "052700b436d75a4ab08a0d231ab634364890a1429ea4f7dcdeb4f22d9095374c",
+        "grid": "intraday_5m",
+        "id": "positive_return_sum__30m__raw__intraday_5m"
+      },
+      {
+        "concept": "post_holiday_flag",
+        "definition_hash": "38dd88ba3218755063439c35184299f26895ec9c2e2a4d462b95e3a2fc095271",
+        "grid": "intraday_5m",
+        "id": "post_holiday_flag__context__raw__intraday_5m"
+      },
+      {
+        "concept": "pre_holiday_flag",
+        "definition_hash": "ffb57ecee019a0ce0551cd5bb9c98788f21a3043f293a6395573085013fb24f9",
+        "grid": "intraday_5m",
+        "id": "pre_holiday_flag__context__raw__intraday_5m"
+      },
+      {
+        "concept": "price_minus_sma_volnorm",
+        "definition_hash": "2f8efce986508324f7e8207991e90a084f6fa251f78017ebdc45e78f3b4f3676",
+        "grid": "intraday_5m",
+        "id": "price_minus_sma_volnorm__30m__raw__intraday_5m"
+      },
+      {
+        "concept": "price_shock_minus_volume_shock",
+        "definition_hash": "feda3b9d588c7b242646d6f20cbc4df9b0ba6cc92cc01cf507391a385cc447fa",
+        "grid": "intraday_5m",
+        "id": "price_shock_minus_volume_shock__30m__raw__intraday_5m"
+      },
+      {
+        "concept": "price_to_sma",
+        "definition_hash": "b2ee4ce647c30871dd64891793c6ab30a3d6702fd0f8ffdd9e144da8e14d7357",
+        "grid": "intraday_5m",
+        "id": "price_to_sma__30m__raw__intraday_5m"
+      },
+      {
+        "concept": "prior_high_reclaim_strength",
+        "definition_hash": "d713c1e1d8e231ed53698d3d12b6a35b6d4a66ec5e5fe9fa622d44751f513dac",
+        "grid": "intraday_5m",
+        "id": "prior_high_reclaim_strength__30m__raw__intraday_5m"
+      },
+      {
+        "concept": "prior_low_reclaim_strength",
+        "definition_hash": "da13947ad7489d9809faa8a4508a740cc4bb5b6ad7f47d1f15e829e1f7a09b0d",
+        "grid": "intraday_5m",
+        "id": "prior_low_reclaim_strength__30m__raw__intraday_5m"
+      },
+      {
+        "concept": "pullback_in_uptrend",
+        "definition_hash": "849cf3cef7175b22719e92fc5e713d4b6078926606c25399c62cbadc54c5cb52",
+        "grid": "intraday_5m",
+        "id": "pullback_in_uptrend__5m_30m__raw__intraday_5m"
+      },
+      {
+        "concept": "quarter_end_distance",
+        "definition_hash": "e51c24b1e4f0e7aa82c1061425a9187c840a54b7437deebcdf619479cdef76c9",
+        "grid": "intraday_5m",
+        "id": "quarter_end_distance__context__raw__intraday_5m"
+      },
+      {
+        "concept": "range_per_dollar_volume",
+        "definition_hash": "e7a1637123d41cc1a6ad0a35c1258ee106e52de1d5a132fe432f07c84ce5e0e9",
+        "grid": "intraday_5m",
+        "id": "range_per_dollar_volume__30m__raw__intraday_5m"
+      },
+      {
+        "concept": "range_position",
+        "definition_hash": "fd43366cf7a56abe02ffd81678a17bac18e8215a7d2c4ef6f8987ee058293888",
+        "grid": "intraday_5m",
+        "id": "range_position__30m__raw__intraday_5m"
+      },
+      {
+        "concept": "raw_volume",
+        "definition_hash": "d9692789a0d8844325039d3facba6f69d849dc31c268627c279907a364af1dce",
+        "grid": "intraday_5m",
+        "id": "raw_volume__30m__raw__intraday_5m"
+      },
+      {
+        "concept": "realized_kurtosis",
+        "definition_hash": "7b7e256b979a7f92ef86f2f75910ec62874b03e6d0345bedcebeb0ac1cf91765",
+        "grid": "intraday_5m",
+        "id": "realized_kurtosis__30m__raw__intraday_5m"
+      },
+      {
+        "concept": "realized_skewness",
+        "definition_hash": "66aae064239ac7b556ce0ad9b99a076486c7ccd105ca49662942732a4d300c29",
+        "grid": "intraday_5m",
+        "id": "realized_skewness__30m__raw__intraday_5m"
+      },
+      {
+        "concept": "realized_vol",
+        "definition_hash": "7cdc6d76d6d2f89859f5af8d3d5f349c2548a2e0d337362ed61f2117b32e5303",
+        "grid": "intraday_5m",
+        "id": "realized_vol__30m__raw__intraday_5m"
+      },
+      {
+        "concept": "recovery_fraction",
+        "definition_hash": "cba2e8da5c74233514a2b4fac67bff2daae86229447fef0a6624a01a720fcb97",
+        "grid": "intraday_5m",
+        "id": "recovery_fraction__30m__raw__intraday_5m"
+      },
+      {
+        "concept": "recovery_from_low",
+        "definition_hash": "b7a148f30e26a287ca73126689908b91007c72535ccf5d9f86c0acefa781a772",
+        "grid": "intraday_5m",
+        "id": "recovery_from_low__30m__raw__intraday_5m"
+      },
+      {
+        "concept": "recovery_in_downtrend",
+        "definition_hash": "c611de9b95381ce19a87b86f023b63c98cff60e497f4e6ccc8854ff00f809864",
+        "grid": "intraday_5m",
+        "id": "recovery_in_downtrend__5m_30m__raw__intraday_5m"
+      },
+      {
+        "concept": "relative_dollar_volume",
+        "definition_hash": "499227a528097b596787fc061c31356e755856b44ee88e0caf9fbf848e5707c4",
+        "grid": "intraday_5m",
+        "id": "relative_dollar_volume__30m__raw__intraday_5m"
+      },
+      {
+        "concept": "relative_trade_count",
+        "definition_hash": "1e50f75ff15c324c1a956fcacf443559c12e04fa443816e0a8ee36fdc51b5b2b",
+        "grid": "intraday_5m",
+        "id": "relative_trade_count__30m__raw__intraday_5m"
+      },
+      {
+        "concept": "relative_volume",
+        "definition_hash": "e722d71f5b9cf645455851db4a163f0b0d31093081bf7649e39ba07473713fe8",
+        "grid": "intraday_5m",
+        "id": "relative_volume__30m__raw__intraday_5m"
+      },
+      {
+        "concept": "return_acceleration_halves",
+        "definition_hash": "a5eda58c259b2e8d7be9c2ae9640821e3d12b322a165fceffcfeb17e7254a911",
+        "grid": "intraday_5m",
+        "id": "return_acceleration_halves__30m__raw__intraday_5m"
+      },
+      {
+        "concept": "return_acceleration_thirds",
+        "definition_hash": "e7f3aca411e78242e65f8d4213096ac366ec30317dbf0e78b0f7110cb1eed1ca",
+        "grid": "intraday_5m",
+        "id": "return_acceleration_thirds__30m__raw__intraday_5m"
+      },
+      {
+        "concept": "return_autocorr_lag1",
+        "definition_hash": "b6309af735c6590a221a383387ff1174f841e55690f0c4215b73ad5e9dc1de8a",
+        "grid": "intraday_5m",
+        "id": "return_autocorr_lag1__60m__raw__intraday_5m"
+      },
+      {
+        "concept": "return_autocorr_lag2",
+        "definition_hash": "8614c4922d3da5213a42936907858b008a33d2bda668a402226c5a051b814ec4",
+        "grid": "intraday_5m",
+        "id": "return_autocorr_lag2__60m__raw__intraday_5m"
+      },
+      {
+        "concept": "return_autocorr_lag3",
+        "definition_hash": "400310d10f6ed994639515891581010fcc84802c9f464d58d6ee4d3681c7dad6",
+        "grid": "intraday_5m",
+        "id": "return_autocorr_lag3__60m__raw__intraday_5m"
+      },
+      {
+        "concept": "return_entropy",
+        "definition_hash": "774a8dd60691f015c90777b3be21647ca2ec5479d5b4b142d35202e56e361eb3",
+        "grid": "intraday_5m",
+        "id": "return_entropy__60m__raw__intraday_5m"
+      },
+      {
+        "concept": "return_over_downside_vol",
+        "definition_hash": "26413329b8b37912fef7f3cd88207055758daa51c0fbd9d12c206bc670e35135",
+        "grid": "intraday_5m",
+        "id": "return_over_downside_vol__30m__raw__intraday_5m"
+      },
+      {
+        "concept": "return_over_realized_vol",
+        "definition_hash": "f7f6f48d06b4e428471a233bf5d8b38504a26276ec93b53a1723b582d2f65677",
+        "grid": "intraday_5m",
+        "id": "return_over_realized_vol__30m__raw__intraday_5m"
+      },
+      {
+        "concept": "return_t_stat",
+        "definition_hash": "ed81809ce4f7dff2983d9a5806854b7b30ed1780de97930c9083da5778d2927f",
+        "grid": "intraday_5m",
+        "id": "return_t_stat__30m__raw__intraday_5m"
+      },
+      {
+        "concept": "return_volume_corr",
+        "definition_hash": "de4922199633997f7efdbe6782d0ab19033389d7144d951e911d4bcc2e3f2370",
+        "grid": "intraday_5m",
+        "id": "return_volume_corr__30m__raw__intraday_5m"
+      },
+      {
+        "concept": "return_x_rvol",
+        "definition_hash": "37a18d096f4e65c2b4e45baf2f39b65b7600f857c09431f6a51df3b48a3f6d1d",
+        "grid": "intraday_5m",
+        "id": "return_x_rvol__30m__raw__intraday_5m"
+      },
+      {
+        "concept": "return_x_volume_z",
+        "definition_hash": "e9004a554b24f2c37e5223a6e0f5da32c58efae80b616dfeca9ad76ae325b52b",
+        "grid": "intraday_5m",
+        "id": "return_x_volume_z__30m__raw__intraday_5m"
+      },
+      {
+        "concept": "right_expected_shortfall",
+        "definition_hash": "8422b017ffafe3b0475f30e94bdc59d3292d93d9dc8851281d76e9c9f5253e4c",
+        "grid": "intraday_5m",
+        "id": "right_expected_shortfall__30m__raw__intraday_5m"
+      },
+      {
+        "concept": "rogers_satchell_vol",
+        "definition_hash": "6fea3c82e5231aeb23d63f31206bb2088822491aad3e3c2fd3454cc0fc2606c1",
+        "grid": "intraday_5m",
+        "id": "rogers_satchell_vol__30m__raw__intraday_5m"
+      },
+      {
+        "concept": "roll_spread_proxy",
+        "definition_hash": "b0c99653706a4f88a2ba8fae08262d244d66be01899e4b1a817192f3b2410e2c",
+        "grid": "intraday_5m",
+        "id": "roll_spread_proxy__30m__raw__intraday_5m"
+      },
+      {
+        "concept": "same_bucket_return_lag1",
+        "definition_hash": "db802c95db91d8d08aacd99da0b6ef151d7b65ed8f562d85ee8c900aeba48ad3",
+        "grid": "intraday_5m",
+        "id": "same_bucket_return_lag1__30m__raw__intraday_5m"
+      },
+      {
+        "concept": "same_bucket_return_mean10",
+        "definition_hash": "0adf9e4253773bf96d23db8b4eb4106c8eb25700f57ce34b4b6ef26279633bbd",
+        "grid": "intraday_5m",
+        "id": "same_bucket_return_mean10__30m__raw__intraday_5m"
+      },
+      {
+        "concept": "same_bucket_return_mean2",
+        "definition_hash": "aeac71d1735e9f6c869847e9e766383df59bcd39ca2dcef973e530abc4a27175",
+        "grid": "intraday_5m",
+        "id": "same_bucket_return_mean2__30m__raw__intraday_5m"
+      },
+      {
+        "concept": "same_bucket_return_mean20",
+        "definition_hash": "3d84ebb68e527ff6d1e40f6b6a993fa92c2f52363a64649c42e8bb565ea5d746",
+        "grid": "intraday_5m",
+        "id": "same_bucket_return_mean20__30m__raw__intraday_5m"
+      },
+      {
+        "concept": "same_bucket_return_mean5",
+        "definition_hash": "616497631e2ba16ab2dc38754e8e20032e24adc156f3f1493f4b9ebbdc380c34",
+        "grid": "intraday_5m",
+        "id": "same_bucket_return_mean5__30m__raw__intraday_5m"
+      },
+      {
+        "concept": "same_bucket_return_rank",
+        "definition_hash": "ce90fc8a319856dbd3e832f8b00fbef98fadca5f57325007db121d8c0698c322",
+        "grid": "intraday_5m",
+        "id": "same_bucket_return_rank__30m__raw__intraday_5m"
+      },
+      {
+        "concept": "same_bucket_rvol",
+        "definition_hash": "766dffd0feaa8b6d02b462bc3fafee45ca2ed767053c427e085b09dba4a8f451",
+        "grid": "intraday_5m",
+        "id": "same_bucket_rvol__30m__raw__intraday_5m"
+      },
+      {
+        "concept": "same_bucket_volatility",
+        "definition_hash": "c0ccc99a95b00f85de4d7b92e836e18fcc8ed78c09a5bf91dc124931e86cdd87",
+        "grid": "intraday_5m",
+        "id": "same_bucket_volatility__30m__raw__intraday_5m"
+      },
+      {
+        "concept": "semivariance_ratio",
+        "definition_hash": "9e03eacc3f6c6160fe90f6763eb04bf2e21393df93156b3281b9892813f88b25",
+        "grid": "intraday_5m",
+        "id": "semivariance_ratio__30m__raw__intraday_5m"
+      },
+      {
+        "concept": "sign_autocorr_lag1",
+        "definition_hash": "3d31a8c2675923dd7b2a3a9df25c701862e712d9120c1d953a4ed080d5db9bfa",
+        "grid": "intraday_5m",
+        "id": "sign_autocorr_lag1__60m__raw__intraday_5m"
+      },
+      {
+        "concept": "sign_entropy",
+        "definition_hash": "b7b8a07421beb4bccb8ef2b919c9dcdada53c48ba574c703a6b0e3af8c16a3f9",
+        "grid": "intraday_5m",
+        "id": "sign_entropy__60m__raw__intraday_5m"
+      },
+      {
+        "concept": "sign_persistence",
+        "definition_hash": "9e4ba74ba4acc04648d90bbe169650666943c8cf0ec48a9a2d528e8810e82c8c",
+        "grid": "intraday_5m",
+        "id": "sign_persistence__30m__raw__intraday_5m"
+      },
+      {
+        "concept": "sign_switch_rate",
+        "definition_hash": "f2195e45b95466307fa1ecc3568322d91c40a866e2c7594f68fd28788912ba9d",
+        "grid": "intraday_5m",
+        "id": "sign_switch_rate__30m__raw__intraday_5m"
+      },
+      {
+        "concept": "signed_body_to_range",
+        "definition_hash": "c843e476b2ec183b550f0eafbbd5ebf8d102c5f856dfffe757f6bbbb52c5ee87",
+        "grid": "intraday_5m",
+        "id": "signed_body_to_range__30m__raw__intraday_5m"
+      },
+      {
+        "concept": "signed_return_concentration",
+        "definition_hash": "8889a1a48c5babb0f1b4fc02bb6444cce871a467110ec042848b000c7587d09c",
+        "grid": "intraday_5m",
+        "id": "signed_return_concentration__30m__raw__intraday_5m"
+      },
+      {
+        "concept": "signed_volume_balance",
+        "definition_hash": "005296ef516bbcfc489fb7baa20e3c67f9e18619d43784b2be31a052da910456",
+        "grid": "intraday_5m",
+        "id": "signed_volume_balance__30m__raw__intraday_5m"
+      },
+      {
+        "concept": "simple_return",
+        "definition_hash": "d8414a8534993f770192ff13848a9695a0576c8b9dabc52df4f88069ed03270b",
+        "grid": "intraday_5m",
+        "id": "simple_return__30m__raw__intraday_5m"
+      },
+      {
+        "concept": "sma_acceleration",
+        "definition_hash": "1778009aefaeee09d0cdb5e85ebf419cb8dc5e07833225696bf690842eb56368",
+        "grid": "intraday_5m",
+        "id": "sma_acceleration__30m__raw__intraday_5m"
+      },
+      {
+        "concept": "sma_slope",
+        "definition_hash": "de7bfb0203fcc1cc9b9a922edbe1583733053d0276d463e16840da6b64c73b7c",
+        "grid": "intraday_5m",
+        "id": "sma_slope__30m__raw__intraday_5m"
+      },
+      {
+        "concept": "stock_lead_market_response",
+        "definition_hash": "d47cdfcbe0cf322020d8ae4637b3949dc191129276c2c4c3f6cd1677addb6e94",
+        "grid": "intraday_5m",
+        "id": "stock_lead_market_response__30m__raw__intraday_5m"
+      },
+      {
+        "concept": "tail_spread",
+        "definition_hash": "f7c276e0e00e17f2b83222d40c73bbc00e03ed03c3fb4125a98ce11dc6f08b18",
+        "grid": "intraday_5m",
+        "id": "tail_spread__30m__raw__intraday_5m"
+      },
+      {
+        "concept": "top2_abs_return_share",
+        "definition_hash": "b60aec17daab70b568d8786cc1b753955d81fec955f30382ba6d08e16cf2f80b",
+        "grid": "intraday_5m",
+        "id": "top2_abs_return_share__30m__raw__intraday_5m"
+      },
+      {
+        "concept": "top3_abs_return_share",
+        "definition_hash": "cd6c22f3b007d22c3985fffda1536f89ea30807c1b53ccffb6bb3f97c6fce2a4",
+        "grid": "intraday_5m",
+        "id": "top3_abs_return_share__30m__raw__intraday_5m"
+      },
+      {
+        "concept": "top5_abs_return_share",
+        "definition_hash": "d88a6f836bdf85fabef051cd371881cc64d85da99a144672188a4e128c02b68b",
+        "grid": "intraday_5m",
+        "id": "top5_abs_return_share__30m__raw__intraday_5m"
+      },
+      {
+        "concept": "trade_count",
+        "definition_hash": "399674cb1a679f7c8d13b45a9c19c476ab9f329935ae50755225c727d143324a",
+        "grid": "intraday_5m",
+        "id": "trade_count__30m__raw__intraday_5m"
+      },
+      {
+        "concept": "trend_r2",
+        "definition_hash": "b60a5120df6b45907d9904e496a7c027c7dd3114d0ab226736638330e37d580f",
+        "grid": "intraday_5m",
+        "id": "trend_r2__30m__raw__intraday_5m"
+      },
+      {
+        "concept": "trend_slope",
+        "definition_hash": "c597b271b9b7c9a4228dfff46d802069afaab979d95f0dd87cac2cbaea277dcb",
+        "grid": "intraday_5m",
+        "id": "trend_slope__30m__raw__intraday_5m"
+      },
+      {
+        "concept": "trend_slope_t",
+        "definition_hash": "36b933048fecc3ca387f19bb810c9379322dfb42d8981e1d141e260db62956cb",
+        "grid": "intraday_5m",
+        "id": "trend_slope_t__30m__raw__intraday_5m"
+      },
+      {
+        "concept": "true_range_pct",
+        "definition_hash": "8cabb0c7050f4b1c27035ae07f9579b53cd5f68ffcca4edd2066b37f2fd8eab2",
+        "grid": "intraday_5m",
+        "id": "true_range_pct__30m__raw__intraday_5m"
+      },
+      {
+        "concept": "up_bar_volume_share",
+        "definition_hash": "e1958f6b26b86bd6a4a33e30eff87418d8d8b611ad535c99192a192afb729467",
+        "grid": "intraday_5m",
+        "id": "up_bar_volume_share__30m__raw__intraday_5m"
+      },
+      {
+        "concept": "up_down_return_ratio",
+        "definition_hash": "888ffaa528586cc31002b259274be8bb29cbadcb749ddc4d15666ae580b1ff15",
+        "grid": "intraday_5m",
+        "id": "up_down_return_ratio__30m__raw__intraday_5m"
+      },
+      {
+        "concept": "upper_wick_fraction",
+        "definition_hash": "99566e9e1553dc498070280d61f2572e0ef8281d4000dec63bebbf746603e525",
+        "grid": "intraday_5m",
+        "id": "upper_wick_fraction__30m__raw__intraday_5m"
+      },
+      {
+        "concept": "upside_beta",
+        "definition_hash": "5a49d557a535ce90e5225ee8f311ff15c5ae06ac55773f3c988be7013724579c",
+        "grid": "intraday_5m",
+        "id": "upside_beta__30m__raw__intraday_5m"
+      },
+      {
+        "concept": "upside_semivariance",
+        "definition_hash": "6a4cb50e016630f2db22cc4720afa207069c6401030d677df0f9019ece98d4e1",
+        "grid": "intraday_5m",
+        "id": "upside_semivariance__30m__raw__intraday_5m"
+      },
+      {
+        "concept": "upside_vol",
+        "definition_hash": "e507e3624b741694513509bdbcd512179eaa5c8c4c9828f2008126db3a1a6d44",
+        "grid": "intraday_5m",
+        "id": "upside_vol__30m__raw__intraday_5m"
+      },
+      {
+        "concept": "upside_vol_acceleration",
+        "definition_hash": "af08afee710f4e5a5379845ab5b82bb7fdc9512c542091db2b4a095cc497aaee",
+        "grid": "intraday_5m",
+        "id": "upside_vol_acceleration__30m__raw__intraday_5m"
+      },
+      {
+        "concept": "variance_ratio_2",
+        "definition_hash": "dfd4316db97e1bf1ce16cc8a95d87930ef5b3618424313111924af5851c5413d",
+        "grid": "intraday_5m",
+        "id": "variance_ratio_2__60m__raw__intraday_5m"
+      },
+      {
+        "concept": "variance_ratio_5",
+        "definition_hash": "c5a7bbb552f584d29575c6cd105256456fdce4faa00a8e2fdab70b746a4745d1",
+        "grid": "intraday_5m",
+        "id": "variance_ratio_5__60m__raw__intraday_5m"
+      },
+      {
+        "concept": "vol_acceleration",
+        "definition_hash": "7ae23092ede32e00c28f026f119686dae7e6898c0f2a7786909b720852f65847",
+        "grid": "intraday_5m",
+        "id": "vol_acceleration__30m__raw__intraday_5m"
+      },
+      {
+        "concept": "vol_compression_ratio",
+        "definition_hash": "b30f7f699816a62cd56b13cb507de7babc85b747933ca6ddd407e117d5dd24f8",
+        "grid": "intraday_5m",
+        "id": "vol_compression_ratio__30m__raw__intraday_5m"
+      },
+      {
+        "concept": "vol_of_vol",
+        "definition_hash": "b72ae08ccbaa5a823a320b76a5cbfc452ffc317986b2b29dde24b83e21d06a90",
+        "grid": "intraday_5m",
+        "id": "vol_of_vol__30m__raw__intraday_5m"
+      },
+      {
+        "concept": "vol_percentile_own",
+        "definition_hash": "6deb2267f6e487d61bcbd0be105f95a25314274fe81f12125374873258bc24e0",
+        "grid": "intraday_5m",
+        "id": "vol_percentile_own__30m__raw__intraday_5m"
+      },
+      {
+        "concept": "volume_acceleration",
+        "definition_hash": "5d68c0eed5474456a4a5c6ff4ac8fa79dcb526800cc34c9c6bad6c770a58ec6f",
+        "grid": "intraday_5m",
+        "id": "volume_acceleration__30m__raw__intraday_5m"
+      },
+      {
+        "concept": "volume_concentration",
+        "definition_hash": "29d50f7db3dc888d9a0b0c4e40be77acfbfd5337be22a6034979abcb720a305d",
+        "grid": "intraday_5m",
+        "id": "volume_concentration__30m__raw__intraday_5m"
+      },
+      {
+        "concept": "volume_percentile_own",
+        "definition_hash": "276e8736ac39cb1358423bccd43311a005da0e6749f8ef08a5b253f9188a6599",
+        "grid": "intraday_5m",
+        "id": "volume_percentile_own__30m__raw__intraday_5m"
+      },
+      {
+        "concept": "volume_shock_minus_price_shock",
+        "definition_hash": "36e97ca816ef361265c321aad926a68c0526d21c50d58ee59d067150f901b487",
+        "grid": "intraday_5m",
+        "id": "volume_shock_minus_price_shock__30m__raw__intraday_5m"
+      },
+      {
+        "concept": "volume_trend",
+        "definition_hash": "47ba008d2785e08dac30227215bfbc831402e73ea08001356835a1a63a2d41de",
+        "grid": "intraday_5m",
+        "id": "volume_trend__30m__raw__intraday_5m"
+      },
+      {
+        "concept": "volume_volatility",
+        "definition_hash": "bc941f18babf44e38ebba4c5838f1df674f7b049d4af2f222c6670a5907623bc",
+        "grid": "intraday_5m",
+        "id": "volume_volatility__30m__raw__intraday_5m"
+      },
+      {
+        "concept": "volume_zscore",
+        "definition_hash": "b39e0fb69dd41e70c961d0efd669d931e4c192066eff04c08c327351c7bfa869",
+        "grid": "intraday_5m",
+        "id": "volume_zscore__30m__raw__intraday_5m"
+      },
+      {
+        "concept": "vwap_drift",
+        "definition_hash": "44e0e1af8f14294079d36b7831db545ae986a3c5cd0ebafeaf803c464735b981",
+        "grid": "intraday_5m",
+        "id": "vwap_drift__30m__raw__intraday_5m"
+      },
+      {
+        "concept": "window_max_drawdown",
+        "definition_hash": "ce66b5900983a260a4fc1454b2d0a379303664bbc70bc126201da3aa2a995524",
+        "grid": "intraday_5m",
+        "id": "window_max_drawdown__30m__raw__intraday_5m"
+      },
+      {
+        "concept": "window_max_runup",
+        "definition_hash": "12b5deb39660be0a5fdff854eb034cf7a942158b060311e513cc1328ce7a201b",
+        "grid": "intraday_5m",
+        "id": "window_max_runup__30m__raw__intraday_5m"
+      },
+      {
+        "concept": "abs_return_autocorr_lag1",
+        "definition_hash": "547e8ec80813f620d6f400b43dcceeede2cc8b9d2831fca1c2885af47a67f3bc",
+        "grid": "daily_close",
+        "id": "abs_return_autocorr_lag1__20d__raw__daily_close"
+      },
+      {
+        "concept": "abs_return_per_dollar_volume",
+        "definition_hash": "ea578647d0ec00a3c145b17bfc84ce7601a902b54ca1107ba717c9aa9e0005a1",
+        "grid": "daily_close",
+        "id": "abs_return_per_dollar_volume__20d__raw__daily_close"
+      },
+      {
+        "concept": "abs_return_x_rvol",
+        "definition_hash": "ba0355ed86b266cc0e965d95fa6c90a4bf3a1fe85b32a37e087fd3fe0c992658",
+        "grid": "daily_close",
+        "id": "abs_return_x_rvol__20d__raw__daily_close"
+      },
+      {
+        "concept": "absolute_return_hhi",
+        "definition_hash": "dc40835e56d93e2a832d2d4e633e2b175e0bddf1b0004c2c539444e0df5b3f5a",
+        "grid": "daily_close",
+        "id": "absolute_return_hhi__20d__raw__daily_close"
+      },
+      {
+        "concept": "absreturn_volume_corr",
+        "definition_hash": "dd8eae704075964a0819c737eac5f41c686c4861bc4fefeb606d051c5089059d",
+        "grid": "daily_close",
+        "id": "absreturn_volume_corr__20d__raw__daily_close"
+      },
+      {
+        "concept": "amihud_illiquidity",
+        "definition_hash": "ea3de4fbcb242689c7c98ee68ba066b0d97307b8159667465880977151c80513",
+        "grid": "daily_close",
+        "id": "amihud_illiquidity__20d__raw__daily_close"
+      },
+      {
+        "concept": "atr_band_z",
+        "definition_hash": "4fa45c97d973418c5de189a6048096a70037774a00871a41ac773bc6d185ccd0",
+        "grid": "daily_close",
+        "id": "atr_band_z__20d__raw__daily_close"
+      },
+      {
+        "concept": "atr_pct",
+        "definition_hash": "778e8de28ccfd969fcc3a1d6c3e4150f91dbd6d05e6e0f9cbb6c54e7afbe3208",
+        "grid": "daily_close",
+        "id": "atr_pct__20d__raw__daily_close"
+      },
+      {
+        "concept": "average_pairwise_correlation",
+        "definition_hash": "b128e31a2687cc8de7f08d8b14a064cbdd8b26fee22174f8c56665ff1ab4d87a",
+        "grid": "daily_close",
+        "id": "average_pairwise_correlation__20d__raw__daily_close"
+      },
+      {
+        "concept": "average_signed_run_length",
+        "definition_hash": "0738c5b3dbae3c21efa5d775b9010928d12284509763880d34b7feb1dd6137db",
+        "grid": "daily_close",
+        "id": "average_signed_run_length__20d__raw__daily_close"
+      },
+      {
+        "concept": "average_trade_size",
+        "definition_hash": "4bdc74aee0fa61888decc22e15e8942f50b26cf37d5e3771629fa8ece70abc48",
+        "grid": "daily_close",
+        "id": "average_trade_size__20d__raw__daily_close"
+      },
+      {
+        "concept": "bars_or_days_since_high",
+        "definition_hash": "24025fbb13034783bc38f5ebdcb06be96ac23b9221386d6bc83bd7b535585537",
+        "grid": "daily_close",
+        "id": "bars_or_days_since_high__20d__raw__daily_close"
+      },
+      {
+        "concept": "bars_or_days_since_low",
+        "definition_hash": "7266e22d98a70f3ee04139183636a16085b965a618cef198be6335f7f0b5f138",
+        "grid": "daily_close",
+        "id": "bars_or_days_since_low__20d__raw__daily_close"
+      },
+      {
+        "concept": "benchmark_excess_return",
+        "definition_hash": "1d29a9983717b2f2a1dfe22b851c0a11d70bcb7738a2cd842a8f68eb8632e60c",
+        "grid": "daily_close",
+        "id": "benchmark_excess_return__20d__raw__daily_close"
+      },
+      {
+        "concept": "beta_change",
+        "definition_hash": "ae39276158979a85793e68da268f6b228fd69eb1fe08d91ad1cc93f74d83edd0",
+        "grid": "daily_close",
+        "id": "beta_change__20d__raw__daily_close"
+      },
+      {
+        "concept": "beta_dispersion",
+        "definition_hash": "80c612631d35ef4604925db33ba8efff76a944a62a22e9f72531e69f85337147",
+        "grid": "daily_close",
+        "id": "beta_dispersion__20d__raw__daily_close"
+      },
+      {
+        "concept": "beta_residual_return",
+        "definition_hash": "6c0adba15e7178925958d91d903af8f37604f18c7485bc43e4d27e3ef8c08c2c",
+        "grid": "daily_close",
+        "id": "beta_residual_return__20d__raw__daily_close"
+      },
+      {
+        "concept": "body_to_range",
+        "definition_hash": "5ea6082cfb0da0914a23216d8baee85626d58221c6890ca0daf682c083a1a23a",
+        "grid": "daily_close",
+        "id": "body_to_range__1d__raw__daily_close"
+      },
+      {
+        "concept": "bollinger_z",
+        "definition_hash": "32c450fe77c27f68637a1ee5e531f4a68512e124606d1d8675256953bcb86748",
+        "grid": "daily_close",
+        "id": "bollinger_z__20d__raw__daily_close"
+      },
+      {
+        "concept": "breadth_change",
+        "definition_hash": "5574f13c3478fdb2cd18a5b11e77025c928f14efd790d3acd2954d1f4fb6da9c",
+        "grid": "daily_close",
+        "id": "breadth_change__20d__raw__daily_close"
+      },
+      {
+        "concept": "breadth_momentum",
+        "definition_hash": "fe53e41460e664a3927d4ef7ad39c0619b9b7c7bcfba40ec0739e1821284d8cb",
+        "grid": "daily_close",
+        "id": "breadth_momentum__20d__raw__daily_close"
+      },
+      {
+        "concept": "breakdown_distance",
+        "definition_hash": "5891fa5d1dcd631e8ae4f1f626d90b538c61c37b36276343b7ce3f23f79469b8",
+        "grid": "daily_close",
+        "id": "breakdown_distance__20d__raw__daily_close"
+      },
+      {
+        "concept": "breakout_distance",
+        "definition_hash": "2b871b066934aecd38f90e3f2c6b092527abc7a1ab161f23ecf2e0faea13ea45",
+        "grid": "daily_close",
+        "id": "breakout_distance__20d__raw__daily_close"
+      },
+      {
+        "concept": "close_location_bar",
+        "definition_hash": "d0e1f4629d020a183d25ae578e412474a086a6a360a8cdbcff45c693a4a34d85",
+        "grid": "daily_close",
+        "id": "close_location_bar__1d__raw__daily_close"
+      },
+      {
+        "concept": "close_location_daily_range",
+        "definition_hash": "27e8a826aa06431351811cc54bbfb8184409ee9b7055490ca4b6d6c7dd0c04c8",
+        "grid": "daily_close",
+        "id": "close_location_daily_range__20d__raw__daily_close"
+      },
+      {
+        "concept": "close_to_close_vol",
+        "definition_hash": "d41698134d900d29fbedacd68dcff60d50a047f8dfba118994d00f48abbf2bd8",
+        "grid": "daily_close",
+        "id": "close_to_close_vol__20d__raw__daily_close"
+      },
+      {
+        "concept": "close_vs_path_mean",
+        "definition_hash": "d71986596c3fcc4bbe4988eca01889fb01ae80fad4a4938fbc298b4d6ab874b9",
+        "grid": "daily_close",
+        "id": "close_vs_path_mean__20d__raw__daily_close"
+      },
+      {
+        "concept": "close_vs_path_median",
+        "definition_hash": "1a3401e0e66c6142fe4de9a8ef21820c1eec6fb73d9fdb2161e67bb2b6968ebd",
+        "grid": "daily_close",
+        "id": "close_vs_path_median__20d__raw__daily_close"
+      },
+      {
+        "concept": "close_vs_vwap",
+        "definition_hash": "eb31ab473834e836a18510c1cc2c1138d95a7e53d3e8af3d50d7ac7bb2e6c42b",
+        "grid": "daily_close",
+        "id": "close_vs_vwap__20d__raw__daily_close"
+      },
+      {
+        "concept": "closing_return_10m",
+        "definition_hash": "ee48239f0b1f7639f850db8d243e4409ce78c2b39371f3a4bf74c9b26e72fc92",
+        "grid": "daily_close",
+        "id": "closing_return_10m__20d__raw__daily_close"
+      },
+      {
+        "concept": "closing_return_15m",
+        "definition_hash": "57ad006c318412b9e4f11ab7d8e9f608296e5a9b5b39c14c6d212056ebaa8542",
+        "grid": "daily_close",
+        "id": "closing_return_15m__20d__raw__daily_close"
+      },
+      {
+        "concept": "closing_return_30m",
+        "definition_hash": "5d9960d8dd4d301741103bdf67542e7518c194bdaa3c13c4a5eec98dadfa313d",
+        "grid": "daily_close",
+        "id": "closing_return_30m__20d__raw__daily_close"
+      },
+      {
+        "concept": "closing_return_5m",
+        "definition_hash": "57cd856b69ca0dcb9ce34f595ed41e4bb4aeb8be129e549cdde2f1dca1161f41",
+        "grid": "daily_close",
+        "id": "closing_return_5m__20d__raw__daily_close"
+      },
+      {
+        "concept": "closing_return_60m",
+        "definition_hash": "d29c3389beee52afe57db623cb943b31f0aff590205d2608d8e552a49f1543c8",
+        "grid": "daily_close",
+        "id": "closing_return_60m__20d__raw__daily_close"
+      },
+      {
+        "concept": "closing_volume_share_15m",
+        "definition_hash": "23d5349968145cbcce60f018bb2dadb4d3ee5dcd6f9ec8c0ca1ec5748b69c94f",
+        "grid": "daily_close",
+        "id": "closing_volume_share_15m__20d__raw__daily_close"
+      },
+      {
+        "concept": "closing_volume_share_30m",
+        "definition_hash": "5dc3719977b0417700985ad6045c7b2cb0abb2c89f5d1ad303b2f3bb98feafea",
+        "grid": "daily_close",
+        "id": "closing_volume_share_30m__20d__raw__daily_close"
+      },
+      {
+        "concept": "closing_volume_share_60m",
+        "definition_hash": "73ee4c8a384c353f21e8a0c067968092114c8f8d3007858dc8d9bba7cc320aac",
+        "grid": "daily_close",
+        "id": "closing_volume_share_60m__20d__raw__daily_close"
+      },
+      {
+        "concept": "correlation_change",
+        "definition_hash": "9338cbbb10d98ab364172aa013355e63baf1cf982822eaa783345e3a3e0fad35",
+        "grid": "daily_close",
+        "id": "correlation_change__20d__raw__daily_close"
+      },
+      {
+        "concept": "corwin_schultz_spread_proxy",
+        "definition_hash": "86b527974e3b4f625f43f1b280f5c1ae6e55c9aeeb87bb2a5cc5ad21a17676f7",
+        "grid": "daily_close",
+        "id": "corwin_schultz_spread_proxy__20d__raw__daily_close"
+      },
+      {
+        "concept": "cross_sectional_residual_dispersion",
+        "definition_hash": "1fb459845a026d3c311644840dff0d796e377244180dc041532d9fb1e173866d",
+        "grid": "daily_close",
+        "id": "cross_sectional_residual_dispersion__20d__raw__daily_close"
+      },
+      {
+        "concept": "cross_sectional_return_dispersion",
+        "definition_hash": "45bb3da03cdaf3d79d841b539e60f98d231fca9162845acab789c2f5ef2132d1",
+        "grid": "daily_close",
+        "id": "cross_sectional_return_dispersion__20d__raw__daily_close"
+      },
+      {
+        "concept": "cross_sectional_return_kurtosis",
+        "definition_hash": "d71ab4951a31548417c60e6e1c8b1f2730ac22bb00f8bf4b111a264fad0189fd",
+        "grid": "daily_close",
+        "id": "cross_sectional_return_kurtosis__20d__raw__daily_close"
+      },
+      {
+        "concept": "cross_sectional_return_skew",
+        "definition_hash": "45ca116fab0ae56fe9522ad803eb88df0b7dfdb9d2e5fdec8ccd44a9f12fa8a5",
+        "grid": "daily_close",
+        "id": "cross_sectional_return_skew__20d__raw__daily_close"
+      },
+      {
+        "concept": "day_of_week",
+        "definition_hash": "34ebe1c8c88a154c03ed23d673a32ed6874edb9755f812e4b723512aa74971ec",
+        "grid": "daily_close",
+        "id": "day_of_week__context__raw__daily_close"
+      },
+      {
+        "concept": "distance_from_high",
+        "definition_hash": "ed797750bafe5b8ee8c4f04191d0fcc61a0f933d8f630335eb2de695d95477fd",
+        "grid": "daily_close",
+        "id": "distance_from_high__20d__raw__daily_close"
+      },
+      {
+        "concept": "distance_from_low",
+        "definition_hash": "434ca3310032f823224abc33de52d72b637d6643b5d2710e5829b0c7d9ac527e",
+        "grid": "daily_close",
+        "id": "distance_from_low__20d__raw__daily_close"
+      },
+      {
+        "concept": "dollar_volume",
+        "definition_hash": "743f5b56f57575f62a7742cc3af5a79f4dc783d8367ec82e02ebaa6fb561d792",
+        "grid": "daily_close",
+        "id": "dollar_volume__20d__raw__daily_close"
+      },
+      {
+        "concept": "dollar_volume_zscore",
+        "definition_hash": "b6420590b8fef5274e7bf40d9f0e305bd4663541bd678ae592463e4a9f1c64a7",
+        "grid": "daily_close",
+        "id": "dollar_volume_zscore__20d__raw__daily_close"
+      },
+      {
+        "concept": "down_bar_volume_share",
+        "definition_hash": "bd676cb62bbd6b5d74f5ce1174e5cdd301b81ba1ef37765790cc776f67351f06",
+        "grid": "daily_close",
+        "id": "down_bar_volume_share__20d__raw__daily_close"
+      },
+      {
+        "concept": "down_up_vol_ratio",
+        "definition_hash": "32c7d6cdcb67a0e42a8a44e18c299988d9c59ce9e58aeee7441ad5bec0dcd981",
+        "grid": "daily_close",
+        "id": "down_up_vol_ratio__20d__raw__daily_close"
+      },
+      {
+        "concept": "downside_beta",
+        "definition_hash": "6ba61a8d3a53aeae659db6a8bf6af9a25aa2aafadfef77d8ee420b2394e2711b",
+        "grid": "daily_close",
+        "id": "downside_beta__20d__raw__daily_close"
+      },
+      {
+        "concept": "downside_semivariance",
+        "definition_hash": "f4bee0ca002687a944ce3ccc311656c8f7ff9ee60af168e8921559c4998120ea",
+        "grid": "daily_close",
+        "id": "downside_semivariance__20d__raw__daily_close"
+      },
+      {
+        "concept": "downside_vol",
+        "definition_hash": "ca7875d2b36dbb8254c12c0ca23be31694e1cfd164a75f48161cae5ccc84abf2",
+        "grid": "daily_close",
+        "id": "downside_vol__20d__raw__daily_close"
+      },
+      {
+        "concept": "downside_vol_acceleration",
+        "definition_hash": "be9193c382f0fd5848c8ce1ff74c961db5f21203eddffb39c371099d37ec2adb",
+        "grid": "daily_close",
+        "id": "downside_vol_acceleration__20d__raw__daily_close"
+      },
+      {
+        "concept": "drawdown_from_high",
+        "definition_hash": "3598ae63fe6ff975975c6ed1e0af294326d97b31903aa0e2d7a60058df8ece16",
+        "grid": "daily_close",
+        "id": "drawdown_from_high__20d__raw__daily_close"
+      },
+      {
+        "concept": "ema_distance",
+        "definition_hash": "02c108cd654560ccfe7a9fa939b05a174165a679b6c7df7a2dd4b926e7f5c2d0",
+        "grid": "daily_close",
+        "id": "ema_distance__20d__raw__daily_close"
+      },
+      {
+        "concept": "ema_slope",
+        "definition_hash": "10d274e7a42c62b53599da3a4366d3bcfca6b940f9b3665ac5d64be4658cad8f",
+        "grid": "daily_close",
+        "id": "ema_slope__20d__raw__daily_close"
+      },
+      {
+        "concept": "failed_breakdown_strength",
+        "definition_hash": "2ffc14ebb7151f45e632de25294b6a359abee94278a43e3a75d132b757750ed3",
+        "grid": "daily_close",
+        "id": "failed_breakdown_strength__20d__raw__daily_close"
+      },
+      {
+        "concept": "failed_breakout_strength",
+        "definition_hash": "ebd52ffea233fb6f66c880c2045f9406106b897d7c54634bea06ac13586e85df",
+        "grid": "daily_close",
+        "id": "failed_breakout_strength__20d__raw__daily_close"
+      },
+      {
+        "concept": "fast_minus_slow_cross_sectional_rank",
+        "definition_hash": "a93f865a83dae0ec2dcfc3e8a7f7fd504625f62ca70a97e6dccf0b00d62e120d",
+        "grid": "daily_close",
+        "id": "fast_minus_slow_cross_sectional_rank__5d_20d__raw__daily_close"
+      },
+      {
+        "concept": "fast_minus_slow_return",
+        "definition_hash": "0d79fc0eecfd61e5e0d07d81d8ef34d7c090b8cbc2ed2938b0f91897b71af863",
+        "grid": "daily_close",
+        "id": "fast_minus_slow_return__5d_20d__raw__daily_close"
+      },
+      {
+        "concept": "fast_minus_slow_risk_adjusted_momentum",
+        "definition_hash": "e7c2dc4ed9959d42f32e15f8a200d6ccdd726f04094199ec319b01b4af149ee5",
+        "grid": "daily_close",
+        "id": "fast_minus_slow_risk_adjusted_momentum__5d_20d__raw__daily_close"
+      },
+      {
+        "concept": "fast_slow_ema_gap",
+        "definition_hash": "0a73b6df97ba7b5f8cb5bcbb7f2edbdfe712d28b06cdc4076b00548149fd2fd5",
+        "grid": "daily_close",
+        "id": "fast_slow_ema_gap__20d__raw__daily_close"
+      },
+      {
+        "concept": "fast_slow_sma_gap",
+        "definition_hash": "989ef14242e4f6d5cd583390711e6bafdaf6fbd3135e746d27c1940a6fa4f6b8",
+        "grid": "daily_close",
+        "id": "fast_slow_sma_gap__20d__raw__daily_close"
+      },
+      {
+        "concept": "fast_slow_sma_ratio",
+        "definition_hash": "29786719a13182dcdff54182ce9ef59ad3d44cdafd004b097c8ea882ad1f5c24",
+        "grid": "daily_close",
+        "id": "fast_slow_sma_ratio__20d__raw__daily_close"
+      },
+      {
+        "concept": "gap_fill_fraction_15m",
+        "definition_hash": "80a5545230b798f16b76930c733e9fb08684b0ed89863002990fcaafb3276a7f",
+        "grid": "daily_close",
+        "id": "gap_fill_fraction_15m__20d__raw__daily_close"
+      },
+      {
+        "concept": "gap_fill_fraction_30m",
+        "definition_hash": "14ac04df8d9b3bdaa4ceff934a832017a984bdb9bdb4f25f35aa307149d28053",
+        "grid": "daily_close",
+        "id": "gap_fill_fraction_30m__20d__raw__daily_close"
+      },
+      {
+        "concept": "gap_fill_fraction_60m",
+        "definition_hash": "f735cadd961c9252b7b1bd03d4af9b56a2af26a5fd5e9bfbfa8cef24b058f5fc",
+        "grid": "daily_close",
+        "id": "gap_fill_fraction_60m__20d__raw__daily_close"
+      },
+      {
+        "concept": "gap_fill_fraction_eod",
+        "definition_hash": "5323cf8ca08d3ba9bc1dd47d283ac8724a1f6088e345ecdc71466d0449d6592f",
+        "grid": "daily_close",
+        "id": "gap_fill_fraction_eod__20d__raw__daily_close"
+      },
+      {
+        "concept": "gap_vs_atr",
+        "definition_hash": "ab4caaf59969e59a5b106f7f8d5f3ef5e9a01b32a462cba15430388e57016b8d",
+        "grid": "daily_close",
+        "id": "gap_vs_atr__20d__raw__daily_close"
+      },
+      {
+        "concept": "gap_vs_prior_vol",
+        "definition_hash": "cac2a3ca2b9002cc8c98f69a23f4be1037b07828d0984500355558332e968dda",
+        "grid": "daily_close",
+        "id": "gap_vs_prior_vol__20d__raw__daily_close"
+      },
+      {
+        "concept": "garman_klass_vol",
+        "definition_hash": "f3b6b76d9cfb1dd3a8d0074826eebb00573a19444761ab8dc89ea78f669a49fe",
+        "grid": "daily_close",
+        "id": "garman_klass_vol__20d__raw__daily_close"
+      },
+      {
+        "concept": "gross_to_net_path_ratio",
+        "definition_hash": "0597e4bf0a6880babb6fb360f259d5e3db3a86140181899c4cbdc01fc0ff6e13",
+        "grid": "daily_close",
+        "id": "gross_to_net_path_ratio__20d__raw__daily_close"
+      },
+      {
+        "concept": "high_low_asymmetry",
+        "definition_hash": "9ba78442038b5507ae1cf9457d829ca2505df51d10272284b094a87ff1a1003d",
+        "grid": "daily_close",
+        "id": "high_low_asymmetry__1d__raw__daily_close"
+      },
+      {
+        "concept": "hurst_exponent",
+        "definition_hash": "69f33d3a9f89e74af78c8ad0a8b5cc03810b527074b4e4af5f12ab6b15d97bf8",
+        "grid": "daily_close",
+        "id": "hurst_exponent__40d__raw__daily_close"
+      },
+      {
+        "concept": "idiosyncratic_vol",
+        "definition_hash": "61ab28688444d56675a5b75fbccd5cb5164147efe0e47446934e0fac8a1b4293",
+        "grid": "daily_close",
+        "id": "idiosyncratic_vol__20d__raw__daily_close"
+      },
+      {
+        "concept": "information_discreteness",
+        "definition_hash": "0b15c4f19460f23c24352a92c0aaea9d35a63ebfb987bbf31650ae022fe2b51f",
+        "grid": "daily_close",
+        "id": "information_discreteness__20d__raw__daily_close"
+      },
+      {
+        "concept": "jump_fraction",
+        "definition_hash": "ee8b331e41713f656169085145e4e1d11e50a6425fc9b36db081c4fe09e4535b",
+        "grid": "daily_close",
+        "id": "jump_fraction__20d__raw__daily_close"
+      },
+      {
+        "concept": "jump_variance_share",
+        "definition_hash": "ee1463918e279d3ee3a7d1e7eae52e95448eb91d186472bc7130a04d7668e709",
+        "grid": "daily_close",
+        "id": "jump_variance_share__20d__raw__daily_close"
+      },
+      {
+        "concept": "largest_1m_volume_share_session",
+        "definition_hash": "5444290edc462dfc890002e412e654ea9e270d2e0c396bfcfcee2ff4dec681b3",
+        "grid": "daily_close",
+        "id": "largest_1m_volume_share_session__20d__raw__daily_close"
+      },
+      {
+        "concept": "largest_5m_volume_share_session",
+        "definition_hash": "19e0a42750de0c6aea43032891c221cd2794805c15a771f8ae9c560f954f36dc",
+        "grid": "daily_close",
+        "id": "largest_5m_volume_share_session__20d__raw__daily_close"
+      },
+      {
+        "concept": "largest_abs_return_share",
+        "definition_hash": "bdd3fd73eda750b93f95c26fbbcc13e096b46f67bf9ac6de8e6e8bf47724efb9",
+        "grid": "daily_close",
+        "id": "largest_abs_return_share__20d__raw__daily_close"
+      },
+      {
+        "concept": "largest_bar_volume_share",
+        "definition_hash": "8d6cf03e66a3052316e4c65ffdd9eadbc11fef26b893e7e8fc4b33f2c14c914e",
+        "grid": "daily_close",
+        "id": "largest_bar_volume_share__20d__raw__daily_close"
+      },
+      {
+        "concept": "left_expected_shortfall",
+        "definition_hash": "d9bb467f445821e73015206ec1518604ab42a4b8cb86c08a5d85105e89aa043d",
+        "grid": "daily_close",
+        "id": "left_expected_shortfall__20d__raw__daily_close"
+      },
+      {
+        "concept": "log_return",
+        "definition_hash": "36e3d58e4a7d1ae8b07136febd2e7e56ee335b05f687ed3921b2f9b5ea47e825",
+        "grid": "daily_close",
+        "id": "log_return__20d__raw__daily_close"
+      },
+      {
+        "concept": "longest_down_run",
+        "definition_hash": "0ad94339cd361e06b91e36a15125b1feb9cc8fbfe94d5836dac612be4807ffdc",
+        "grid": "daily_close",
+        "id": "longest_down_run__20d__raw__daily_close"
+      },
+      {
+        "concept": "longest_up_run",
+        "definition_hash": "78b8d9c623855f57515b8ff86d9ffb9bda8d0b72201c2e085b192bb4eac6e0d4",
+        "grid": "daily_close",
+        "id": "longest_up_run__20d__raw__daily_close"
+      },
+      {
+        "concept": "lower_wick_fraction",
+        "definition_hash": "51f990f76a3248c41a52037f4387097267989eedc7029054d39fedb4828d7d46",
+        "grid": "daily_close",
+        "id": "lower_wick_fraction__1d__raw__daily_close"
+      },
+      {
+        "concept": "market_beta",
+        "definition_hash": "f288119b32d423b4e7720d4e9dad11b82e33586bf9f0b6adba0480424ebb32ef",
+        "grid": "daily_close",
+        "id": "market_beta__20d__raw__daily_close"
+      },
+      {
+        "concept": "market_breadth_above_sma100",
+        "definition_hash": "938d2f40cd433b75b32b83af24b6943b2e101e36ee716e990a2ba120e65e120a",
+        "grid": "daily_close",
+        "id": "market_breadth_above_sma100__20d__raw__daily_close"
+      },
+      {
+        "concept": "market_breadth_above_sma20",
+        "definition_hash": "fd7dae6c41ad6d594715bc08341ce9c8321acaf302973dea1369b831b884ca90",
+        "grid": "daily_close",
+        "id": "market_breadth_above_sma20__20d__raw__daily_close"
+      },
+      {
+        "concept": "market_breadth_above_sma200",
+        "definition_hash": "ff922da1bfb2a675ef8ea95398c88903a4f3a84fc4bd70eb0c5fbe1fd8912a69",
+        "grid": "daily_close",
+        "id": "market_breadth_above_sma200__20d__raw__daily_close"
+      },
+      {
+        "concept": "market_breadth_above_sma50",
+        "definition_hash": "fb52fe4326444911fbf535c97bf63dcf187d16e0239c5194affab848215575c1",
+        "grid": "daily_close",
+        "id": "market_breadth_above_sma50__20d__raw__daily_close"
+      },
+      {
+        "concept": "market_breadth_positive",
+        "definition_hash": "e5af40f24790e62e8da2655112c58eaac2a5821771ef7d9a8d2b6372df976b73",
+        "grid": "daily_close",
+        "id": "market_breadth_positive__20d__raw__daily_close"
+      },
+      {
+        "concept": "market_correlation",
+        "definition_hash": "68c46a09aba508b219154ab86a43ac06157164ec373624dcb0fc26149f5d1b3c",
+        "grid": "daily_close",
+        "id": "market_correlation__20d__raw__daily_close"
+      },
+      {
+        "concept": "market_downside_vol",
+        "definition_hash": "71b23be544677ca9bc24b5a8e036b98fb7286c4bd534d31635cf3b7c65e3c429",
+        "grid": "daily_close",
+        "id": "market_downside_vol__20d__raw__daily_close"
+      },
+      {
+        "concept": "market_drawdown",
+        "definition_hash": "e40635fd7aa9ba98d318354d3887040a9f51cc561a78c9f7c01113c2d3997698",
+        "grid": "daily_close",
+        "id": "market_drawdown__20d__raw__daily_close"
+      },
+      {
+        "concept": "market_gap",
+        "definition_hash": "14e02f680324e1c4d81ab4b50b9c6836633c9f47f53dfc6a507b6c67335e7883",
+        "grid": "daily_close",
+        "id": "market_gap__20d__raw__daily_close"
+      },
+      {
+        "concept": "market_intraday_return",
+        "definition_hash": "8fc2da9411d7ffbcb1a113b7378c3803a5c1529878386fd8d4dacf40d46ca92b",
+        "grid": "daily_close",
+        "id": "market_intraday_return__20d__raw__daily_close"
+      },
+      {
+        "concept": "market_lead_response",
+        "definition_hash": "75410773872e7c28660e91de77aef338742773748473d7f01f48394aa5566d3b",
+        "grid": "daily_close",
+        "id": "market_lead_response__20d__raw__daily_close"
+      },
+      {
+        "concept": "market_return",
+        "definition_hash": "e6cf7526eb230fb2232a36bf4c6d62bacdefc3fd4ad8f1c341abcb13e77aa533",
+        "grid": "daily_close",
+        "id": "market_return__20d__raw__daily_close"
+      },
+      {
+        "concept": "market_risk_adjusted_momentum",
+        "definition_hash": "ad07a0d96af7fa9b22fdcf685eb66e5a4da051e5ed9112beb7e05dae7f79cd1b",
+        "grid": "daily_close",
+        "id": "market_risk_adjusted_momentum__20d__raw__daily_close"
+      },
+      {
+        "concept": "market_vol_percentile",
+        "definition_hash": "0309be5d4aa92edafbed8a55c990650cc850601fa413874f670a74c3252f51ac",
+        "grid": "daily_close",
+        "id": "market_vol_percentile__20d__raw__daily_close"
+      },
+      {
+        "concept": "market_volatility",
+        "definition_hash": "13c1b76631f0fe42a822e7d69a42c14e6336ce96a6a1799a30c092ae65a72958",
+        "grid": "daily_close",
+        "id": "market_volatility__20d__raw__daily_close"
+      },
+      {
+        "concept": "max_subreturn",
+        "definition_hash": "ceee3c38696e1cea0ce194dcaf057d30665a4021d544294524abcea72668e9c1",
+        "grid": "daily_close",
+        "id": "max_subreturn__20d__raw__daily_close"
+      },
+      {
+        "concept": "mean_median_return_gap",
+        "definition_hash": "b82bb343730565476e1e229d5d14c91bd562c8e0d21cc0ad052424fa59d940a0",
+        "grid": "daily_close",
+        "id": "mean_median_return_gap__20d__raw__daily_close"
+      },
+      {
+        "concept": "mean_return_rank",
+        "definition_hash": "b51c636c3e04c979d8306051900aef805cf1122aeeb3e717dd72011f5f9ab677",
+        "grid": "daily_close",
+        "id": "mean_return_rank__20d__raw__daily_close"
+      },
+      {
+        "concept": "median_return_rank",
+        "definition_hash": "02639e110ee0958ee03019efd8fb14e80844ba3b9068a5d82956869fe629f5b0",
+        "grid": "daily_close",
+        "id": "median_return_rank__20d__raw__daily_close"
+      },
+      {
+        "concept": "midday_to_close_return",
+        "definition_hash": "517a300d2c37e7b14e0f9ee9b6551e54e3898bbd43d1beb6666cfb281596dd7f",
+        "grid": "daily_close",
+        "id": "midday_to_close_return__20d__raw__daily_close"
+      },
+      {
+        "concept": "min_subreturn",
+        "definition_hash": "aa5e31565de6b6094997bbbd262b0383b0eaeb7f5b33750108ab12d2a71f7db9",
+        "grid": "daily_close",
+        "id": "min_subreturn__20d__raw__daily_close"
+      },
+      {
+        "concept": "minute_of_day_cos",
+        "definition_hash": "87b3ff2396b5cda6fd95cdf76e300a95675d6a0db76d2dab7f51dafebf61a5bc",
+        "grid": "daily_close",
+        "id": "minute_of_day_cos__context__raw__daily_close"
+      },
+      {
+        "concept": "minute_of_day_sin",
+        "definition_hash": "c24ae9b5aae518935947b48570aceb1489e4a881a109be0d39b065cb82cc6695",
+        "grid": "daily_close",
+        "id": "minute_of_day_sin__context__raw__daily_close"
+      },
+      {
+        "concept": "momentum_acceleration",
+        "definition_hash": "3ea2139a704ac50ce352c8eb27be78da7f327978bddcaae3f6f556431b8df2d0",
+        "grid": "daily_close",
+        "id": "momentum_acceleration__5d_20d__raw__daily_close"
+      },
+      {
+        "concept": "momentum_deceleration",
+        "definition_hash": "892b0edc1fd7f4de2c186bf4c6f13372390b3f5d5459a791b5945d91c9df0fa4",
+        "grid": "daily_close",
+        "id": "momentum_deceleration__5d_20d__raw__daily_close"
+      },
+      {
+        "concept": "momentum_sign_agreement",
+        "definition_hash": "e555327f4a7cfb2d5e5f935e1b08b752f8049e4902f85dcbd55de834c0796166",
+        "grid": "daily_close",
+        "id": "momentum_sign_agreement__5d_20d__raw__daily_close"
+      },
+      {
+        "concept": "money_flow_proxy",
+        "definition_hash": "9b1b5c2d42a3e8dd8649624595affd7e7732e8c454aa3e422f5d7090e10b2a42",
+        "grid": "daily_close",
+        "id": "money_flow_proxy__20d__raw__daily_close"
+      },
+      {
+        "concept": "month_end_distance",
+        "definition_hash": "28352a7a69552f666ee503fe09269f75ed8a3471f09443e4ea68771fa0ac3d45",
+        "grid": "daily_close",
+        "id": "month_end_distance__context__raw__daily_close"
+      },
+      {
+        "concept": "negative_bar_fraction",
+        "definition_hash": "8cc269ee7e1ab99bf8e39790954d2d346eff5cf6099d0797b9e93f43309ce536",
+        "grid": "daily_close",
+        "id": "negative_bar_fraction__20d__raw__daily_close"
+      },
+      {
+        "concept": "negative_jump_fraction",
+        "definition_hash": "375b121a65923ff52ca305098260b85926d5a13bb75750898800d8a864e26a3d",
+        "grid": "daily_close",
+        "id": "negative_jump_fraction__20d__raw__daily_close"
+      },
+      {
+        "concept": "negative_return_sum_abs",
+        "definition_hash": "3867ec2c58cb1c15d74bd6fb180d4afcf0f2c8cd1a6e49ceddf6a8045869e664",
+        "grid": "daily_close",
+        "id": "negative_return_sum_abs__20d__raw__daily_close"
+      },
+      {
+        "concept": "new_high_count",
+        "definition_hash": "2c0cdf13bb0f90806f96e8c9fedc375332b3796518ffd7c4d426043ab8672a1e",
+        "grid": "daily_close",
+        "id": "new_high_count__20d__raw__daily_close"
+      },
+      {
+        "concept": "new_low_count",
+        "definition_hash": "35e57b876272531068cf7435d19e6580deaee13012f060d4b5840c1d5baec207",
+        "grid": "daily_close",
+        "id": "new_low_count__20d__raw__daily_close"
+      },
+      {
+        "concept": "obv_slope",
+        "definition_hash": "c09e0e41f9dfe992af79c7ef75f143f29c70ca81d814f7d639f30249d87f0a92",
+        "grid": "daily_close",
+        "id": "obv_slope__20d__raw__daily_close"
+      },
+      {
+        "concept": "open_to_midday_return",
+        "definition_hash": "995d6a16b992e3735676a721be5f777ee5371cdcaff4962444260656da57ac02",
+        "grid": "daily_close",
+        "id": "open_to_midday_return__20d__raw__daily_close"
+      },
+      {
+        "concept": "opening_gap",
+        "definition_hash": "267ff269d3698cecbfc5e60c6967b4ef016470909190caaf74f7bc82159aa503",
+        "grid": "daily_close",
+        "id": "opening_gap__20d__raw__daily_close"
+      },
+      {
+        "concept": "opening_range_pct_15m",
+        "definition_hash": "fd035416761f5b3e55062bc37b884e149f7ab187c4d66db41e2bf0c315a13dac",
+        "grid": "daily_close",
+        "id": "opening_range_pct_15m__20d__raw__daily_close"
+      },
+      {
+        "concept": "opening_range_pct_30m",
+        "definition_hash": "987e7ae7dcb79778fa843e77495c33f13db6970514ff22b59d7d6039a958c489",
+        "grid": "daily_close",
+        "id": "opening_range_pct_30m__20d__raw__daily_close"
+      },
+      {
+        "concept": "opening_range_pct_60m",
+        "definition_hash": "bc52d1cee2599bb61a23eeea3e7cac9c229d52cc6eefb794dce4fa5fb5256ede",
+        "grid": "daily_close",
+        "id": "opening_range_pct_60m__20d__raw__daily_close"
+      },
+      {
+        "concept": "opening_return_10m",
+        "definition_hash": "c65006ad9c0fade288a21e73d1d8be966e5fd6695e957bd882acb263bf3e8b3a",
+        "grid": "daily_close",
+        "id": "opening_return_10m__20d__raw__daily_close"
+      },
+      {
+        "concept": "opening_return_15m",
+        "definition_hash": "42b1484f850b85d4c9bd9fb869778577bbdb8bbc51fdc08b5df3d2154e06d229",
+        "grid": "daily_close",
+        "id": "opening_return_15m__20d__raw__daily_close"
+      },
+      {
+        "concept": "opening_return_30m",
+        "definition_hash": "e2e8993efcf5d037df47615980947a219f160a74151fc3e9bd031f0e1b9b9b0d",
+        "grid": "daily_close",
+        "id": "opening_return_30m__20d__raw__daily_close"
+      },
+      {
+        "concept": "opening_return_5m",
+        "definition_hash": "a5a88a9e56e9687c38b39aa5c876b34ed968155d4f4b6128f4786217cb7760c9",
+        "grid": "daily_close",
+        "id": "opening_return_5m__20d__raw__daily_close"
+      },
+      {
+        "concept": "opening_return_60m",
+        "definition_hash": "e4419e3e2d44780aeba6e00494a3ef476a0fd763e8b85c78fa35f14645e6be68",
+        "grid": "daily_close",
+        "id": "opening_return_60m__20d__raw__daily_close"
+      },
+      {
+        "concept": "opening_rvol_15m",
+        "definition_hash": "75dbf53aea783f53ccf5096e47339c88204602212a8e482c01d14748033e47d3",
+        "grid": "daily_close",
+        "id": "opening_rvol_15m__20d__raw__daily_close"
+      },
+      {
+        "concept": "opening_rvol_30m",
+        "definition_hash": "684ddf04dadaf423621ff72b8ca3e4d621c33be7314c30ca3430c2d0b03a420d",
+        "grid": "daily_close",
+        "id": "opening_rvol_30m__20d__raw__daily_close"
+      },
+      {
+        "concept": "opening_rvol_60m",
+        "definition_hash": "d53e64d3daecce0f37c3e6d0372cb6ddb05647660803d3179439ff666b3a3caa",
+        "grid": "daily_close",
+        "id": "opening_rvol_60m__20d__raw__daily_close"
+      },
+      {
+        "concept": "overnight_minus_regular",
+        "definition_hash": "466031d58ab8c1b65025a58e577c493197d3c1909cbea549a025e85140e152f4",
+        "grid": "daily_close",
+        "id": "overnight_minus_regular__20d__raw__daily_close"
+      },
+      {
+        "concept": "overnight_return",
+        "definition_hash": "68f3df41a8b614ef190d463ccf8490e7e838dc6057e2df0b9d3da5f5ec2ad288",
+        "grid": "daily_close",
+        "id": "overnight_return__20d__raw__daily_close"
+      },
+      {
+        "concept": "overnight_share_total",
+        "definition_hash": "159ac5dcfb8141d90c0636d178d13c5a83cbdf8cbb8d53dce74040430ba8c91b",
+        "grid": "daily_close",
+        "id": "overnight_share_total__20d__raw__daily_close"
+      },
+      {
+        "concept": "p05_subreturn",
+        "definition_hash": "6ceba6bc98f67d7bb0ab37b48061e422e8186ef0be99c441df59f6d4bdac88b5",
+        "grid": "daily_close",
+        "id": "p05_subreturn__20d__raw__daily_close"
+      },
+      {
+        "concept": "p95_subreturn",
+        "definition_hash": "1810e10070e8cec49c06a59ff5cb0324b939ea11b25a2aa792ebf3b9088e16c9",
+        "grid": "daily_close",
+        "id": "p95_subreturn__20d__raw__daily_close"
+      },
+      {
+        "concept": "parkinson_vol",
+        "definition_hash": "1336e4de8a1088f6aa13fd9c05beea2d64037749a24ef82350e7cda5c34c17b8",
+        "grid": "daily_close",
+        "id": "parkinson_vol__20d__raw__daily_close"
+      },
+      {
+        "concept": "path_chord_convexity",
+        "definition_hash": "5d09851f6c12087ad811944709b09e221f82c848797d9645b22d29778c6bf1a3",
+        "grid": "daily_close",
+        "id": "path_chord_convexity__20d__raw__daily_close"
+      },
+      {
+        "concept": "path_efficiency",
+        "definition_hash": "4899fd6f08eb3c3391249054837691021ad4346ecfdf2e461b8af75eac5f5910",
+        "grid": "daily_close",
+        "id": "path_efficiency__20d__raw__daily_close"
+      },
+      {
+        "concept": "path_quadratic_curvature",
+        "definition_hash": "219aabae352fb0176e832806ca0650f30a4a9249582577ef6be24cb31699be56",
+        "grid": "daily_close",
+        "id": "path_quadratic_curvature__20d__raw__daily_close"
+      },
+      {
+        "concept": "permutation_entropy",
+        "definition_hash": "dde11d4ab8eb64ee679c4620a45402c5682a7f96cbc42384ea345331b69a2bd1",
+        "grid": "daily_close",
+        "id": "permutation_entropy__20d__raw__daily_close"
+      },
+      {
+        "concept": "positive_bar_fraction",
+        "definition_hash": "f956e97fddd01d9a7350355e96b490184b2c12f454632e68c161eb71d52daf0b",
+        "grid": "daily_close",
+        "id": "positive_bar_fraction__20d__raw__daily_close"
+      },
+      {
+        "concept": "positive_jump_fraction",
+        "definition_hash": "8d3662860e9269295078445b4f002d04d738e834c04e0a0ce2c1f474667bc35e",
+        "grid": "daily_close",
+        "id": "positive_jump_fraction__20d__raw__daily_close"
+      },
+      {
+        "concept": "positive_overnight_fraction",
+        "definition_hash": "515c77730829774e2f45ef0a15403487e51882b1caf02b5b5a6bf8d08dbab329",
+        "grid": "daily_close",
+        "id": "positive_overnight_fraction__20d__raw__daily_close"
+      },
+      {
+        "concept": "positive_regular_fraction",
+        "definition_hash": "b40350f18d23c6ae1c329a623043bf4c4412e7e16ad1f73fa110160c4425bdb7",
+        "grid": "daily_close",
+        "id": "positive_regular_fraction__20d__raw__daily_close"
+      },
+      {
+        "concept": "positive_return_sum",
+        "definition_hash": "f064c361c661ecdead3f51a92d9e8de6de647bcc0249a98b6c97ba6f5be12555",
+        "grid": "daily_close",
+        "id": "positive_return_sum__20d__raw__daily_close"
+      },
+      {
+        "concept": "post_holiday_flag",
+        "definition_hash": "bb07d0ff18ef4b92323af0c90e46022a9538f95296370d7abb5d24c98dcab655",
+        "grid": "daily_close",
+        "id": "post_holiday_flag__context__raw__daily_close"
+      },
+      {
+        "concept": "pre_holiday_flag",
+        "definition_hash": "2233d767a2c2ac2705481886f6d92a9709565baf882d7b4158f53d2671a21fe5",
+        "grid": "daily_close",
+        "id": "pre_holiday_flag__context__raw__daily_close"
+      },
+      {
+        "concept": "price_minus_sma_volnorm",
+        "definition_hash": "2d5f860c89b800bc2f538c559eb4dc1e06aefa8f93ba11896eafbdf6078e8c77",
+        "grid": "daily_close",
+        "id": "price_minus_sma_volnorm__20d__raw__daily_close"
+      },
+      {
+        "concept": "price_shock_minus_volume_shock",
+        "definition_hash": "b66a1a96272782b999ddeaa34fc1b893551ce0856e7de1a548dd4bf5f8d14001",
+        "grid": "daily_close",
+        "id": "price_shock_minus_volume_shock__20d__raw__daily_close"
+      },
+      {
+        "concept": "price_to_sma",
+        "definition_hash": "3cf4576a8d9e915a92ad1e809dbafb05247ef2286e6b889d5ce06c748ece79ae",
+        "grid": "daily_close",
+        "id": "price_to_sma__20d__raw__daily_close"
+      },
+      {
+        "concept": "prior_high_reclaim_strength",
+        "definition_hash": "3c52e068df48f82e88eb82178ea3e4ae53aca4ba2bd04d36b5a046295c1da627",
+        "grid": "daily_close",
+        "id": "prior_high_reclaim_strength__20d__raw__daily_close"
+      },
+      {
+        "concept": "prior_low_reclaim_strength",
+        "definition_hash": "1f4d8b7d96c145daf03e98666736775bffc800dba0b08d07bf292dba2cb72bda",
+        "grid": "daily_close",
+        "id": "prior_low_reclaim_strength__20d__raw__daily_close"
+      },
+      {
+        "concept": "pullback_in_uptrend",
+        "definition_hash": "0fde6236912e064a1544b505957e0acb2978edf2f4a708ae6a26922909f484f3",
+        "grid": "daily_close",
+        "id": "pullback_in_uptrend__5d_20d__raw__daily_close"
+      },
+      {
+        "concept": "quarter_end_distance",
+        "definition_hash": "ced488380bfa6e83fd6bd114636fbe59b664953bb38a24bd04f0470e4e89bf2f",
+        "grid": "daily_close",
+        "id": "quarter_end_distance__context__raw__daily_close"
+      },
+      {
+        "concept": "range_per_dollar_volume",
+        "definition_hash": "d0b21553ffbdcfde4586154b73e9cb9e822e22458ee48096933cfebaa9323d5a",
+        "grid": "daily_close",
+        "id": "range_per_dollar_volume__20d__raw__daily_close"
+      },
+      {
+        "concept": "range_position",
+        "definition_hash": "cd0433be4eb067c15feda58de4b17c682e44bbea252d89f375bad50721e1e02f",
+        "grid": "daily_close",
+        "id": "range_position__20d__raw__daily_close"
+      },
+      {
+        "concept": "rank_above_80_fraction",
+        "definition_hash": "62075dd7cc0385c401bd575c01362b1c0ae0febe91f142fd8d5ddbf2e0ad36cf",
+        "grid": "daily_close",
+        "id": "rank_above_80_fraction__20d__raw__daily_close"
+      },
+      {
+        "concept": "rank_above_90_fraction",
+        "definition_hash": "d6378d64ed82f3e17e9644abc59910dbf2f10b9a121437d7b37f7424ffe4904d",
+        "grid": "daily_close",
+        "id": "rank_above_90_fraction__20d__raw__daily_close"
+      },
+      {
+        "concept": "rank_below_20_fraction",
+        "definition_hash": "37a6a6fa9917cdf8b030efb1b721fa64ed1eae3691baac47ead2b6cdb75d6562",
+        "grid": "daily_close",
+        "id": "rank_below_20_fraction__20d__raw__daily_close"
+      },
+      {
+        "concept": "rank_change_10d",
+        "definition_hash": "02fae869f5223085fa34865d174132986af800da07018c881020c89a38c13ef8",
+        "grid": "daily_close",
+        "id": "rank_change_10d__20d__raw__daily_close"
+      },
+      {
+        "concept": "rank_change_1d",
+        "definition_hash": "2b82b6020a3ad19fc35906bdc32d45af627ac32dca8dec33c8c306f8e868738d",
+        "grid": "daily_close",
+        "id": "rank_change_1d__20d__raw__daily_close"
+      },
+      {
+        "concept": "rank_change_20d",
+        "definition_hash": "78b99a0d492bb9707ae4021b7bd86750897ae1a02805ef8e6dfce4818e3eef00",
+        "grid": "daily_close",
+        "id": "rank_change_20d__20d__raw__daily_close"
+      },
+      {
+        "concept": "rank_change_2d",
+        "definition_hash": "8a29ff7c26dc510e179ba16b832f4ff3bbeab508a2ec78e0dbe3d3bca1ef35e6",
+        "grid": "daily_close",
+        "id": "rank_change_2d__20d__raw__daily_close"
+      },
+      {
+        "concept": "rank_change_5d",
+        "definition_hash": "280bd1253d6c3576fd7ff501b470555efd0fa968f546859842819bfd5ae6285e",
+        "grid": "daily_close",
+        "id": "rank_change_5d__20d__raw__daily_close"
+      },
+      {
+        "concept": "rank_dwell_bottom_decile",
+        "definition_hash": "ca40d59abb93ddcefe2a5b593acca689f25d6226b948c592f94667e3c9c53a15",
+        "grid": "daily_close",
+        "id": "rank_dwell_bottom_decile__20d__raw__daily_close"
+      },
+      {
+        "concept": "rank_dwell_top_decile",
+        "definition_hash": "a4dcc870414063b9ce6114ef75e2edf932ee54fde1798d453461648a52936c5a",
+        "grid": "daily_close",
+        "id": "rank_dwell_top_decile__20d__raw__daily_close"
+      },
+      {
+        "concept": "rank_range",
+        "definition_hash": "72dc5aa0827c5b8a0e13fe3c276aceac4a326195d20ec551a9e76833fd5d0b04",
+        "grid": "daily_close",
+        "id": "rank_range__20d__raw__daily_close"
+      },
+      {
+        "concept": "raw_volume",
+        "definition_hash": "ed785713f6dba7e407efcd38180c5a1965685b3e671ba0a46c145659d73d65e3",
+        "grid": "daily_close",
+        "id": "raw_volume__20d__raw__daily_close"
+      },
+      {
+        "concept": "realized_kurtosis",
+        "definition_hash": "b8f135018b8e576713628dc976adf5647071093af95e1a2415dc309beb26d963",
+        "grid": "daily_close",
+        "id": "realized_kurtosis__20d__raw__daily_close"
+      },
+      {
+        "concept": "realized_skewness",
+        "definition_hash": "2c2e03b3a73e46f0ab048337b84fa02ecb3371fdedb127199b48dc4a58f884fc",
+        "grid": "daily_close",
+        "id": "realized_skewness__20d__raw__daily_close"
+      },
+      {
+        "concept": "realized_vol",
+        "definition_hash": "dd993ceb63f8f407d3971f29a8378c1a246a7331af7981d60020fc139e07cb6b",
+        "grid": "daily_close",
+        "id": "realized_vol__20d__raw__daily_close"
+      },
+      {
+        "concept": "recovery_fraction",
+        "definition_hash": "ccf08e26571d5f388f1c0ba624c0d7e4da15fe873fce6abfba515df1bbf6b333",
+        "grid": "daily_close",
+        "id": "recovery_fraction__20d__raw__daily_close"
+      },
+      {
+        "concept": "recovery_from_low",
+        "definition_hash": "3f98c326080f5870997e3610937ea1743f577909c8166dd361f2a069d12ec3fe",
+        "grid": "daily_close",
+        "id": "recovery_from_low__20d__raw__daily_close"
+      },
+      {
+        "concept": "recovery_in_downtrend",
+        "definition_hash": "bddb99e64c7b959bf269f291d97e1c4c6c13778080f44af7bf5bad626c0a1656",
+        "grid": "daily_close",
+        "id": "recovery_in_downtrend__5d_20d__raw__daily_close"
+      },
+      {
+        "concept": "regular_session_return",
+        "definition_hash": "6f53113460e954b98b9cdd8e1233149df8e3a630470ec11adb65555348b2e696",
+        "grid": "daily_close",
+        "id": "regular_session_return__20d__raw__daily_close"
+      },
+      {
+        "concept": "relative_dollar_volume",
+        "definition_hash": "c5939e61b5929976cae59ae5dbe37ba8e42eebba930fa7fce3189223422fb4a0",
+        "grid": "daily_close",
+        "id": "relative_dollar_volume__20d__raw__daily_close"
+      },
+      {
+        "concept": "relative_trade_count",
+        "definition_hash": "1ec914cec751fae7194ae0ebf7feb5c389ec9917750fa12ea0191ef0143dc86a",
+        "grid": "daily_close",
+        "id": "relative_trade_count__20d__raw__daily_close"
+      },
+      {
+        "concept": "relative_volume",
+        "definition_hash": "6517b5b2d6c40edc2356aa6393abc72693ef39a4b599cae41de25f21b92af9e8",
+        "grid": "daily_close",
+        "id": "relative_volume__20d__raw__daily_close"
+      },
+      {
+        "concept": "return_acceleration_halves",
+        "definition_hash": "29b678fe3bf90813c528fa6daa64875852ca14e95150c348cf60ad1b6e41ddd7",
+        "grid": "daily_close",
+        "id": "return_acceleration_halves__20d__raw__daily_close"
+      },
+      {
+        "concept": "return_acceleration_thirds",
+        "definition_hash": "b3bbe9408af24aa6b5e354eb4fcf5a669bf2b163d3326406e8537131ec2c1d82",
+        "grid": "daily_close",
+        "id": "return_acceleration_thirds__20d__raw__daily_close"
+      },
+      {
+        "concept": "return_autocorr_lag1",
+        "definition_hash": "04392ff5ee9c4bed1dcad38e5e7d5c6f61e369b94c4abfbd84785bfad04f88eb",
+        "grid": "daily_close",
+        "id": "return_autocorr_lag1__20d__raw__daily_close"
+      },
+      {
+        "concept": "return_autocorr_lag2",
+        "definition_hash": "05465992110f8d6df7c3519ffbcf0b7256d44afd5155c83254c52426f4018ffc",
+        "grid": "daily_close",
+        "id": "return_autocorr_lag2__20d__raw__daily_close"
+      },
+      {
+        "concept": "return_autocorr_lag3",
+        "definition_hash": "2b14d1bc3d2c69c3b8db9ca77ea5dbf8b03894e948748228619d9fe815d8cf34",
+        "grid": "daily_close",
+        "id": "return_autocorr_lag3__20d__raw__daily_close"
+      },
+      {
+        "concept": "return_entropy",
+        "definition_hash": "0d678df9fe8fe33cb86ff01f1d022f97322e9072bd0ccfc3daccac5c698aee73",
+        "grid": "daily_close",
+        "id": "return_entropy__20d__raw__daily_close"
+      },
+      {
+        "concept": "return_over_downside_vol",
+        "definition_hash": "b3b7c894ecee8a922790e276670ac88e5be8738f5b473276dbebeabd90b2d2d0",
+        "grid": "daily_close",
+        "id": "return_over_downside_vol__20d__raw__daily_close"
+      },
+      {
+        "concept": "return_over_realized_vol",
+        "definition_hash": "f8d1f08b13c6337acc56ad3ae763fcc12b328bc64170ef8b7778a6b7135deb0c",
+        "grid": "daily_close",
+        "id": "return_over_realized_vol__20d__raw__daily_close"
+      },
+      {
+        "concept": "return_rank_acceleration",
+        "definition_hash": "cda9fb0e9128fd4c521a0427c7f81aa589fc848ef8938a740015d29b5953b404",
+        "grid": "daily_close",
+        "id": "return_rank_acceleration__20d__raw__daily_close"
+      },
+      {
+        "concept": "return_rank_slope",
+        "definition_hash": "3e3decb984b9d9d4fb41e870b77a111e4ed804c9ccce4b2d6d0f0113116cce9a",
+        "grid": "daily_close",
+        "id": "return_rank_slope__20d__raw__daily_close"
+      },
+      {
+        "concept": "return_rank_std",
+        "definition_hash": "7812066f24098dcd0d79b183e94c9e502d982fc03a80ca068fb1b6cfa70ee5b5",
+        "grid": "daily_close",
+        "id": "return_rank_std__20d__raw__daily_close"
+      },
+      {
+        "concept": "return_skip_recent_10d_ex_1d",
+        "definition_hash": "c6120c2559951c9e38f24ce95695b975ff629ee710925b3f70a00b1964ffa4ca",
+        "grid": "daily_close",
+        "id": "return_skip_recent_10d_ex_1d__10d__raw__daily_close"
+      },
+      {
+        "concept": "return_skip_recent_126d_ex_20d",
+        "definition_hash": "eea65d06a6a479508269dc09fc6a821175e6171dbb3a7f7ff0ad3dd125e16bbd",
+        "grid": "daily_close",
+        "id": "return_skip_recent_126d_ex_20d__126d__raw__daily_close"
+      },
+      {
+        "concept": "return_skip_recent_20d_ex_1d",
+        "definition_hash": "ad73d07279795740894c7285ea7dd572395f6d83ed74643974a7e576509e3912",
+        "grid": "daily_close",
+        "id": "return_skip_recent_20d_ex_1d__20d__raw__daily_close"
+      },
+      {
+        "concept": "return_skip_recent_20d_ex_5d",
+        "definition_hash": "0293b7fbbdde03eb8ced307958b5d28494ebac2f6a078b4027e617f50b1dd8f3",
+        "grid": "daily_close",
+        "id": "return_skip_recent_20d_ex_5d__20d__raw__daily_close"
+      },
+      {
+        "concept": "return_skip_recent_252d_ex_20d",
+        "definition_hash": "b7fed71ef1378b397849473eb8f3577d9791ac9fd5263f90a3df70c7d324d51b",
+        "grid": "daily_close",
+        "id": "return_skip_recent_252d_ex_20d__252d__raw__daily_close"
+      },
+      {
+        "concept": "return_skip_recent_252d_ex_63d",
+        "definition_hash": "ea9aaec2a43b7755457b121adf0cb1b7bf171dc40095711454b41f36dcb1e4a5",
+        "grid": "daily_close",
+        "id": "return_skip_recent_252d_ex_63d__252d__raw__daily_close"
+      },
+      {
+        "concept": "return_skip_recent_30d_ex_5d",
+        "definition_hash": "fadb51960cc3c91b7c7733539da176f8bf7f241a326dff77bf5be4226f49bc0c",
+        "grid": "daily_close",
+        "id": "return_skip_recent_30d_ex_5d__30d__raw__daily_close"
+      },
+      {
+        "concept": "return_skip_recent_40d_ex_5d",
+        "definition_hash": "5bd2797224d99435aa596b39f4e17417fd288d8f523dd6ab26ab800f45f76c12",
+        "grid": "daily_close",
+        "id": "return_skip_recent_40d_ex_5d__40d__raw__daily_close"
+      },
+      {
+        "concept": "return_skip_recent_5d_ex_1d",
+        "definition_hash": "6fc34b70a3c02ea50b4d01cadf34a47ed9583792347c162c23d729fabeff4afd",
+        "grid": "daily_close",
+        "id": "return_skip_recent_5d_ex_1d__5d__raw__daily_close"
+      },
+      {
+        "concept": "return_skip_recent_63d_ex_20d",
+        "definition_hash": "ef648cfda8c4ac15bab3b11bfa757f51f80ec159cd0718a774d4590bdbb17959",
+        "grid": "daily_close",
+        "id": "return_skip_recent_63d_ex_20d__63d__raw__daily_close"
+      },
+      {
+        "concept": "return_skip_recent_63d_ex_5d",
+        "definition_hash": "6209f6f38f4ea96bc35383b9b7ff612114a6d48226127be7b56430bb0d0136b4",
+        "grid": "daily_close",
+        "id": "return_skip_recent_63d_ex_5d__63d__raw__daily_close"
+      },
+      {
+        "concept": "return_t_stat",
+        "definition_hash": "a2fda4655b9b08272da30303241b30d1d055d12b6eb84022e1e0bd93779b13d8",
+        "grid": "daily_close",
+        "id": "return_t_stat__20d__raw__daily_close"
+      },
+      {
+        "concept": "return_volume_corr",
+        "definition_hash": "e530c44fa799fcd5283325302861ed6c5aa27859d77942811296ee975e879aee",
+        "grid": "daily_close",
+        "id": "return_volume_corr__20d__raw__daily_close"
+      },
+      {
+        "concept": "return_x_rvol",
+        "definition_hash": "70762fe606700e909ee648565a86ba756bf0117c3fbf196cf25bab4c6faeecc8",
+        "grid": "daily_close",
+        "id": "return_x_rvol__20d__raw__daily_close"
+      },
+      {
+        "concept": "return_x_volume_z",
+        "definition_hash": "3fc8ba2fc27a63ca51bf6a459b253237031b73a8479b00fd2106be6b2c02ffb8",
+        "grid": "daily_close",
+        "id": "return_x_volume_z__20d__raw__daily_close"
+      },
+      {
+        "concept": "right_expected_shortfall",
+        "definition_hash": "006828cca19e44794667083c82c88d5cd1752db8eabf3e838fadc6873bc84ddd",
+        "grid": "daily_close",
+        "id": "right_expected_shortfall__20d__raw__daily_close"
+      },
+      {
+        "concept": "rogers_satchell_vol",
+        "definition_hash": "aa35ac84858c8ee8cff30c740f919340b3fd098c4ccfad58851a6155bb967bac",
+        "grid": "daily_close",
+        "id": "rogers_satchell_vol__20d__raw__daily_close"
+      },
+      {
+        "concept": "roll_spread_proxy",
+        "definition_hash": "72423d6e47189a5ea2217fba4387b07024b4fdaa772e83d839eb938cdb0b339b",
+        "grid": "daily_close",
+        "id": "roll_spread_proxy__20d__raw__daily_close"
+      },
+      {
+        "concept": "semivariance_ratio",
+        "definition_hash": "fe1f23f8a2889f15a7a5aaae24d023e81c642ca9f1f139cd491b5b88de4e9c06",
+        "grid": "daily_close",
+        "id": "semivariance_ratio__20d__raw__daily_close"
+      },
+      {
+        "concept": "session_vwap_distance",
+        "definition_hash": "0b835c0c5914146b3c3d44bf18e940c9b2ab6b72efb8743e3bd78728756fea8a",
+        "grid": "daily_close",
+        "id": "session_vwap_distance__20d__raw__daily_close"
+      },
+      {
+        "concept": "sign_autocorr_lag1",
+        "definition_hash": "3c77f7d3e85d9b118134d4d29232e89153f487babf9993fb0a35a2bdaf7480ef",
+        "grid": "daily_close",
+        "id": "sign_autocorr_lag1__20d__raw__daily_close"
+      },
+      {
+        "concept": "sign_entropy",
+        "definition_hash": "06df7fa488104292a8b1d6f14f6c06b6aa755d16afb72925374f02da62e0f538",
+        "grid": "daily_close",
+        "id": "sign_entropy__20d__raw__daily_close"
+      },
+      {
+        "concept": "sign_persistence",
+        "definition_hash": "441c13fca1fb33f5d727d6e6be349c284472774c7212edfa2f98c6a1fa98e53e",
+        "grid": "daily_close",
+        "id": "sign_persistence__20d__raw__daily_close"
+      },
+      {
+        "concept": "sign_switch_rate",
+        "definition_hash": "1b13a689b6385be21559ae86ae0e88676ee817306187c23f45f1f3f2c42a2fa2",
+        "grid": "daily_close",
+        "id": "sign_switch_rate__20d__raw__daily_close"
+      },
+      {
+        "concept": "signed_body_to_range",
+        "definition_hash": "007e29666e5f2f492f90721d4d19d7d33993ca6928711953556775cd0c39df0e",
+        "grid": "daily_close",
+        "id": "signed_body_to_range__1d__raw__daily_close"
+      },
+      {
+        "concept": "signed_return_concentration",
+        "definition_hash": "808b6fcf998474975d0ec7ed6cb811b8e3d47a11a8f68ca435e03a46efd2df17",
+        "grid": "daily_close",
+        "id": "signed_return_concentration__20d__raw__daily_close"
+      },
+      {
+        "concept": "signed_volume_balance",
+        "definition_hash": "c6769308f798ab64c087561c4a35b72a665d288b9a988343c802cb924fc1c21b",
+        "grid": "daily_close",
+        "id": "signed_volume_balance__20d__raw__daily_close"
+      },
+      {
+        "concept": "simple_return",
+        "definition_hash": "2fd9f3eff1c20a5b9f5912cb346860aae7ca91e2d1a24e207bbdaffae3fa51a3",
+        "grid": "daily_close",
+        "id": "simple_return__20d__raw__daily_close"
+      },
+      {
+        "concept": "sma_acceleration",
+        "definition_hash": "bc2a055f565f7e92b6a9c1cbe3e7d12899253c233fba351d2330cfa283aa4398",
+        "grid": "daily_close",
+        "id": "sma_acceleration__20d__raw__daily_close"
+      },
+      {
+        "concept": "sma_slope",
+        "definition_hash": "28b9b0d1ff3d0180cad9955fb2113b79a1e04964590e4b4fa1c4186f6f19a2d5",
+        "grid": "daily_close",
+        "id": "sma_slope__20d__raw__daily_close"
+      },
+      {
+        "concept": "stock_lead_market_response",
+        "definition_hash": "0e906b57c7b436f9281d9310cef4b282bab75905f7c94aa3cce172bde76708ec",
+        "grid": "daily_close",
+        "id": "stock_lead_market_response__20d__raw__daily_close"
+      },
+      {
+        "concept": "tail_spread",
+        "definition_hash": "1d6d043a1e658c915ffa67a51825bb729118403a9400dbca94cc48d8578fd185",
+        "grid": "daily_close",
+        "id": "tail_spread__20d__raw__daily_close"
+      },
+      {
+        "concept": "time_above_vwap",
+        "definition_hash": "687c8ae9824cf9f1783ebe754a0a0c82e7e07a00fcaa2ba16fb3581a6af33c16",
+        "grid": "daily_close",
+        "id": "time_above_vwap__20d__raw__daily_close"
+      },
+      {
+        "concept": "top2_abs_return_share",
+        "definition_hash": "c777fbc2b2f15899ac7d1833254f32bbecb183d21076d9fc3b4c9d92e468d850",
+        "grid": "daily_close",
+        "id": "top2_abs_return_share__20d__raw__daily_close"
+      },
+      {
+        "concept": "top3_abs_return_share",
+        "definition_hash": "1a79b13e7832d113eb549e71252f58f5c9a944243bf6eabacef4937fa25219e3",
+        "grid": "daily_close",
+        "id": "top3_abs_return_share__20d__raw__daily_close"
+      },
+      {
+        "concept": "top5_abs_return_share",
+        "definition_hash": "dbb5f3e5db3e4f4dc581626d6918a33bac02faff40605a902ff21706691203ba",
+        "grid": "daily_close",
+        "id": "top5_abs_return_share__20d__raw__daily_close"
+      },
+      {
+        "concept": "trade_count",
+        "definition_hash": "4b7d6dcbdfd8fbf7f731487ceff6c89572e989d50ea7cd50bbc34da70549bb12",
+        "grid": "daily_close",
+        "id": "trade_count__20d__raw__daily_close"
+      },
+      {
+        "concept": "trend_r2",
+        "definition_hash": "34174eecd4fc726dc9498730949d5e08797717c61ceb7698e81e1837220e66c5",
+        "grid": "daily_close",
+        "id": "trend_r2__20d__raw__daily_close"
+      },
+      {
+        "concept": "trend_slope",
+        "definition_hash": "9c57954b78a378915a67a4ade1d2d1cc0f508558f6886857939d660ba449d1cc",
+        "grid": "daily_close",
+        "id": "trend_slope__20d__raw__daily_close"
+      },
+      {
+        "concept": "trend_slope_t",
+        "definition_hash": "941d90c2d91186158772a4076db08ed613449ef3a60adf46866eae9148c6d211",
+        "grid": "daily_close",
+        "id": "trend_slope_t__20d__raw__daily_close"
+      },
+      {
+        "concept": "true_range_pct",
+        "definition_hash": "285f0f00db2860da957e6786bbc1375091067c2b8a1daffd2832a1fcdd979f29",
+        "grid": "daily_close",
+        "id": "true_range_pct__1d__raw__daily_close"
+      },
+      {
+        "concept": "up_bar_volume_share",
+        "definition_hash": "5bf53d29f832ff9bad18648fc56f33fc839534e5c242e448b5086e031a2dc483",
+        "grid": "daily_close",
+        "id": "up_bar_volume_share__20d__raw__daily_close"
+      },
+      {
+        "concept": "up_down_return_ratio",
+        "definition_hash": "e64baf22f704dd94eac4feefa75635e057395f9619d334afaf64f43055e8b89d",
+        "grid": "daily_close",
+        "id": "up_down_return_ratio__20d__raw__daily_close"
+      },
+      {
+        "concept": "upper_wick_fraction",
+        "definition_hash": "a77e7c8f1216c528e1464447a754958fb4765a7e87b21e10285b6aba3676c837",
+        "grid": "daily_close",
+        "id": "upper_wick_fraction__1d__raw__daily_close"
+      },
+      {
+        "concept": "upside_beta",
+        "definition_hash": "8b720f04b6e622a25025f6ae3f473b897b3d5d6663bd22ae43ea28847ab4da55",
+        "grid": "daily_close",
+        "id": "upside_beta__20d__raw__daily_close"
+      },
+      {
+        "concept": "upside_semivariance",
+        "definition_hash": "fd951366df58594af48a3e053e199c99a24c751e36d7c6def3a0585acf836957",
+        "grid": "daily_close",
+        "id": "upside_semivariance__20d__raw__daily_close"
+      },
+      {
+        "concept": "upside_vol",
+        "definition_hash": "8d6c8f2884d0c8d3b8ebcfb7627b0ebfe7db3b988e92dce4247d4e3f86027ad9",
+        "grid": "daily_close",
+        "id": "upside_vol__20d__raw__daily_close"
+      },
+      {
+        "concept": "upside_vol_acceleration",
+        "definition_hash": "a0b63a854ea6ef6962fb610b5a0696a81ec9e1e1ab2127fafba3e0c9350abc30",
+        "grid": "daily_close",
+        "id": "upside_vol_acceleration__20d__raw__daily_close"
+      },
+      {
+        "concept": "variance_ratio_2",
+        "definition_hash": "007aa02d3e3c723714eb610ce7608a2aa57cad7860d201b215a8129857456a0f",
+        "grid": "daily_close",
+        "id": "variance_ratio_2__20d__raw__daily_close"
+      },
+      {
+        "concept": "variance_ratio_5",
+        "definition_hash": "76f3f1419be34dcd76e0fb7978d486645e0ad2756bdc7657b532cab6ead63987",
+        "grid": "daily_close",
+        "id": "variance_ratio_5__20d__raw__daily_close"
+      },
+      {
+        "concept": "vol_acceleration",
+        "definition_hash": "059a62a914c37bf26aabfe67c31fe3102b2551ab9ab7957e17963c0acbfb3489",
+        "grid": "daily_close",
+        "id": "vol_acceleration__20d__raw__daily_close"
+      },
+      {
+        "concept": "vol_compression_ratio",
+        "definition_hash": "e286d809e211282faef1dade908b55f90c1534aab3cda7fa940fc02c9d2de07a",
+        "grid": "daily_close",
+        "id": "vol_compression_ratio__20d__raw__daily_close"
+      },
+      {
+        "concept": "vol_of_vol",
+        "definition_hash": "c75fe9cd4ebb1100fb6538a89f8b56634685b61dd14f55b9fe90ecde99f97038",
+        "grid": "daily_close",
+        "id": "vol_of_vol__20d__raw__daily_close"
+      },
+      {
+        "concept": "vol_percentile_own",
+        "definition_hash": "8576c9f163fddc3bd5fa01d5d546cdaedc928b3b5753363fb7af983591019c2b",
+        "grid": "daily_close",
+        "id": "vol_percentile_own__20d__raw__daily_close"
+      },
+      {
+        "concept": "volume_acceleration",
+        "definition_hash": "e68d4162ccea9322f048a284d4f19475dfb115c4e6d600ff77791be7984abac5",
+        "grid": "daily_close",
+        "id": "volume_acceleration__20d__raw__daily_close"
+      },
+      {
+        "concept": "volume_concentration",
+        "definition_hash": "5edef3f28502404bbc4ac1c51ee0d4e3eb46a6002ab69c50838dc3b20a5016ad",
+        "grid": "daily_close",
+        "id": "volume_concentration__20d__raw__daily_close"
+      },
+      {
+        "concept": "volume_percentile_own",
+        "definition_hash": "4284769f5269a8b8ae485508bfe275036e773e249d3d9e742134261efcb467a6",
+        "grid": "daily_close",
+        "id": "volume_percentile_own__20d__raw__daily_close"
+      },
+      {
+        "concept": "volume_shock_minus_price_shock",
+        "definition_hash": "07ee693ea363ca9016f8cb9d4e3bda6ecb27276f8312d3623788d1a65a141005",
+        "grid": "daily_close",
+        "id": "volume_shock_minus_price_shock__20d__raw__daily_close"
+      },
+      {
+        "concept": "volume_trend",
+        "definition_hash": "9f33e8dea0171e1c5812cca844fd8a0be75975c761b7f862ff793e688b87ac1b",
+        "grid": "daily_close",
+        "id": "volume_trend__20d__raw__daily_close"
+      },
+      {
+        "concept": "volume_volatility",
+        "definition_hash": "b795d615de236fe1e9ac61ec8fa53b6cbb23baddb7c770ad4c2933a64154b3a3",
+        "grid": "daily_close",
+        "id": "volume_volatility__20d__raw__daily_close"
+      },
+      {
+        "concept": "volume_zscore",
+        "definition_hash": "13628a8f7a955f091a0a66f9b17513657e2271586d7af272f7386260f458ce46",
+        "grid": "daily_close",
+        "id": "volume_zscore__20d__raw__daily_close"
+      },
+      {
+        "concept": "vwap_cross_count",
+        "definition_hash": "bf805a18445fc99dfa5a69b9cf77056ac93a5bf523add9e6eae87995e17011c2",
+        "grid": "daily_close",
+        "id": "vwap_cross_count__20d__raw__daily_close"
+      },
+      {
+        "concept": "vwap_drift",
+        "definition_hash": "215fddce303993bc9c9024b251501815d8c106ab0477732b876f0237bbe4edf5",
+        "grid": "daily_close",
+        "id": "vwap_drift__20d__raw__daily_close"
+      },
+      {
+        "concept": "window_max_drawdown",
+        "definition_hash": "2cdf9953fc379d30a70ed2352df26bc9d4033d4586612fb6f3644faeea0cd3e6",
+        "grid": "daily_close",
+        "id": "window_max_drawdown__20d__raw__daily_close"
+      },
+      {
+        "concept": "window_max_runup",
+        "definition_hash": "380bde7c95cb114869c298db24338979c71c0d8519b9cc7fd628c805dc23c6ab",
+        "grid": "daily_close",
+        "id": "window_max_runup__20d__raw__daily_close"
+      },
+      {
+        "concept": "abs_return_autocorr_lag1",
+        "definition_hash": "cfe7dcb653bcfcdd5a9eae7cee2839704565b825a0cc23e54925d7c7b0ea40e5",
+        "grid": "preclose_1555",
+        "id": "abs_return_autocorr_lag1__20d__raw__preclose_1555"
+      },
+      {
+        "concept": "abs_return_per_dollar_volume",
+        "definition_hash": "645e48e76a901673d121fd5a619b38d9d1aead41985d0dcd7100adf7169491b2",
+        "grid": "preclose_1555",
+        "id": "abs_return_per_dollar_volume__20d__raw__preclose_1555"
+      },
+      {
+        "concept": "abs_return_x_rvol",
+        "definition_hash": "5587bcfe63ade9a748038e7e518bf03c2c75d601fed7715263401c2e927d3305",
+        "grid": "preclose_1555",
+        "id": "abs_return_x_rvol__20d__raw__preclose_1555"
+      },
+      {
+        "concept": "absolute_return_hhi",
+        "definition_hash": "bac8c2ca4cc5d548be576e954878953ae8159ed85dbadf2553b542b20d8bb672",
+        "grid": "preclose_1555",
+        "id": "absolute_return_hhi__20d__raw__preclose_1555"
+      },
+      {
+        "concept": "absreturn_volume_corr",
+        "definition_hash": "fbc82e2c1ad7f65e3be8ccb90d121eea4ca51a75c051d54ce33db5f787e6dc1d",
+        "grid": "preclose_1555",
+        "id": "absreturn_volume_corr__20d__raw__preclose_1555"
+      },
+      {
+        "concept": "amihud_illiquidity",
+        "definition_hash": "4db6587db0da33e6992174fe607b0af700304d05591ab9d79ff11746fc1b2758",
+        "grid": "preclose_1555",
+        "id": "amihud_illiquidity__20d__raw__preclose_1555"
+      },
+      {
+        "concept": "atr_band_z",
+        "definition_hash": "bb0415724975059308cd7c0ca4af035bbcaa1910e2a374bfa2e98e181f586bf2",
+        "grid": "preclose_1555",
+        "id": "atr_band_z__20d__raw__preclose_1555"
+      },
+      {
+        "concept": "atr_pct",
+        "definition_hash": "88fb87d8cbc10b16ed4148628f117b482d7f5a5bd574991c7b8a9c041ff518c2",
+        "grid": "preclose_1555",
+        "id": "atr_pct__20d__raw__preclose_1555"
+      },
+      {
+        "concept": "average_signed_run_length",
+        "definition_hash": "d5ce72be12db5264bfa7b198f468d5e633bfaa3c625a1da9f6c465d83e5ea937",
+        "grid": "preclose_1555",
+        "id": "average_signed_run_length__20d__raw__preclose_1555"
+      },
+      {
+        "concept": "average_trade_size",
+        "definition_hash": "0e3753b337634be7d3e37cedd51adfb2c72938dd93ead028b9505fd188c8a6c3",
+        "grid": "preclose_1555",
+        "id": "average_trade_size__20d__raw__preclose_1555"
+      },
+      {
+        "concept": "bars_or_days_since_high",
+        "definition_hash": "0433ea2efe5afe9d1661b5531c0bacf3ea5624153dbaca1f8e04a53bc8513947",
+        "grid": "preclose_1555",
+        "id": "bars_or_days_since_high__20d__raw__preclose_1555"
+      },
+      {
+        "concept": "bars_or_days_since_low",
+        "definition_hash": "190e22add7dc146c961eb651b68cf0153a4758d73ae7dc0be84c7d07b41691a1",
+        "grid": "preclose_1555",
+        "id": "bars_or_days_since_low__20d__raw__preclose_1555"
+      },
+      {
+        "concept": "benchmark_excess_return",
+        "definition_hash": "f21aac3cd5ad7a6f3f6dc836a511b63ff0eb275b7c6cf6b1eae42eac980b74c1",
+        "grid": "preclose_1555",
+        "id": "benchmark_excess_return__20d__raw__preclose_1555"
+      },
+      {
+        "concept": "beta_change",
+        "definition_hash": "e52fae25916f792f8dbb2609e1a4a904cbc1271e860ab9ebe2e0ef15d0e2dcf6",
+        "grid": "preclose_1555",
+        "id": "beta_change__20d__raw__preclose_1555"
+      },
+      {
+        "concept": "beta_residual_return",
+        "definition_hash": "6e98f909f7115a3bdb27d967baac334d12319b6a64fafb9294af25df66360690",
+        "grid": "preclose_1555",
+        "id": "beta_residual_return__20d__raw__preclose_1555"
+      },
+      {
+        "concept": "body_to_range",
+        "definition_hash": "bd36edc8f2cbff36575a72bb5ed908fb804b4b47dc2f0f4ce97d2b2eb039f63c",
+        "grid": "preclose_1555",
+        "id": "body_to_range__1d__raw__preclose_1555"
+      },
+      {
+        "concept": "bollinger_z",
+        "definition_hash": "32dbc5f4dac3d8cecf9f0467d0df7557b591c0f234a30c501ab06c2728425efb",
+        "grid": "preclose_1555",
+        "id": "bollinger_z__20d__raw__preclose_1555"
+      },
+      {
+        "concept": "breakdown_distance",
+        "definition_hash": "fc65baba61c5f4824faa4cbb2935d9014cd3d596acd7235511c985cf6aacb718",
+        "grid": "preclose_1555",
+        "id": "breakdown_distance__20d__raw__preclose_1555"
+      },
+      {
+        "concept": "breakout_distance",
+        "definition_hash": "42b9ab58222dabe950f1da4dc0180cf90dc6cb9a92e1e30c380092e85ea7e035",
+        "grid": "preclose_1555",
+        "id": "breakout_distance__20d__raw__preclose_1555"
+      },
+      {
+        "concept": "close_location_bar",
+        "definition_hash": "a063757b5eb0979c5b24c7237d7aae0b6227c92a83581f18df802c3c22b0a860",
+        "grid": "preclose_1555",
+        "id": "close_location_bar__1d__raw__preclose_1555"
+      },
+      {
+        "concept": "close_location_daily_range",
+        "definition_hash": "0dddf5af1e9168a4d77d4fbddc9ed25fcf99254fe6f2dde2a30bcc3d7df3fe44",
+        "grid": "preclose_1555",
+        "id": "close_location_daily_range__20d__raw__preclose_1555"
+      },
+      {
+        "concept": "close_to_close_vol",
+        "definition_hash": "b83792c5d426cb9dcf911292d500899a8ab29079d73946b1f2a986b0cc9ce59c",
+        "grid": "preclose_1555",
+        "id": "close_to_close_vol__20d__raw__preclose_1555"
+      },
+      {
+        "concept": "close_vs_path_mean",
+        "definition_hash": "536d7e4563950593e3102b8efa0fc2b1aca2a6bf9b09d162c07ee00b1ad588ed",
+        "grid": "preclose_1555",
+        "id": "close_vs_path_mean__20d__raw__preclose_1555"
+      },
+      {
+        "concept": "close_vs_path_median",
+        "definition_hash": "6a3463ba47558a08bb3c03532bcacbac83a0b95c3b8bcce689afb31b7c2ac815",
+        "grid": "preclose_1555",
+        "id": "close_vs_path_median__20d__raw__preclose_1555"
+      },
+      {
+        "concept": "close_vs_vwap",
+        "definition_hash": "386d4d35db9c1646fa00ccc0a2203beb0bea4aaa893b5fbb5a116819600e3ddc",
+        "grid": "preclose_1555",
+        "id": "close_vs_vwap__20d__raw__preclose_1555"
+      },
+      {
+        "concept": "closing_return_10m",
+        "definition_hash": "9860aec300406bbdd21c206e95192d64cb885e3e5636886ed8df3c977e8bb74f",
+        "grid": "preclose_1555",
+        "id": "closing_return_10m__20d__raw__preclose_1555"
+      },
+      {
+        "concept": "closing_return_15m",
+        "definition_hash": "07534cc8247e07fe747a1a0b069d343ee0540d16888078ffe7f86aa72e1ea735",
+        "grid": "preclose_1555",
+        "id": "closing_return_15m__20d__raw__preclose_1555"
+      },
+      {
+        "concept": "closing_return_30m",
+        "definition_hash": "92b38ae588d4d1404f9d43b5bb1737d52406f8235a961179f95c9ced569a216a",
+        "grid": "preclose_1555",
+        "id": "closing_return_30m__20d__raw__preclose_1555"
+      },
+      {
+        "concept": "closing_return_5m",
+        "definition_hash": "c7f20dd14e42203f880296fd5901f84ec7421aa9a052ae782afcc502519af8a2",
+        "grid": "preclose_1555",
+        "id": "closing_return_5m__20d__raw__preclose_1555"
+      },
+      {
+        "concept": "closing_return_60m",
+        "definition_hash": "04ab32683f3a9f9ead7354ebfbfdf0af794a36f5f7c6def4a3aefc1a4f20f712",
+        "grid": "preclose_1555",
+        "id": "closing_return_60m__20d__raw__preclose_1555"
+      },
+      {
+        "concept": "closing_volume_share_15m",
+        "definition_hash": "fe86f666d88eb51397dc8d6237e6c0d61257d781e2646c6ee38d85484ba9ad3e",
+        "grid": "preclose_1555",
+        "id": "closing_volume_share_15m__20d__raw__preclose_1555"
+      },
+      {
+        "concept": "closing_volume_share_30m",
+        "definition_hash": "9c5ea353b844c108674c92b8338495733404d3af096f29cdf1155f497966f768",
+        "grid": "preclose_1555",
+        "id": "closing_volume_share_30m__20d__raw__preclose_1555"
+      },
+      {
+        "concept": "closing_volume_share_60m",
+        "definition_hash": "e2be5b0de4c0185ea71576a5790c5ded76233f72576a1d7fee113bb402c5d72e",
+        "grid": "preclose_1555",
+        "id": "closing_volume_share_60m__20d__raw__preclose_1555"
+      },
+      {
+        "concept": "correlation_change",
+        "definition_hash": "19843462e76fa7e2c83d488d813670d9e80377846f33b1e858a0acf6765fa30e",
+        "grid": "preclose_1555",
+        "id": "correlation_change__20d__raw__preclose_1555"
+      },
+      {
+        "concept": "corwin_schultz_spread_proxy",
+        "definition_hash": "49fede6afab73c67c01645aebde69dc6fca0e545f36a293d46dab64ac150a54f",
+        "grid": "preclose_1555",
+        "id": "corwin_schultz_spread_proxy__20d__raw__preclose_1555"
+      },
+      {
+        "concept": "day_of_week",
+        "definition_hash": "7a6d65d3d538bd23a4c182aeb12aec398cd64c69ec646532d67f46cdd206b80d",
+        "grid": "preclose_1555",
+        "id": "day_of_week__context__raw__preclose_1555"
+      },
+      {
+        "concept": "distance_from_high",
+        "definition_hash": "e076cbef8d47f6ac7e25e1a52f3c9151fc8659635b4dfacd1db40302b0be58d9",
+        "grid": "preclose_1555",
+        "id": "distance_from_high__20d__raw__preclose_1555"
+      },
+      {
+        "concept": "distance_from_low",
+        "definition_hash": "081d59204a10fae104abba391267b0c78541c18c8655e1b4abb578ccf41af473",
+        "grid": "preclose_1555",
+        "id": "distance_from_low__20d__raw__preclose_1555"
+      },
+      {
+        "concept": "dollar_volume",
+        "definition_hash": "a9161e94b355aec5fb7fc6c87c4c910ba804a4450d59162cd5592e9effef0626",
+        "grid": "preclose_1555",
+        "id": "dollar_volume__20d__raw__preclose_1555"
+      },
+      {
+        "concept": "dollar_volume_zscore",
+        "definition_hash": "a02e577b20117fc40797b7839dcd5793845029e390c074ec13ad11323c32d045",
+        "grid": "preclose_1555",
+        "id": "dollar_volume_zscore__20d__raw__preclose_1555"
+      },
+      {
+        "concept": "down_bar_volume_share",
+        "definition_hash": "5e1065f5f0bde8eb01abc8ddb8fc793cd7845018feaf084c29672c0345ce0a26",
+        "grid": "preclose_1555",
+        "id": "down_bar_volume_share__20d__raw__preclose_1555"
+      },
+      {
+        "concept": "down_up_vol_ratio",
+        "definition_hash": "693edf8e6cf303a5d38daf9a0708604cefc6ea6b046c7025c5bdf85156a5fb63",
+        "grid": "preclose_1555",
+        "id": "down_up_vol_ratio__20d__raw__preclose_1555"
+      },
+      {
+        "concept": "downside_beta",
+        "definition_hash": "cf77ec44a456d6e4f5f8d3eb33cbdfa5c19e01b7dcd32ee9c1b824dc0cc62ddb",
+        "grid": "preclose_1555",
+        "id": "downside_beta__20d__raw__preclose_1555"
+      },
+      {
+        "concept": "downside_semivariance",
+        "definition_hash": "f506da433c73045f70d28c20773663ccd761b5375d71755f2c9eba79248db160",
+        "grid": "preclose_1555",
+        "id": "downside_semivariance__20d__raw__preclose_1555"
+      },
+      {
+        "concept": "downside_vol",
+        "definition_hash": "91d32d2199561dd0564d0f0c4c028a9c3e9b796b7b02a20bb202a4eb8d2673b4",
+        "grid": "preclose_1555",
+        "id": "downside_vol__20d__raw__preclose_1555"
+      },
+      {
+        "concept": "downside_vol_acceleration",
+        "definition_hash": "6856b597ac89edc5ebf0093c535651ac908bc75b1dc8cd60c30200daa113994a",
+        "grid": "preclose_1555",
+        "id": "downside_vol_acceleration__20d__raw__preclose_1555"
+      },
+      {
+        "concept": "drawdown_from_high",
+        "definition_hash": "2443b401afa62791915832421d9795f2ead8ed1936f33e2c9522ea2435c675c3",
+        "grid": "preclose_1555",
+        "id": "drawdown_from_high__20d__raw__preclose_1555"
+      },
+      {
+        "concept": "ema_distance",
+        "definition_hash": "c807234de6cabf06572b84cdd2e491e8f03607de8332fe1f28bb1f20dafe01d8",
+        "grid": "preclose_1555",
+        "id": "ema_distance__20d__raw__preclose_1555"
+      },
+      {
+        "concept": "ema_slope",
+        "definition_hash": "b08da2caded01658e82473bdec7ae028a8edd4a9433e7df42bfcd6decb10e4ff",
+        "grid": "preclose_1555",
+        "id": "ema_slope__20d__raw__preclose_1555"
+      },
+      {
+        "concept": "failed_breakdown_strength",
+        "definition_hash": "b2cb7a122ecf02db090319fcd7946872f1250d716b02d424be92a6214ed05798",
+        "grid": "preclose_1555",
+        "id": "failed_breakdown_strength__20d__raw__preclose_1555"
+      },
+      {
+        "concept": "failed_breakout_strength",
+        "definition_hash": "3f8e102e6295c4c159f18653caf1ace6da7e2bb97c6bb4b651c2948a6110b81e",
+        "grid": "preclose_1555",
+        "id": "failed_breakout_strength__20d__raw__preclose_1555"
+      },
+      {
+        "concept": "fast_minus_slow_cross_sectional_rank",
+        "definition_hash": "697d3151aa1e89e3974aef93ce57dcd75649081952c0abb620ad6a6f45588530",
+        "grid": "preclose_1555",
+        "id": "fast_minus_slow_cross_sectional_rank__5d_20d__raw__preclose_1555"
+      },
+      {
+        "concept": "fast_minus_slow_return",
+        "definition_hash": "e17f357393a975fa12a8559aff212e8001b0c7e6103650ee5e1a287fe70d7109",
+        "grid": "preclose_1555",
+        "id": "fast_minus_slow_return__5d_20d__raw__preclose_1555"
+      },
+      {
+        "concept": "fast_minus_slow_risk_adjusted_momentum",
+        "definition_hash": "8f6f17d672beb25d22b94ab8cbd3918de033b1ea84e7d7de31d7a02abbf40c62",
+        "grid": "preclose_1555",
+        "id": "fast_minus_slow_risk_adjusted_momentum__5d_20d__raw__preclose_1555"
+      },
+      {
+        "concept": "fast_slow_ema_gap",
+        "definition_hash": "97890b327bc950d268bfbf9131a37124103a872e5fef35a92d19331542c72187",
+        "grid": "preclose_1555",
+        "id": "fast_slow_ema_gap__20d__raw__preclose_1555"
+      },
+      {
+        "concept": "fast_slow_sma_gap",
+        "definition_hash": "475e6c38952f841c313797ef0b5935b5b2e4cc3e40e68425c6a2ab4df04de4e8",
+        "grid": "preclose_1555",
+        "id": "fast_slow_sma_gap__20d__raw__preclose_1555"
+      },
+      {
+        "concept": "fast_slow_sma_ratio",
+        "definition_hash": "793458b86ce8b8a4680e9a47c195fd80b74a5e8fb05a19e678c91e1ee254c54e",
+        "grid": "preclose_1555",
+        "id": "fast_slow_sma_ratio__20d__raw__preclose_1555"
+      },
+      {
+        "concept": "gap_fill_fraction_15m",
+        "definition_hash": "13a1444196ef3e7d93c333f8dbb3cdcbdf60def1fd137101883d7507ba219600",
+        "grid": "preclose_1555",
+        "id": "gap_fill_fraction_15m__20d__raw__preclose_1555"
+      },
+      {
+        "concept": "gap_fill_fraction_30m",
+        "definition_hash": "b940ecdf8b2c4955d5f0949027a268a96cf809e84e324369af64d3a7429fe277",
+        "grid": "preclose_1555",
+        "id": "gap_fill_fraction_30m__20d__raw__preclose_1555"
+      },
+      {
+        "concept": "gap_fill_fraction_60m",
+        "definition_hash": "e86d4e684a4bcf5e62c43cad2b01047c369ba6aa5764f5e95775b617627bfd25",
+        "grid": "preclose_1555",
+        "id": "gap_fill_fraction_60m__20d__raw__preclose_1555"
+      },
+      {
+        "concept": "gap_fill_fraction_eod",
+        "definition_hash": "148663640f9c9127ef431a534521d15c70ce920237255de8c01889ecc3dfee98",
+        "grid": "preclose_1555",
+        "id": "gap_fill_fraction_eod__20d__raw__preclose_1555"
+      },
+      {
+        "concept": "gap_vs_atr",
+        "definition_hash": "d478cda9f4538140845eab6c3ab3398f857c1be41c820687d76e94f9be7f805e",
+        "grid": "preclose_1555",
+        "id": "gap_vs_atr__20d__raw__preclose_1555"
+      },
+      {
+        "concept": "gap_vs_prior_vol",
+        "definition_hash": "96a47b289012d54bc6c46ddee4239eac642df7e239b15fa3b674368de2e6ce09",
+        "grid": "preclose_1555",
+        "id": "gap_vs_prior_vol__20d__raw__preclose_1555"
+      },
+      {
+        "concept": "garman_klass_vol",
+        "definition_hash": "555cc1cc79958ddd3b2ec17a71a1c4114bb9f47204a1a4fad48292b5a1fe1156",
+        "grid": "preclose_1555",
+        "id": "garman_klass_vol__20d__raw__preclose_1555"
+      },
+      {
+        "concept": "gross_to_net_path_ratio",
+        "definition_hash": "54321d01617b3eba2c34375bcab34089df0651b936298748cfaa5b9f1cd28ae4",
+        "grid": "preclose_1555",
+        "id": "gross_to_net_path_ratio__20d__raw__preclose_1555"
+      },
+      {
+        "concept": "high_low_asymmetry",
+        "definition_hash": "c830cbeb5be9105a38ee3e27b8c84a97617ee4947cc1129a5708747523144609",
+        "grid": "preclose_1555",
+        "id": "high_low_asymmetry__1d__raw__preclose_1555"
+      },
+      {
+        "concept": "hurst_exponent",
+        "definition_hash": "6385fd574480287642d8191eac819087e3f03ec04a3cd7237928a3adbe12cac8",
+        "grid": "preclose_1555",
+        "id": "hurst_exponent__40d__raw__preclose_1555"
+      },
+      {
+        "concept": "idiosyncratic_vol",
+        "definition_hash": "c7285ea5bb16eae0aded571481b8a7ca06ce6ddae0c49791cf8b471b5317d76f",
+        "grid": "preclose_1555",
+        "id": "idiosyncratic_vol__20d__raw__preclose_1555"
+      },
+      {
+        "concept": "information_discreteness",
+        "definition_hash": "cc1ca3271d1ce7fb0137b4fe279b7cd0a046bab3af9dc59781ae83f97bc39b06",
+        "grid": "preclose_1555",
+        "id": "information_discreteness__20d__raw__preclose_1555"
+      },
+      {
+        "concept": "jump_fraction",
+        "definition_hash": "985e1a316c14b844725f754fb93fdde6d1ffecd1744f54c86a474c9f448fab63",
+        "grid": "preclose_1555",
+        "id": "jump_fraction__20d__raw__preclose_1555"
+      },
+      {
+        "concept": "jump_variance_share",
+        "definition_hash": "0d3452383679e395f4c0815ddbb75d30b49aa487dc0cad16233aae34413c0bc4",
+        "grid": "preclose_1555",
+        "id": "jump_variance_share__20d__raw__preclose_1555"
+      },
+      {
+        "concept": "largest_1m_volume_share_session",
+        "definition_hash": "903dc53d4f5328436230cf5ca6f6fa9d079064cd69fd0fbfe81f0e7685ba497e",
+        "grid": "preclose_1555",
+        "id": "largest_1m_volume_share_session__20d__raw__preclose_1555"
+      },
+      {
+        "concept": "largest_5m_volume_share_session",
+        "definition_hash": "d0501d49c71216e9d3ed32fb7051257d370533918a055bb265bbc6e0ff9b895c",
+        "grid": "preclose_1555",
+        "id": "largest_5m_volume_share_session__20d__raw__preclose_1555"
+      },
+      {
+        "concept": "largest_abs_return_share",
+        "definition_hash": "1b62c63d15fbcd101347539f764cd1b7ddc705cd7198f88392c764d7351de9b1",
+        "grid": "preclose_1555",
+        "id": "largest_abs_return_share__20d__raw__preclose_1555"
+      },
+      {
+        "concept": "largest_bar_volume_share",
+        "definition_hash": "b2bc21c09fd021cfc72b59d97860422aff9b68de090d398960ba7c0ed1c6ace6",
+        "grid": "preclose_1555",
+        "id": "largest_bar_volume_share__20d__raw__preclose_1555"
+      },
+      {
+        "concept": "left_expected_shortfall",
+        "definition_hash": "c6a5fa280b1925fb9559e477176d55d36c87b00a3e79fb13918391c29fee7291",
+        "grid": "preclose_1555",
+        "id": "left_expected_shortfall__20d__raw__preclose_1555"
+      },
+      {
+        "concept": "log_return",
+        "definition_hash": "3c40fcc22b88f347af4a42e1b0179e351a466543df01f9f205ecb5a040b53be3",
+        "grid": "preclose_1555",
+        "id": "log_return__20d__raw__preclose_1555"
+      },
+      {
+        "concept": "longest_down_run",
+        "definition_hash": "fa318b7eb2140caefaca39a48ff3d3a92e5fe23113fd88fd62747d7c69158630",
+        "grid": "preclose_1555",
+        "id": "longest_down_run__20d__raw__preclose_1555"
+      },
+      {
+        "concept": "longest_up_run",
+        "definition_hash": "a92540738a38191bd59a6b85ffb7e92288fb7611e703c888935660543730807b",
+        "grid": "preclose_1555",
+        "id": "longest_up_run__20d__raw__preclose_1555"
+      },
+      {
+        "concept": "lower_wick_fraction",
+        "definition_hash": "96fb34c5fce1c1b0d49c956f92c54fac5aa7e02b8c7a3c3988cb4c2dda262350",
+        "grid": "preclose_1555",
+        "id": "lower_wick_fraction__1d__raw__preclose_1555"
+      },
+      {
+        "concept": "market_beta",
+        "definition_hash": "18bc791ded8b61ab93759d4a672be1663aa58477ff3f753442e827821199bb2e",
+        "grid": "preclose_1555",
+        "id": "market_beta__20d__raw__preclose_1555"
+      },
+      {
+        "concept": "market_correlation",
+        "definition_hash": "095aabab6a6d089f1783b6946281d4dbe6ca865a9ffc9a846057cae01ee0801c",
+        "grid": "preclose_1555",
+        "id": "market_correlation__20d__raw__preclose_1555"
+      },
+      {
+        "concept": "market_downside_vol",
+        "definition_hash": "6d51b4dc095c02609283bd02520eab54c4f4ed39dd234ff47df9008b553f65c7",
+        "grid": "preclose_1555",
+        "id": "market_downside_vol__20d__raw__preclose_1555"
+      },
+      {
+        "concept": "market_drawdown",
+        "definition_hash": "ad76126d7d7e27098820b6959ed826bf756a8924f41b883cc7678c655c49dff4",
+        "grid": "preclose_1555",
+        "id": "market_drawdown__20d__raw__preclose_1555"
+      },
+      {
+        "concept": "market_gap",
+        "definition_hash": "ee2742eb7d2897ec84e6f61e6dd96d5c83ff2278802b032963e6d33e330d21ab",
+        "grid": "preclose_1555",
+        "id": "market_gap__20d__raw__preclose_1555"
+      },
+      {
+        "concept": "market_intraday_return",
+        "definition_hash": "94baa097ac63441b6d80a607e79c6f421e6edfec236b10f74e6b6596f173ca59",
+        "grid": "preclose_1555",
+        "id": "market_intraday_return__20d__raw__preclose_1555"
+      },
+      {
+        "concept": "market_lead_response",
+        "definition_hash": "332d707d38c2e068f1add218575630caddf75634713068a0537071e623a8679d",
+        "grid": "preclose_1555",
+        "id": "market_lead_response__20d__raw__preclose_1555"
+      },
+      {
+        "concept": "market_return",
+        "definition_hash": "994b282122db923134617a21bdbaee649939c8d0e859fea6e4e5206e66be00d6",
+        "grid": "preclose_1555",
+        "id": "market_return__20d__raw__preclose_1555"
+      },
+      {
+        "concept": "market_risk_adjusted_momentum",
+        "definition_hash": "44897b136cacdfd10c477312c11b6e9be47b40b94e3091ad6c479187500d41c3",
+        "grid": "preclose_1555",
+        "id": "market_risk_adjusted_momentum__20d__raw__preclose_1555"
+      },
+      {
+        "concept": "market_vol_percentile",
+        "definition_hash": "d0d83d3a74a925c1d44224722197838dd1fdf7d7e8063581e93711c7cdc43eea",
+        "grid": "preclose_1555",
+        "id": "market_vol_percentile__20d__raw__preclose_1555"
+      },
+      {
+        "concept": "market_volatility",
+        "definition_hash": "47205f7f800cd67eaf6c4f41492b65a7de8cd7b1fc35e8125e3cc8e83ba16fe1",
+        "grid": "preclose_1555",
+        "id": "market_volatility__20d__raw__preclose_1555"
+      },
+      {
+        "concept": "max_subreturn",
+        "definition_hash": "ec47fcd5e67f2ea126fd43ee5d8d41c4b569a60790572db8e5957bcd7ee4412f",
+        "grid": "preclose_1555",
+        "id": "max_subreturn__20d__raw__preclose_1555"
+      },
+      {
+        "concept": "mean_median_return_gap",
+        "definition_hash": "56cebe8aeac2ff60a626f4a7094c68c4ed24c0eacdbcda487bd3d74074ef05a3",
+        "grid": "preclose_1555",
+        "id": "mean_median_return_gap__20d__raw__preclose_1555"
+      },
+      {
+        "concept": "midday_to_close_return",
+        "definition_hash": "6fb706606aa5d0fd234f8393228abe3777344be09cf6a182e42e8c46ad3266f3",
+        "grid": "preclose_1555",
+        "id": "midday_to_close_return__20d__raw__preclose_1555"
+      },
+      {
+        "concept": "min_subreturn",
+        "definition_hash": "3345c62585b35a8423721572f18a9af869c35d812c790e41b807aceb445c66f7",
+        "grid": "preclose_1555",
+        "id": "min_subreturn__20d__raw__preclose_1555"
+      },
+      {
+        "concept": "minute_of_day_cos",
+        "definition_hash": "bb68b829d891834149aaf2d3fbcc242201b87b2fee4388e0fc32ca674b81e199",
+        "grid": "preclose_1555",
+        "id": "minute_of_day_cos__context__raw__preclose_1555"
+      },
+      {
+        "concept": "minute_of_day_sin",
+        "definition_hash": "9feb462bd9821c59c175ccf7b48a2d52a95f9d9f081f2ef72b04515b2c0b733b",
+        "grid": "preclose_1555",
+        "id": "minute_of_day_sin__context__raw__preclose_1555"
+      },
+      {
+        "concept": "momentum_acceleration",
+        "definition_hash": "ce020d0d812b71b6a79bdf42333aaa1bbd0adb03fbdff3b5a0ae4090c7c25292",
+        "grid": "preclose_1555",
+        "id": "momentum_acceleration__5d_20d__raw__preclose_1555"
+      },
+      {
+        "concept": "momentum_deceleration",
+        "definition_hash": "4fa5339ebd09fa6e134b29a204e3fc78854fbc337742f269905afe60e3fdbfaf",
+        "grid": "preclose_1555",
+        "id": "momentum_deceleration__5d_20d__raw__preclose_1555"
+      },
+      {
+        "concept": "momentum_sign_agreement",
+        "definition_hash": "39e0a393f7a396610b214860464b9883c6040639b5751c6eab848c38db74268d",
+        "grid": "preclose_1555",
+        "id": "momentum_sign_agreement__5d_20d__raw__preclose_1555"
+      },
+      {
+        "concept": "money_flow_proxy",
+        "definition_hash": "f3cad3167d20cfd58971442a90581effcaf8161cbeffd727b5d7bb5104123b3b",
+        "grid": "preclose_1555",
+        "id": "money_flow_proxy__20d__raw__preclose_1555"
+      },
+      {
+        "concept": "month_end_distance",
+        "definition_hash": "1e9ce68d15105499f6c95388ede61993c78e7cb568d551468435017715ccb020",
+        "grid": "preclose_1555",
+        "id": "month_end_distance__context__raw__preclose_1555"
+      },
+      {
+        "concept": "negative_bar_fraction",
+        "definition_hash": "b1b44bf93ff4a1304fbe4f9d487ff83435cbcbe5f383c3b77417c7d808bca91a",
+        "grid": "preclose_1555",
+        "id": "negative_bar_fraction__20d__raw__preclose_1555"
+      },
+      {
+        "concept": "negative_jump_fraction",
+        "definition_hash": "269d5fd9b23927c6e49fe7c3013d8a405f7867a6a4a7fee3e54e9726b77bd786",
+        "grid": "preclose_1555",
+        "id": "negative_jump_fraction__20d__raw__preclose_1555"
+      },
+      {
+        "concept": "negative_return_sum_abs",
+        "definition_hash": "a4a80a0b341bbd5752e453ddce633501a4e16208237cc098d7086c3ebcc12691",
+        "grid": "preclose_1555",
+        "id": "negative_return_sum_abs__20d__raw__preclose_1555"
+      },
+      {
+        "concept": "new_high_count",
+        "definition_hash": "33f584c31c8d6c31bd44a21cf169486cfcd0da80bf3f32a440e53fd4bdc6ca8b",
+        "grid": "preclose_1555",
+        "id": "new_high_count__20d__raw__preclose_1555"
+      },
+      {
+        "concept": "new_low_count",
+        "definition_hash": "b6dd88ca723a849387d8c0014220acf5ad96f9f980ac898dc3fcf313ebd4aa8a",
+        "grid": "preclose_1555",
+        "id": "new_low_count__20d__raw__preclose_1555"
+      },
+      {
+        "concept": "obv_slope",
+        "definition_hash": "d43c2df99d6549286848feffda64784eb731e6cc9b01cc527bd8ceeda354da7d",
+        "grid": "preclose_1555",
+        "id": "obv_slope__20d__raw__preclose_1555"
+      },
+      {
+        "concept": "open_to_midday_return",
+        "definition_hash": "a209a58c8bae33fdf0e42584f070d3d60e11ab55da00a575580d69c160aa10fa",
+        "grid": "preclose_1555",
+        "id": "open_to_midday_return__20d__raw__preclose_1555"
+      },
+      {
+        "concept": "opening_gap",
+        "definition_hash": "85794aaac041184b16725d39a5a2dabd1fc4f8e836d7ae39444baaf5c3be9f3c",
+        "grid": "preclose_1555",
+        "id": "opening_gap__20d__raw__preclose_1555"
+      },
+      {
+        "concept": "opening_range_pct_15m",
+        "definition_hash": "377a605b0ea531d725bcee60c9934a1b52dcafd00c1d56c6c4e9dd31fe07296b",
+        "grid": "preclose_1555",
+        "id": "opening_range_pct_15m__20d__raw__preclose_1555"
+      },
+      {
+        "concept": "opening_range_pct_30m",
+        "definition_hash": "9230aed4ad8abd2c355a1a330a451e4f7ce8febfcda6dcc90f620aba756e6caa",
+        "grid": "preclose_1555",
+        "id": "opening_range_pct_30m__20d__raw__preclose_1555"
+      },
+      {
+        "concept": "opening_range_pct_60m",
+        "definition_hash": "d29b46bb7d187892a94162330cd9bb9e19e2f65bba34c27c350b53e2d1f7af61",
+        "grid": "preclose_1555",
+        "id": "opening_range_pct_60m__20d__raw__preclose_1555"
+      },
+      {
+        "concept": "opening_return_10m",
+        "definition_hash": "bdc7546eddbcdc33c919b8282de52f6bacaea70428bc4ac7523e7408534cd449",
+        "grid": "preclose_1555",
+        "id": "opening_return_10m__20d__raw__preclose_1555"
+      },
+      {
+        "concept": "opening_return_15m",
+        "definition_hash": "df946bcfa4744b3367d053c7eae6925fc41f7efc1b1f3ed0abe0cbc59a00d078",
+        "grid": "preclose_1555",
+        "id": "opening_return_15m__20d__raw__preclose_1555"
+      },
+      {
+        "concept": "opening_return_30m",
+        "definition_hash": "198c9363ab85f2946ba8b81c3376aedf96553e9779089567b18d82ca99aa61a0",
+        "grid": "preclose_1555",
+        "id": "opening_return_30m__20d__raw__preclose_1555"
+      },
+      {
+        "concept": "opening_return_5m",
+        "definition_hash": "490859f031ac4bce7a609adc23563ce34911d14d7d6cfbecf5819defdf98ec6c",
+        "grid": "preclose_1555",
+        "id": "opening_return_5m__20d__raw__preclose_1555"
+      },
+      {
+        "concept": "opening_return_60m",
+        "definition_hash": "952a29d6ff666fd57a700e3d76e58fb2b4f0172576c6cf629b038a8636216606",
+        "grid": "preclose_1555",
+        "id": "opening_return_60m__20d__raw__preclose_1555"
+      },
+      {
+        "concept": "opening_rvol_15m",
+        "definition_hash": "181a3c591586cf425cb65ea63f9573a2e874d649ebe6b847d62ba78c6547d809",
+        "grid": "preclose_1555",
+        "id": "opening_rvol_15m__20d__raw__preclose_1555"
+      },
+      {
+        "concept": "opening_rvol_30m",
+        "definition_hash": "c283f054d36bba9773f57723f451fe857cad338ec1ec6330777067c5b2507908",
+        "grid": "preclose_1555",
+        "id": "opening_rvol_30m__20d__raw__preclose_1555"
+      },
+      {
+        "concept": "opening_rvol_60m",
+        "definition_hash": "0f3f3db637809f87cdeb4848faf59467e18884886ce61670cf5a03e47ca80e93",
+        "grid": "preclose_1555",
+        "id": "opening_rvol_60m__20d__raw__preclose_1555"
+      },
+      {
+        "concept": "overnight_minus_regular",
+        "definition_hash": "71bda34b7df4a7c666bf5b19901bc0358b2bd993ede7fe45c15e6fee86dca1d6",
+        "grid": "preclose_1555",
+        "id": "overnight_minus_regular__20d__raw__preclose_1555"
+      },
+      {
+        "concept": "overnight_return",
+        "definition_hash": "17cb4e8363dfa4189871b024699aa982c032e6be788e1835038a651bb1fdcb24",
+        "grid": "preclose_1555",
+        "id": "overnight_return__20d__raw__preclose_1555"
+      },
+      {
+        "concept": "overnight_share_total",
+        "definition_hash": "fca56c78d2c629dde2839a031a0c35a8e061ab087a5c586bb00fa593a70119a3",
+        "grid": "preclose_1555",
+        "id": "overnight_share_total__20d__raw__preclose_1555"
+      },
+      {
+        "concept": "p05_subreturn",
+        "definition_hash": "2bd30c0e50e9f3a0d7f1cdf17eee79cff9046cea21bcc9ae74b6d5db19b9269b",
+        "grid": "preclose_1555",
+        "id": "p05_subreturn__20d__raw__preclose_1555"
+      },
+      {
+        "concept": "p95_subreturn",
+        "definition_hash": "273ff91970b75885f78f4ffc82cde2a013042b9cd2e40037eabfef0fdff256f5",
+        "grid": "preclose_1555",
+        "id": "p95_subreturn__20d__raw__preclose_1555"
+      },
+      {
+        "concept": "parkinson_vol",
+        "definition_hash": "69d7d1d737fd5d895820c6d46195f8da991146ffd56098971b86f053f1f4a26a",
+        "grid": "preclose_1555",
+        "id": "parkinson_vol__20d__raw__preclose_1555"
+      },
+      {
+        "concept": "path_chord_convexity",
+        "definition_hash": "4672f2c4c8a1be22ccc07a4eb33e4d456323b77ad81610ae60491f71fdfa6d0a",
+        "grid": "preclose_1555",
+        "id": "path_chord_convexity__20d__raw__preclose_1555"
+      },
+      {
+        "concept": "path_efficiency",
+        "definition_hash": "8f33d29c14cb613c720d4c854231743b4dd7435c5b13b5b80316db1866db9d53",
+        "grid": "preclose_1555",
+        "id": "path_efficiency__20d__raw__preclose_1555"
+      },
+      {
+        "concept": "path_quadratic_curvature",
+        "definition_hash": "de42b262b44554a5c3c440fe5d64022ad60d729db284fb399fc891c99c4fce85",
+        "grid": "preclose_1555",
+        "id": "path_quadratic_curvature__20d__raw__preclose_1555"
+      },
+      {
+        "concept": "permutation_entropy",
+        "definition_hash": "dd0aa37d024d867e2ddea9bae3632e2fe3bc48cecdfd7e2975ad31ceadf58bab",
+        "grid": "preclose_1555",
+        "id": "permutation_entropy__20d__raw__preclose_1555"
+      },
+      {
+        "concept": "positive_bar_fraction",
+        "definition_hash": "ea3f73a3db308cde1682a44f8802eb6dc4fe0fb1276954a7c873607c103a46e3",
+        "grid": "preclose_1555",
+        "id": "positive_bar_fraction__20d__raw__preclose_1555"
+      },
+      {
+        "concept": "positive_jump_fraction",
+        "definition_hash": "afdf04b9e3448591f59d3011c4eb7dc31dfb024f2a4312b8599a78efe090b2c1",
+        "grid": "preclose_1555",
+        "id": "positive_jump_fraction__20d__raw__preclose_1555"
+      },
+      {
+        "concept": "positive_overnight_fraction",
+        "definition_hash": "a78b1b498497980a71cd7eefc13db1886c3689aa36280d78d1fadc3f1d0c0e3b",
+        "grid": "preclose_1555",
+        "id": "positive_overnight_fraction__20d__raw__preclose_1555"
+      },
+      {
+        "concept": "positive_regular_fraction",
+        "definition_hash": "06b851a2a12e821ef6162361cef8e95858c2be77846ec89711e1083a6a8f4b0d",
+        "grid": "preclose_1555",
+        "id": "positive_regular_fraction__20d__raw__preclose_1555"
+      },
+      {
+        "concept": "positive_return_sum",
+        "definition_hash": "6e30c2905d185bc01c28d249b49be2559750cd5ea58f3fe13496cd697ce98764",
+        "grid": "preclose_1555",
+        "id": "positive_return_sum__20d__raw__preclose_1555"
+      },
+      {
+        "concept": "post_holiday_flag",
+        "definition_hash": "08b5a73ad038f1f90e3a35b6db4c4fd241f8394b9864f5adf3a68f37eff1c85e",
+        "grid": "preclose_1555",
+        "id": "post_holiday_flag__context__raw__preclose_1555"
+      },
+      {
+        "concept": "pre_holiday_flag",
+        "definition_hash": "a113bfe57264b5afaa39cf1faf725bf8550315971adc444db20b7f36bbefe9b1",
+        "grid": "preclose_1555",
+        "id": "pre_holiday_flag__context__raw__preclose_1555"
+      },
+      {
+        "concept": "price_minus_sma_volnorm",
+        "definition_hash": "41ff76448f985cb05dab01c9d7ebe4132c715549066ffa85d8d894224cf9acd1",
+        "grid": "preclose_1555",
+        "id": "price_minus_sma_volnorm__20d__raw__preclose_1555"
+      },
+      {
+        "concept": "price_shock_minus_volume_shock",
+        "definition_hash": "80dda1bf29ee904a1d49e694b727eb8db231631670c9b8ec3d957810e55e4ecd",
+        "grid": "preclose_1555",
+        "id": "price_shock_minus_volume_shock__20d__raw__preclose_1555"
+      },
+      {
+        "concept": "price_to_sma",
+        "definition_hash": "eeb2d09dafc2074de62a72edc866cf44930a8665988ff2de74d423a7a6e70502",
+        "grid": "preclose_1555",
+        "id": "price_to_sma__20d__raw__preclose_1555"
+      },
+      {
+        "concept": "prior_high_reclaim_strength",
+        "definition_hash": "92f41e728574c1a61c441d7c2f43aea764d865f00978a964aef54c9bca81c533",
+        "grid": "preclose_1555",
+        "id": "prior_high_reclaim_strength__20d__raw__preclose_1555"
+      },
+      {
+        "concept": "prior_low_reclaim_strength",
+        "definition_hash": "ea97ab6641965936e812924e5d4e9211acf52d8ba86ae4b6be39906b0eaef1df",
+        "grid": "preclose_1555",
+        "id": "prior_low_reclaim_strength__20d__raw__preclose_1555"
+      },
+      {
+        "concept": "pullback_in_uptrend",
+        "definition_hash": "73a0c38e71c7b340d79260f72b3fe648d43552b719018089c2e1b9a0cca5ae41",
+        "grid": "preclose_1555",
+        "id": "pullback_in_uptrend__5d_20d__raw__preclose_1555"
+      },
+      {
+        "concept": "quarter_end_distance",
+        "definition_hash": "24889c70ca513ed85e81131946328eaa0bb0a519d2b9287700c39dae2833c1d8",
+        "grid": "preclose_1555",
+        "id": "quarter_end_distance__context__raw__preclose_1555"
+      },
+      {
+        "concept": "range_per_dollar_volume",
+        "definition_hash": "a149f55c3b18105ee94a62fc0466ba87667dabac1b6de41f9a75f9d57603724a",
+        "grid": "preclose_1555",
+        "id": "range_per_dollar_volume__20d__raw__preclose_1555"
+      },
+      {
+        "concept": "range_position",
+        "definition_hash": "fd93781417c86471233a3a648b6f7233addec3f96e595d059950924449291222",
+        "grid": "preclose_1555",
+        "id": "range_position__20d__raw__preclose_1555"
+      },
+      {
+        "concept": "raw_volume",
+        "definition_hash": "12d8269852c2cd503ce59b4591f3f11dce4502d48a5a5fd5f0a03e89fae8d79e",
+        "grid": "preclose_1555",
+        "id": "raw_volume__20d__raw__preclose_1555"
+      },
+      {
+        "concept": "realized_kurtosis",
+        "definition_hash": "add1e6e7b4b742e26a06deae95d6db1b57cfeaf405809907a5cebbf12859bfa8",
+        "grid": "preclose_1555",
+        "id": "realized_kurtosis__20d__raw__preclose_1555"
+      },
+      {
+        "concept": "realized_skewness",
+        "definition_hash": "9593801b231851e84da24eca318992dfd7b24ba209a9a491c1726c9cd1f73d9b",
+        "grid": "preclose_1555",
+        "id": "realized_skewness__20d__raw__preclose_1555"
+      },
+      {
+        "concept": "realized_vol",
+        "definition_hash": "830c7559e4ef4f8f98637e37d6e846d4a9e9ab850efbebf37f2dec243ff20428",
+        "grid": "preclose_1555",
+        "id": "realized_vol__20d__raw__preclose_1555"
+      },
+      {
+        "concept": "recovery_fraction",
+        "definition_hash": "cfe4ce7c4f882aa01929215d819397560d4b7c30170395c8653d60f69abb0ddd",
+        "grid": "preclose_1555",
+        "id": "recovery_fraction__20d__raw__preclose_1555"
+      },
+      {
+        "concept": "recovery_from_low",
+        "definition_hash": "f7e5b20bec0155106fb932566ca715e94fcf6615db44b1cd01475f8e63cb485c",
+        "grid": "preclose_1555",
+        "id": "recovery_from_low__20d__raw__preclose_1555"
+      },
+      {
+        "concept": "recovery_in_downtrend",
+        "definition_hash": "9209b6b4cf8e5b28979177db3cd7e8bfef3734f9110aeeff77a022a0529f8731",
+        "grid": "preclose_1555",
+        "id": "recovery_in_downtrend__5d_20d__raw__preclose_1555"
+      },
+      {
+        "concept": "regular_session_return",
+        "definition_hash": "ade68bf79bdc9ac201d39e9e184534704918e0f486f9f273050c782edc7ca9c2",
+        "grid": "preclose_1555",
+        "id": "regular_session_return__20d__raw__preclose_1555"
+      },
+      {
+        "concept": "relative_dollar_volume",
+        "definition_hash": "8e1995e3daa87aeaa9cba74d638f5780b79344632734f361b2e6c9c363b48480",
+        "grid": "preclose_1555",
+        "id": "relative_dollar_volume__20d__raw__preclose_1555"
+      },
+      {
+        "concept": "relative_trade_count",
+        "definition_hash": "f394ff71266e1202fb054afc8d862daca2d367bc18cc234f77e330f739256334",
+        "grid": "preclose_1555",
+        "id": "relative_trade_count__20d__raw__preclose_1555"
+      },
+      {
+        "concept": "relative_volume",
+        "definition_hash": "427cfd591945133a4671f97c98929af62004a3c3ce7ffdcc94aa89b13f785b89",
+        "grid": "preclose_1555",
+        "id": "relative_volume__20d__raw__preclose_1555"
+      },
+      {
+        "concept": "return_acceleration_halves",
+        "definition_hash": "ef88ec86bf6aa85d05d84b16576119c9eca340de494516eb49f00dcc155f7ae7",
+        "grid": "preclose_1555",
+        "id": "return_acceleration_halves__20d__raw__preclose_1555"
+      },
+      {
+        "concept": "return_acceleration_thirds",
+        "definition_hash": "a666b83f2ec6185a0fa58b8812fbbcf6326d6b361ea4cdaa535a69ab3641645d",
+        "grid": "preclose_1555",
+        "id": "return_acceleration_thirds__20d__raw__preclose_1555"
+      },
+      {
+        "concept": "return_autocorr_lag1",
+        "definition_hash": "efa6d285ff5177c745c8fdbe8d389d1d5f07ee3aed532fe88e1ebaa799f58ff7",
+        "grid": "preclose_1555",
+        "id": "return_autocorr_lag1__20d__raw__preclose_1555"
+      },
+      {
+        "concept": "return_autocorr_lag2",
+        "definition_hash": "fe2a70b145f6391641dc124804234ebb84a2fcad4c3b7dbc9eb1457ab6f7dd69",
+        "grid": "preclose_1555",
+        "id": "return_autocorr_lag2__20d__raw__preclose_1555"
+      },
+      {
+        "concept": "return_autocorr_lag3",
+        "definition_hash": "3c247069a89be7cb2430d1fb403451d9b414ba72a999eb2e4142de63501d90b7",
+        "grid": "preclose_1555",
+        "id": "return_autocorr_lag3__20d__raw__preclose_1555"
+      },
+      {
+        "concept": "return_entropy",
+        "definition_hash": "5e4b6cde08b4627afcf08ca7e748f231d8cd4e87e1ba9121e3201cf660cc99d6",
+        "grid": "preclose_1555",
+        "id": "return_entropy__20d__raw__preclose_1555"
+      },
+      {
+        "concept": "return_over_downside_vol",
+        "definition_hash": "20b6cc351bc3b6da8660b3f71caef286a7982ddf588b0bc910d22a2e4e1f5de1",
+        "grid": "preclose_1555",
+        "id": "return_over_downside_vol__20d__raw__preclose_1555"
+      },
+      {
+        "concept": "return_over_realized_vol",
+        "definition_hash": "c384ecd6fa580b30a88fd132f7c8dd077a9039cd171a98d2d9084a00f20c5f8f",
+        "grid": "preclose_1555",
+        "id": "return_over_realized_vol__20d__raw__preclose_1555"
+      },
+      {
+        "concept": "return_t_stat",
+        "definition_hash": "f3e34a26018dd7430f21dcbc9f44860183a24a91b93cfbb0e7c4dfbd0dd69fc2",
+        "grid": "preclose_1555",
+        "id": "return_t_stat__20d__raw__preclose_1555"
+      },
+      {
+        "concept": "return_volume_corr",
+        "definition_hash": "39c31cb4ac61181beb39f175ec779d37ae8068e5fd5eb52791f2c68b7f243746",
+        "grid": "preclose_1555",
+        "id": "return_volume_corr__20d__raw__preclose_1555"
+      },
+      {
+        "concept": "return_x_rvol",
+        "definition_hash": "a08f738e846c012947f3e61ce7ee8c1512313e1883218c7bfa61a7b4d364f8de",
+        "grid": "preclose_1555",
+        "id": "return_x_rvol__20d__raw__preclose_1555"
+      },
+      {
+        "concept": "return_x_volume_z",
+        "definition_hash": "c65502bb2a97c6a827940aacc0bd5b3de06ac9fe9a6b40f5f2497607235080c0",
+        "grid": "preclose_1555",
+        "id": "return_x_volume_z__20d__raw__preclose_1555"
+      },
+      {
+        "concept": "right_expected_shortfall",
+        "definition_hash": "2ce3ad426fe30de1e82ffabb76694d66ebe95cc56e59367fab88ec881b5f9adf",
+        "grid": "preclose_1555",
+        "id": "right_expected_shortfall__20d__raw__preclose_1555"
+      },
+      {
+        "concept": "rogers_satchell_vol",
+        "definition_hash": "d45964a741b99b10cd7c15d1dbb209ea6bd71f00e0b1534dcbd22f36cd6e11e9",
+        "grid": "preclose_1555",
+        "id": "rogers_satchell_vol__20d__raw__preclose_1555"
+      },
+      {
+        "concept": "roll_spread_proxy",
+        "definition_hash": "7510b9df04df4d62e2b2f586a6e3e465cb18c270d540cbd016f56a2113f52058",
+        "grid": "preclose_1555",
+        "id": "roll_spread_proxy__20d__raw__preclose_1555"
+      },
+      {
+        "concept": "semivariance_ratio",
+        "definition_hash": "32ad43b82f4f92d012a8c9a454c6a1c62c3062e40d3808010ce27b4f50c315e7",
+        "grid": "preclose_1555",
+        "id": "semivariance_ratio__20d__raw__preclose_1555"
+      },
+      {
+        "concept": "session_vwap_distance",
+        "definition_hash": "b9d119625a67dd833fb51c507323b3fa763cef536a4e5122fcd8fed984a965a6",
+        "grid": "preclose_1555",
+        "id": "session_vwap_distance__20d__raw__preclose_1555"
+      },
+      {
+        "concept": "sign_autocorr_lag1",
+        "definition_hash": "73fe5c4f207250a6dd1462452b2c09b982eb22becf61ad8825b2a5a7e62f91d9",
+        "grid": "preclose_1555",
+        "id": "sign_autocorr_lag1__20d__raw__preclose_1555"
+      },
+      {
+        "concept": "sign_entropy",
+        "definition_hash": "05a4dbc03bab4168178f2374f0fb4b15c90ef5d37e4ef8c6c4cf824e53ba937c",
+        "grid": "preclose_1555",
+        "id": "sign_entropy__20d__raw__preclose_1555"
+      },
+      {
+        "concept": "sign_persistence",
+        "definition_hash": "6a93126e2c8ab6dafecc637ddfcc41631ebad6388d4ea347f9a5cc4d6840eaa9",
+        "grid": "preclose_1555",
+        "id": "sign_persistence__20d__raw__preclose_1555"
+      },
+      {
+        "concept": "sign_switch_rate",
+        "definition_hash": "0afa989132dc9741797d84b6d34bcfa85d49a01badcb2969547a5965e4d7cfae",
+        "grid": "preclose_1555",
+        "id": "sign_switch_rate__20d__raw__preclose_1555"
+      },
+      {
+        "concept": "signed_body_to_range",
+        "definition_hash": "3f9c5a8a5d0a2198ba4d8c6f96af39e78c7413e9b3fe43f70238de7c56f6664d",
+        "grid": "preclose_1555",
+        "id": "signed_body_to_range__1d__raw__preclose_1555"
+      },
+      {
+        "concept": "signed_return_concentration",
+        "definition_hash": "35c2e5c9465a9e07f3251d4a6c9f440387918aee14ef3424d0186805076a8be8",
+        "grid": "preclose_1555",
+        "id": "signed_return_concentration__20d__raw__preclose_1555"
+      },
+      {
+        "concept": "signed_volume_balance",
+        "definition_hash": "83d990e24e96b9031a84b2aeb156785f6404101634b978a8c85bc0fdca46e23d",
+        "grid": "preclose_1555",
+        "id": "signed_volume_balance__20d__raw__preclose_1555"
+      },
+      {
+        "concept": "simple_return",
+        "definition_hash": "c31ce908e2d1635d65a8d391b62d65679c3208968c3c442a7d91ab425d978e64",
+        "grid": "preclose_1555",
+        "id": "simple_return__20d__raw__preclose_1555"
+      },
+      {
+        "concept": "sma_acceleration",
+        "definition_hash": "eda4be3f2fcce0d8854bbbb255e0b319d56ccf314d095575f35b7fc6633aec64",
+        "grid": "preclose_1555",
+        "id": "sma_acceleration__20d__raw__preclose_1555"
+      },
+      {
+        "concept": "sma_slope",
+        "definition_hash": "d5f85878dd37e5c2bffdd9ff90efdc589cb4526b8b091839c9241d7f0b2db486",
+        "grid": "preclose_1555",
+        "id": "sma_slope__20d__raw__preclose_1555"
+      },
+      {
+        "concept": "stock_lead_market_response",
+        "definition_hash": "5fcdd53ca03456915bb8dfe1c4213cb46e96c4b7f14029ba80cc834987de60e7",
+        "grid": "preclose_1555",
+        "id": "stock_lead_market_response__20d__raw__preclose_1555"
+      },
+      {
+        "concept": "tail_spread",
+        "definition_hash": "4c88b2004d08e4e83442448d2129fd7441172cff9ab5473cba1688790976abe5",
+        "grid": "preclose_1555",
+        "id": "tail_spread__20d__raw__preclose_1555"
+      },
+      {
+        "concept": "time_above_vwap",
+        "definition_hash": "b9061facc1e1295f6f2d9cf4540534c47051f928d501bbca8135d86fc06c2d68",
+        "grid": "preclose_1555",
+        "id": "time_above_vwap__20d__raw__preclose_1555"
+      },
+      {
+        "concept": "top2_abs_return_share",
+        "definition_hash": "49901eaf42ab6aabf5aa7405b4f9602ffbf1a551b80f62127f60afbdfe2f9bae",
+        "grid": "preclose_1555",
+        "id": "top2_abs_return_share__20d__raw__preclose_1555"
+      },
+      {
+        "concept": "top3_abs_return_share",
+        "definition_hash": "c318f62fc7dfa280232f35197230fd12def4ea73c9562244655a26490418d1a5",
+        "grid": "preclose_1555",
+        "id": "top3_abs_return_share__20d__raw__preclose_1555"
+      },
+      {
+        "concept": "top5_abs_return_share",
+        "definition_hash": "8b814b170c810bd927d4e3c605d5ae8977fe74bffad46af9d14485d67ada6f79",
+        "grid": "preclose_1555",
+        "id": "top5_abs_return_share__20d__raw__preclose_1555"
+      },
+      {
+        "concept": "trade_count",
+        "definition_hash": "cb09993e8c5aa2f98a052460a840cce17fa4ae68d41edb0e4d5962756b7af7c1",
+        "grid": "preclose_1555",
+        "id": "trade_count__20d__raw__preclose_1555"
+      },
+      {
+        "concept": "trend_r2",
+        "definition_hash": "b853f1b2001c2c3e0ba01da97d564cffa8672b31459b9d5b7851e052e0cd3f19",
+        "grid": "preclose_1555",
+        "id": "trend_r2__20d__raw__preclose_1555"
+      },
+      {
+        "concept": "trend_slope",
+        "definition_hash": "f12629a5673e05df7e3bb22d572f6496c96a10a2f261e80a29248013cf029f12",
+        "grid": "preclose_1555",
+        "id": "trend_slope__20d__raw__preclose_1555"
+      },
+      {
+        "concept": "trend_slope_t",
+        "definition_hash": "d2ff0742046b67e8809cf474237f238348ab565b36f8f3dc4fd57aeded3411b6",
+        "grid": "preclose_1555",
+        "id": "trend_slope_t__20d__raw__preclose_1555"
+      },
+      {
+        "concept": "true_range_pct",
+        "definition_hash": "792ee56200383eddfdb8283bc6c00bc7ec10aa13420ef3ae823eee65b4a5cd08",
+        "grid": "preclose_1555",
+        "id": "true_range_pct__1d__raw__preclose_1555"
+      },
+      {
+        "concept": "up_bar_volume_share",
+        "definition_hash": "ff11145abf71805d50234525d1829ea2c702daa11167b7d231ef84025d9efbfa",
+        "grid": "preclose_1555",
+        "id": "up_bar_volume_share__20d__raw__preclose_1555"
+      },
+      {
+        "concept": "up_down_return_ratio",
+        "definition_hash": "e66474267cd7fe1f283d4c3c592cbf2bd90340f38c47be755a50442bc2dad29d",
+        "grid": "preclose_1555",
+        "id": "up_down_return_ratio__20d__raw__preclose_1555"
+      },
+      {
+        "concept": "upper_wick_fraction",
+        "definition_hash": "d74012808c2d05f853e30593989c6d7d3b540f54de26f40d572b339204a82467",
+        "grid": "preclose_1555",
+        "id": "upper_wick_fraction__1d__raw__preclose_1555"
+      },
+      {
+        "concept": "upside_beta",
+        "definition_hash": "812c330f3bb2dc2086b89002700962717046e2b68973234c2ac89d0f6d5f2406",
+        "grid": "preclose_1555",
+        "id": "upside_beta__20d__raw__preclose_1555"
+      },
+      {
+        "concept": "upside_semivariance",
+        "definition_hash": "b3247aa4264fa943c8fb4654ff82b34ab266e8959a72680f9f82df686b5e6e18",
+        "grid": "preclose_1555",
+        "id": "upside_semivariance__20d__raw__preclose_1555"
+      },
+      {
+        "concept": "upside_vol",
+        "definition_hash": "ea77da6db54b05a014fe2b75ceb7d476a5947699fc0f8aca8f7b4a65c0ef5ad3",
+        "grid": "preclose_1555",
+        "id": "upside_vol__20d__raw__preclose_1555"
+      },
+      {
+        "concept": "upside_vol_acceleration",
+        "definition_hash": "a487d7193021c2ec9c834718fbb4364a9d4eedd9f0248b2d81882410f709a9c2",
+        "grid": "preclose_1555",
+        "id": "upside_vol_acceleration__20d__raw__preclose_1555"
+      },
+      {
+        "concept": "variance_ratio_2",
+        "definition_hash": "91b078535cb0a10aebcec6a53fe317b102f309e41e54ff4bcb3e34a891947542",
+        "grid": "preclose_1555",
+        "id": "variance_ratio_2__20d__raw__preclose_1555"
+      },
+      {
+        "concept": "variance_ratio_5",
+        "definition_hash": "ad08693e66670b1d5d1afeb62779302bb420066c5100af193b4aa4867181c270",
+        "grid": "preclose_1555",
+        "id": "variance_ratio_5__20d__raw__preclose_1555"
+      },
+      {
+        "concept": "vol_acceleration",
+        "definition_hash": "d51c16f264f4665099c2f609d6c8c1c42e7fdef54ffdc13a55655d6380564b36",
+        "grid": "preclose_1555",
+        "id": "vol_acceleration__20d__raw__preclose_1555"
+      },
+      {
+        "concept": "vol_compression_ratio",
+        "definition_hash": "0ad74d1734aadb443d0bfc2ff52c238ada86b4fc61222ff5cc3601a9909eaeb1",
+        "grid": "preclose_1555",
+        "id": "vol_compression_ratio__20d__raw__preclose_1555"
+      },
+      {
+        "concept": "vol_of_vol",
+        "definition_hash": "a378a988501069ead5d8c7e56cd7c68f892e4075227b42dc758c5b8a23e0b3ad",
+        "grid": "preclose_1555",
+        "id": "vol_of_vol__20d__raw__preclose_1555"
+      },
+      {
+        "concept": "vol_percentile_own",
+        "definition_hash": "96fd60e3a1edd099a908c3c07f173df6fdb85e28ff5a6cfb4fd58b42f7cba2f2",
+        "grid": "preclose_1555",
+        "id": "vol_percentile_own__20d__raw__preclose_1555"
+      },
+      {
+        "concept": "volume_acceleration",
+        "definition_hash": "b31c24e731a9659d1a7607a64ea974de8c0591005aa9d4605e8d37b979619679",
+        "grid": "preclose_1555",
+        "id": "volume_acceleration__20d__raw__preclose_1555"
+      },
+      {
+        "concept": "volume_concentration",
+        "definition_hash": "ec5055144d3165d7069831e1cdb6a5076127646cf0cb6b0396f7b72a0a1a3146",
+        "grid": "preclose_1555",
+        "id": "volume_concentration__20d__raw__preclose_1555"
+      },
+      {
+        "concept": "volume_percentile_own",
+        "definition_hash": "a46b711c0592e5d6d269ef62c821af1fdb002bd1bee81fbedd2cfb9a8992fcfa",
+        "grid": "preclose_1555",
+        "id": "volume_percentile_own__20d__raw__preclose_1555"
+      },
+      {
+        "concept": "volume_shock_minus_price_shock",
+        "definition_hash": "05856f7f2df0422dcb6d3fa9b26b38241790fe09f7945e3421a922b2ffe8afbf",
+        "grid": "preclose_1555",
+        "id": "volume_shock_minus_price_shock__20d__raw__preclose_1555"
+      },
+      {
+        "concept": "volume_trend",
+        "definition_hash": "45886ef95d234e4e4d12f1127bc726d9d3f57250050b0ec5eab1a8dae48c7e1e",
+        "grid": "preclose_1555",
+        "id": "volume_trend__20d__raw__preclose_1555"
+      },
+      {
+        "concept": "volume_volatility",
+        "definition_hash": "af94013c389fc27013a9df4a512d0d1883261fd988af75e5c4803ea83172110f",
+        "grid": "preclose_1555",
+        "id": "volume_volatility__20d__raw__preclose_1555"
+      },
+      {
+        "concept": "volume_zscore",
+        "definition_hash": "5c84c86d6a370c4163335b125745fe0e8a13de96d48e7d88902bef0eddedb2e5",
+        "grid": "preclose_1555",
+        "id": "volume_zscore__20d__raw__preclose_1555"
+      },
+      {
+        "concept": "vwap_cross_count",
+        "definition_hash": "f53ba86ff84d4fbffe93baec2b8874bd4b6e159a1d87406a615171066469a970",
+        "grid": "preclose_1555",
+        "id": "vwap_cross_count__20d__raw__preclose_1555"
+      },
+      {
+        "concept": "vwap_drift",
+        "definition_hash": "efbd0dc4c2dd14ff63d213a432cccccd357e22b221bfabf455eca88f33ebc80b",
+        "grid": "preclose_1555",
+        "id": "vwap_drift__20d__raw__preclose_1555"
+      },
+      {
+        "concept": "window_max_drawdown",
+        "definition_hash": "262d302e798727e2034031f32f32938cb1d0c3189e582fe3033e74dfbbc3d3ea",
+        "grid": "preclose_1555",
+        "id": "window_max_drawdown__20d__raw__preclose_1555"
+      },
+      {
+        "concept": "window_max_runup",
+        "definition_hash": "1c8567cedab7235982107479929829bbd153bcee0365b4a77d7ef0e9622c8c54",
+        "grid": "preclose_1555",
+        "id": "window_max_runup__20d__raw__preclose_1555"
+      }
+    ],
+    "grids": [
+      "intraday_5m",
+      "daily_close",
+      "preclose_1555"
+    ],
+    "reference_universe": {},
+    "resolutions": [
+      3,
+      5,
+      10
+    ],
+    "target_mode": "canonical_defaults",
+    "targets": [
+      {
+        "definition_hash": "c6e4e662fed8559fcd69055df8571ea0f27bc1e1068e61081da5f04d69f52b44",
+        "grid": "intraday_5m",
+        "id": "target_1m__raw__intraday_5m"
+      },
+      {
+        "definition_hash": "a7119da5cf8c98be508b66c92a8e19ad0aa1be6fc1a32e3df1dd6d9fe2ef8b0c",
+        "grid": "intraday_5m",
+        "id": "target_1m__benchmark_adjusted__intraday_5m"
+      },
+      {
+        "definition_hash": "b8932ddb5db902d6eccbacf5dcd3997eaaeaf5bcde03a161551574d5ac5045a0",
+        "grid": "intraday_5m",
+        "id": "target_1m__beta_residual__intraday_5m"
+      },
+      {
+        "definition_hash": "8af848664a64248557f00231f56f1d6897cfbc3b4e663455bb6288324396029e",
+        "grid": "intraday_5m",
+        "id": "target_2m__raw__intraday_5m"
+      },
+      {
+        "definition_hash": "b392e5766dc4c9dd47d0d098c95130b419b86590ff858dd20c74267734580109",
+        "grid": "intraday_5m",
+        "id": "target_2m__benchmark_adjusted__intraday_5m"
+      },
+      {
+        "definition_hash": "a15ec70d170f48333d9f308d9e37bdcc3043d3f605f001aaf2bdd203f214e0e7",
+        "grid": "intraday_5m",
+        "id": "target_2m__beta_residual__intraday_5m"
+      },
+      {
+        "definition_hash": "9c72a38aa18e6c7a1f3c68f999367db9fcf01f3fd834fa5946bc8df61083d0ce",
+        "grid": "intraday_5m",
+        "id": "target_5m__raw__intraday_5m"
+      },
+      {
+        "definition_hash": "5f58e192132f8935e2905130427007d136644b47875a5b78c97f7addc0983775",
+        "grid": "intraday_5m",
+        "id": "target_5m__benchmark_adjusted__intraday_5m"
+      },
+      {
+        "definition_hash": "ed57cc853da26873001fa24c43cc67c51a0973ae707b47b7b44bd45814b7b51a",
+        "grid": "intraday_5m",
+        "id": "target_5m__beta_residual__intraday_5m"
+      },
+      {
+        "definition_hash": "d10665d4181680eed3143acb8177891257f0d6d06d89b5bde0bb85d7b8fc968e",
+        "grid": "intraday_5m",
+        "id": "target_10m__raw__intraday_5m"
+      },
+      {
+        "definition_hash": "5641694e7a2e15dd40afd64f123f2c5d18b76673dd9e6ac25088a1673e5cd8b0",
+        "grid": "intraday_5m",
+        "id": "target_10m__benchmark_adjusted__intraday_5m"
+      },
+      {
+        "definition_hash": "a654be4fb96358ac5b3f5b40ffe7607730054ac1613b8e19efae4a10ae6514dc",
+        "grid": "intraday_5m",
+        "id": "target_10m__beta_residual__intraday_5m"
+      },
+      {
+        "definition_hash": "e946843027995902cad88cf345d8ba3f1ccc01df080a2eb358cf2c9af078d41c",
+        "grid": "intraday_5m",
+        "id": "target_15m__raw__intraday_5m"
+      },
+      {
+        "definition_hash": "2a07eb11b5d8b589a2b90911727d2b7dc3a17c72d41abd191ec48768f966a3a4",
+        "grid": "intraday_5m",
+        "id": "target_15m__benchmark_adjusted__intraday_5m"
+      },
+      {
+        "definition_hash": "830cb5e7a44d4ae830468a5ab1d82ab76f0f430bb05f9e8fb3a506b68724d7dc",
+        "grid": "intraday_5m",
+        "id": "target_15m__beta_residual__intraday_5m"
+      },
+      {
+        "definition_hash": "3d022ee8274fc065e632f34327c51c2a525a19c6daa92c89aa6a02c93cb58f90",
+        "grid": "intraday_5m",
+        "id": "target_30m__raw__intraday_5m"
+      },
+      {
+        "definition_hash": "1f032b831bb229d5bd69f456f1e754bf542776a7eaa958b3058306347df999b1",
+        "grid": "intraday_5m",
+        "id": "target_30m__benchmark_adjusted__intraday_5m"
+      },
+      {
+        "definition_hash": "6ddb1a2185bea4a0b6fb03e59d5a1a0f26e01d0d620a083dedd71a89ced51619",
+        "grid": "intraday_5m",
+        "id": "target_30m__beta_residual__intraday_5m"
+      },
+      {
+        "definition_hash": "dfc1f9a8c85a7ea4e3b4d76edc8b3bb669bfc725f4d7916a3041e02164b6b2bb",
+        "grid": "intraday_5m",
+        "id": "target_60m__raw__intraday_5m"
+      },
+      {
+        "definition_hash": "c2c43da2e1d8dbc97f5756d63fa811f33e70f0033183cc8ae640adc7c75abe8c",
+        "grid": "intraday_5m",
+        "id": "target_60m__benchmark_adjusted__intraday_5m"
+      },
+      {
+        "definition_hash": "bbc1597c3f51ec59c9f52b7e30263bbd8b2f1c4fd2925574e816316a2b2155ca",
+        "grid": "intraday_5m",
+        "id": "target_60m__beta_residual__intraday_5m"
+      },
+      {
+        "definition_hash": "647dcaccc603ef324384463f0e089200f559e7a2c11390ae61ed6dd5a1fea12f",
+        "grid": "intraday_5m",
+        "id": "target_120m__raw__intraday_5m"
+      },
+      {
+        "definition_hash": "748e6e557031e0eec9ff2e245f85927215f1d588462a0fed3007ca7ce227cfd0",
+        "grid": "intraday_5m",
+        "id": "target_120m__benchmark_adjusted__intraday_5m"
+      },
+      {
+        "definition_hash": "fc0cd2518832b77820980405199c2128891695b9432196f62c5d3830a1d7fd1f",
+        "grid": "intraday_5m",
+        "id": "target_120m__beta_residual__intraday_5m"
+      },
+      {
+        "definition_hash": "6d5c82af28b4c9cec5b2160b6bdaaab4b40d1f8207d2a0f9e9acbd2371c4c8f2",
+        "grid": "intraday_5m",
+        "id": "target_240m__raw__intraday_5m"
+      },
+      {
+        "definition_hash": "2d863e3206c42b90a89e3b9465651d2b272a31685fdb39b82817893bed9a82e4",
+        "grid": "intraday_5m",
+        "id": "target_240m__benchmark_adjusted__intraday_5m"
+      },
+      {
+        "definition_hash": "af2ff34e82b78d6660d49d99fae1c4ed04c2cdeae1578f1fbbf185b2bf6a8ccb",
+        "grid": "intraday_5m",
+        "id": "target_240m__beta_residual__intraday_5m"
+      },
+      {
+        "definition_hash": "6553277cc719e71fb13c44747b1360dcf4e279987116b0c426358d0bf77c3b09",
+        "grid": "intraday_5m",
+        "id": "target_eod__raw__intraday_5m"
+      },
+      {
+        "definition_hash": "25c4d00e09c8dcd1eb10c9e1f5b69179371595df5971b0995de2be85ec1deea4",
+        "grid": "intraday_5m",
+        "id": "target_eod__benchmark_adjusted__intraday_5m"
+      },
+      {
+        "definition_hash": "a911239af49d00eb8d78e27645f1c941d726711346a40c5c2299aab6cd7a5e13",
+        "grid": "intraday_5m",
+        "id": "target_eod__beta_residual__intraday_5m"
+      },
+      {
+        "definition_hash": "167a74de485a2a19d49c4f88bcb854b731a18c8bb2a3fbeea729bc4410978e46",
+        "grid": "daily_close",
+        "id": "target_1d__raw__daily_close"
+      },
+      {
+        "definition_hash": "bb5ccc8dd138a28edb016f954d78871935d32a579ce9ddf4b741a9e421308b25",
+        "grid": "daily_close",
+        "id": "target_1d__benchmark_adjusted__daily_close"
+      },
+      {
+        "definition_hash": "645c749655fce5159ff724d63a1a667543086b526ee747eab000c24f6a178e93",
+        "grid": "daily_close",
+        "id": "target_1d__beta_residual__daily_close"
+      },
+      {
+        "definition_hash": "ade603abd0a804080027748f6c152261b03d4a4ebf7fb1fc10abecde76c3915d",
+        "grid": "daily_close",
+        "id": "target_2d__raw__daily_close"
+      },
+      {
+        "definition_hash": "845f47707b583993e021a2337c783908bd238120f16ddf4ad19514e41104a889",
+        "grid": "daily_close",
+        "id": "target_2d__benchmark_adjusted__daily_close"
+      },
+      {
+        "definition_hash": "8671796d718817e01faa739b72a5cf88bd251da1d409c1a65c65958599d8d20a",
+        "grid": "daily_close",
+        "id": "target_2d__beta_residual__daily_close"
+      },
+      {
+        "definition_hash": "3d541aaeffb9e628e00de4002cf260a6181a26273990b77a8892ded41b2c6b56",
+        "grid": "daily_close",
+        "id": "target_3d__raw__daily_close"
+      },
+      {
+        "definition_hash": "36f630a66b4d5ebb9af9814a2a72fe9ecc92a83210f27846070787eadd33bc78",
+        "grid": "daily_close",
+        "id": "target_3d__benchmark_adjusted__daily_close"
+      },
+      {
+        "definition_hash": "a94cd0bd91a00cd7bb8175beb0cd8c4969ff6325e2ac9cb0b65fdc2cf7cd1695",
+        "grid": "daily_close",
+        "id": "target_3d__beta_residual__daily_close"
+      },
+      {
+        "definition_hash": "750e2431a63f620bad92fd41c1e7b5f5392c398b919f5d453a625465d6975f14",
+        "grid": "daily_close",
+        "id": "target_5d__raw__daily_close"
+      },
+      {
+        "definition_hash": "6c53b48d79899e0d82e5b0ea830658aee734c3f86557b8312e0503f489146571",
+        "grid": "daily_close",
+        "id": "target_5d__benchmark_adjusted__daily_close"
+      },
+      {
+        "definition_hash": "1623449f780d1b5db4b515c769b12a5aba35bc8298ded0f5634a372ce8515796",
+        "grid": "daily_close",
+        "id": "target_5d__beta_residual__daily_close"
+      },
+      {
+        "definition_hash": "5793d693d6c593a073e5c07088a18b9bee6d920b37db2a460cf504ff38050ea0",
+        "grid": "daily_close",
+        "id": "target_10d__raw__daily_close"
+      },
+      {
+        "definition_hash": "93be1938d4787e3167def0a1eb9e60a6508fe1ec8c799252453c388ff9e5da2e",
+        "grid": "daily_close",
+        "id": "target_10d__benchmark_adjusted__daily_close"
+      },
+      {
+        "definition_hash": "19a7ce9b5485530256b10bb502738413cfca274d239e69c6fd028f05c2e5d832",
+        "grid": "daily_close",
+        "id": "target_10d__beta_residual__daily_close"
+      },
+      {
+        "definition_hash": "9ffc348edb89049497d0a6c44f52c66ff16c1592ac0a55486f1cb110b31e57b0",
+        "grid": "daily_close",
+        "id": "target_20d__raw__daily_close"
+      },
+      {
+        "definition_hash": "55ec51a7b0e81ad84b50b079a16f0d128664f1f99194a63e35a6b630ebcc33fd",
+        "grid": "daily_close",
+        "id": "target_20d__benchmark_adjusted__daily_close"
+      },
+      {
+        "definition_hash": "3ce7983a3cab2c8e22619c7583cc2385f2205b76205107edff08d5546637415a",
+        "grid": "daily_close",
+        "id": "target_20d__beta_residual__daily_close"
+      },
+      {
+        "definition_hash": "78cc1edff8f76a686a4772d17411bbec1a4d7d8afd8767bedcf641513c1ffbd7",
+        "grid": "daily_close",
+        "id": "target_30d__raw__daily_close"
+      },
+      {
+        "definition_hash": "51a127b8e688ee163494a58d52f39f542d8b854952b93fc6c7980c8f9f1932c2",
+        "grid": "daily_close",
+        "id": "target_30d__benchmark_adjusted__daily_close"
+      },
+      {
+        "definition_hash": "4b3d57f69e1913791025f3a1bf60bb7f01f215ffca249e06743e77a2c58286da",
+        "grid": "daily_close",
+        "id": "target_30d__beta_residual__daily_close"
+      },
+      {
+        "definition_hash": "43f5e581aa3b84e6fc92a16739da843d5fef15e6d7c811096a87bd7e1254620d",
+        "grid": "daily_close",
+        "id": "target_40d__raw__daily_close"
+      },
+      {
+        "definition_hash": "3a833a47dddfd0578d04d92b78bc5082451749c1a7b267a0d065b7b232ef0c90",
+        "grid": "daily_close",
+        "id": "target_40d__benchmark_adjusted__daily_close"
+      },
+      {
+        "definition_hash": "895b03d2d1ce4208ebb0436b89f64c59ff28ff8be8b8e15d06c4f5f38a704d02",
+        "grid": "daily_close",
+        "id": "target_40d__beta_residual__daily_close"
+      },
+      {
+        "definition_hash": "cc7217997e0726d8d0a31d16738967c7cb0a6a69a02e9d7f767ad72b00a2d1bc",
+        "grid": "daily_close",
+        "id": "target_63d__raw__daily_close"
+      },
+      {
+        "definition_hash": "d0ac9dd839c47f328155719ae1196938238af70bd65b418cc0ea52d0cbaa1d2e",
+        "grid": "daily_close",
+        "id": "target_63d__benchmark_adjusted__daily_close"
+      },
+      {
+        "definition_hash": "21843165e1b2bb0312871032e1ffdd8ad6ba659f978c9bdad769561baa74c560",
+        "grid": "daily_close",
+        "id": "target_63d__beta_residual__daily_close"
+      },
+      {
+        "definition_hash": "cd5ddddccbd4abf989fb617d68c8a28e08b284e1deb9ec9a9d99164073c34bfe",
+        "grid": "daily_close",
+        "id": "target_126d__raw__daily_close"
+      },
+      {
+        "definition_hash": "c08acb24ace05fa0ad84fb1a53e6109746db6b443956801ec4c96d6896a75ba1",
+        "grid": "daily_close",
+        "id": "target_126d__benchmark_adjusted__daily_close"
+      },
+      {
+        "definition_hash": "40df2b5f99b321605ecadf0f060fefd696455797e7f8320e2df152b46c99ccb8",
+        "grid": "daily_close",
+        "id": "target_126d__beta_residual__daily_close"
+      },
+      {
+        "definition_hash": "ce025d500d63370a7f4ebd8f5769d1483772762db2702f174be75a45ff824df9",
+        "grid": "preclose_1555",
+        "id": "target_overnight__raw__preclose_1555"
+      },
+      {
+        "definition_hash": "f22e6ba5d32d20734ffdfb30719a651e50faaafccf1d643395a6bf825b2b7fc5",
+        "grid": "preclose_1555",
+        "id": "target_overnight__benchmark_adjusted__preclose_1555"
+      },
+      {
+        "definition_hash": "927169b3429ce3f1e2d21828ab98bd1618e9865e0652854f6fff9d46825a3327",
+        "grid": "preclose_1555",
+        "id": "target_overnight__beta_residual__preclose_1555"
+      }
+    ]
+  },
+  "scope_id": "9146877fc3d2a77dfd3949f1f76f0dd75d980009b1c1f4ed7aa85fa2ae3e7433",
+  "snapshot_utc": "2026-09-23T15:02:58.602994+00:00",
+  "storage_preflight": {
+    "budget_bytes": 75014387712,
+    "free_bytes": 200038367232,
+    "note": "Dense bytes are a nonmaterialized upper bound. Sampled compression and pinned input sizes are checked after core publication.",
+    "reserve_bytes": 50009591808,
+    "security_only_dense_bytes_estimate": 2721032244000,
+    "status": "admitted_streaming",
+    "symbols": 525
+  },
+  "time_estimate": {
+    "bounded_162_task_coverage_seconds": 5.037312,
+    "full_run_seconds": null,
+    "reason": "bounded fixture density and throughput do not predict the year-scale run",
+    "status": "requires_representative_full_scope_tiles_after_core"
+  }
+}

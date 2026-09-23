@@ -2,11 +2,13 @@
 
 ## Comprehensive evidence status
 
-The `evidence.profile: comprehensive` path passed a bounded real-core gate with mandatory subgroup coverage, stored/evicted queries, recomputation, search, diagnostic, neighbor scan, and raw and benchmark-adjusted execution replay. The configured year-long request has **not** run and the full handoff is not yet certified; see [implementation status](RESEARCH_IMPLEMENTATION_STATUS.md). A dense byte estimate is not a permanent disk requirement. The existing analysis bundle remains a legacy summary, not complete subgroup coverage.
+The `evidence.profile: comprehensive` path is **ready for the configured run** after bounded real-core checks of mandatory subgroup coverage, stored/evicted queries, recomputation, search, diagnostics, neighbor scan, and raw and benchmark-adjusted execution replay. The configured year-long request has **not** run; see [implementation status](RESEARCH_IMPLEMENTATION_STATUS.md) for measured gate results and full-scale limits. A dense byte estimate is not a permanent disk requirement. The existing analysis bundle remains a legacy summary, not complete subgroup coverage.
 
 ## Local comprehensive workflow (Windows PowerShell)
 
 Run from the repository root with the configured `configs\machines\local.yaml`. The short gate uses real source data and all configured subgroup types. The year-long command is listed for an authorized production start; it has not been launched for this handoff.
+
+The saved `configs\research\v3_comprehensive_20260922.preflight.json` contains the exact resolved scope and a dated machine/storage snapshot. Recheck live free space at launch; no full-year completion time is asserted from the bounded gate.
 
 ```powershell
 .\.venv\Scripts\python -m quant_pipeline run --request configs\research\v3_comprehensive_gate.yaml --machine configs\machines\local.yaml
