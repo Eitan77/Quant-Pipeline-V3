@@ -45,9 +45,13 @@ def check_moments():
         for r in (3, 5, 10):
             m = SegmentedMoments(pairs=2, targets=2, groups=3, resolution=r,
                                  singles=single, max_state_bytes=1_000_000)
+            lean = SegmentedMoments(pairs=2, targets=2, groups=3, resolution=r,
+                                    singles=single, max_state_bytes=1_000_000,
+                                    track_sumsq=False)
             left, right = [0, 1], None if single else [1, 2]
             for a, b in [(0, 11), (11, 37)]:
                 m.update(packed[a:b], left, right, y[a:b], groups[a:b])
+                lean.update(packed[a:b], left, right, y[a:b], groups[a:b])
             expected = [np.zeros(m.shape, dtype=d) for d in (np.int64, float, float)]
             decode = lambda x: int(x) % 3 if r == 3 else (int(x) // 3) % 5 if r == 5 else int(x) // 15
             for i in range(37):
@@ -65,6 +69,8 @@ def check_moments():
                         expected[1][key] += y[i, t]
                         expected[2][key] += y[i, t] ** 2
             for observed, wanted in zip(m.numpy(), expected):
+                np.testing.assert_allclose(observed, wanted, rtol=1e-12, atol=1e-16)
+            for observed, wanted in zip(lean.counts_and_sums(), expected[:2]):
                 np.testing.assert_allclose(observed, wanted, rtol=1e-12, atol=1e-16)
     np.testing.assert_array_equal(local_group_codes(np.array([-1, 0, 1, 2, 3]), 1, 3), [-1, -1, 0, 1, -1])
 

@@ -24,13 +24,13 @@ class SegmentedMoments:
     """One bounded (target, pair, group, cell) tile. CPU reference + Torch backend."""
 
     def __init__(self, *, pairs, targets, groups, resolution, singles=False,
-                 device="cpu", max_state_bytes):
+                 device="cpu", max_state_bytes, track_sumsq=True):
         if resolution not in (3, 5, 10) or min(pairs, targets, groups) < 1:
             raise ValueError("Invalid tile axes")
         self.resolution, self.singles = resolution, singles
         self.cells = resolution if singles else resolution * resolution
         self.shape = (targets, pairs, groups, self.cells)
-        if 24 * targets * pairs * groups * self.cells > max_state_bytes:
+        if (24 if track_sumsq else 16) * targets * pairs * groups * self.cells > max_state_bytes:
             raise MemoryError("Split logical work into smaller accumulator tiles")
         self.torch = None
         if device != "cpu":
@@ -39,11 +39,11 @@ class SegmentedMoments:
             self.device = torch.device(device)
             self.n = torch.zeros(self.shape, dtype=torch.int64, device=self.device)
             self.s = torch.zeros(self.shape, dtype=torch.float64, device=self.device)
-            self.q = torch.zeros_like(self.s)
+            self.q = torch.zeros_like(self.s) if track_sumsq else None
         else:
             self.n = np.zeros(self.shape, np.int64)
             self.s = np.zeros(self.shape, np.float64)
-            self.q = np.zeros(self.shape, np.float64)
+            self.q = np.zeros(self.shape, np.float64) if track_sumsq else None
 
     def update(self, packed, left, right, y, group_codes):
         packed = np.asarray(packed)
@@ -110,7 +110,8 @@ class SegmentedMoments:
                 values = np.broadcast_to(y[:, target, None], keep.shape)[keep].astype(np.float64)
                 np.add.at(self.n[target].reshape(-1), indices, 1)
                 np.add.at(self.s[target].reshape(-1), indices, values)
-                np.add.at(self.q[target].reshape(-1), indices, values * values)
+                if self.q is not None:
+                    np.add.at(self.q[target].reshape(-1), indices, values * values)
         else:
             t = self.torch
             raw = packed
@@ -131,9 +132,17 @@ class SegmentedMoments:
                 values = values_y[:, target, None].expand(-1, pairs)[keep]
                 self.n[target].view(-1).scatter_add_(0, indices, t.ones_like(indices))
                 self.s[target].view(-1).scatter_add_(0, indices, values)
-                self.q[target].view(-1).scatter_add_(0, indices, values.square())
+                if self.q is not None:
+                    self.q[target].view(-1).scatter_add_(0, indices, values.square())
+
+    def counts_and_sums(self):
+        if self.torch is None:
+            return self.n, self.s
+        return self.n.detach().cpu().numpy(), self.s.detach().cpu().numpy()
 
     def numpy(self):
+        if self.q is None:
+            raise ValueError("Squared sums were not tracked for this recomputable sweep")
         if self.torch is None:
             return self.n, self.s, self.q
         return tuple(x.detach().cpu().numpy() for x in (self.n, self.s, self.q))

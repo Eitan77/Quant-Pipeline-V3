@@ -296,7 +296,7 @@ def execute_coverage(root,reader_manifest,plan,*,device,row_chunk,max_state_byte
                         continue
                     task=row["task"]
                     cells=task["resolution"] if task["state_kind"]=="single" else task["resolution"]**2
-                    need=24*len(task["pair_ids"])*len(task["target_ids"])*(task["group_stop"]-task["group_start"])*cells
+                    need=16*len(task["pair_ids"])*len(task["target_ids"])*(task["group_stop"]-task["group_start"])*cells
                     if batch and live_bytes+need>max_state_bytes*9//10:flush()
                     batch.append(row);live_bytes+=need
                 flush()

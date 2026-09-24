@@ -74,12 +74,13 @@ def execute_segmented_batch(*, root, rows, reader, row_chunk, max_state_bytes,
             continue
         task = row["task"]
         cells = task["resolution"] if singles else task["resolution"] ** 2
-        state_bytes += 24 * len(pairs) * len(first["target_ids"]) * (task["group_stop"]-task["group_start"]) * cells
+        state_bytes += (24 if materialize else 16) * len(pairs) * len(first["target_ids"]) * (task["group_stop"]-task["group_start"]) * cells
         if state_bytes > max_state_bytes:
             raise MemoryError("Batch accumulator state exceeds admission")
         live.append((task, SegmentedMoments(pairs=len(pairs), targets=len(first["target_ids"]),
                     groups=task["group_stop"]-task["group_start"], resolution=task["resolution"],
-                    singles=singles, device=device, max_state_bytes=max_state_bytes)))
+                    singles=singles, device=device, max_state_bytes=max_state_bytes,
+                    track_sumsq=materialize)))
     for start in range(0, reader.rows, row_chunk):
         if cancelled():
             raise InterruptedError("Coverage cancelled at observation-chunk boundary")

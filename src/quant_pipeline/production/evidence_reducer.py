@@ -14,7 +14,7 @@ def consume_block(query_state, moments, metadata):
     filters. Without a query, this still records a complete signed sweep summary.
     """
     task = metadata["task"]
-    n, sums, _ = moments.numpy()
+    n, sums = moments.counts_and_sums() if hasattr(moments, "counts_and_sums") else moments.numpy()[:2]
     spec = query_state.get("spec", {})
     if "resolution" in spec and int(spec["resolution"]) != task["resolution"]:
         return

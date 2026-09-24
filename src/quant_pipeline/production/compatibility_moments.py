@@ -47,7 +47,7 @@ class CompatibilitySink:
         counts,sums,seen=self.parts[key]
         start,stop=task["group_start"],task["group_stop"]
         if seen[start:stop].any():raise ValueError("Duplicate compatibility group partition")
-        n,s,_=moments.numpy()
+        n,s=moments.counts_and_sums() if hasattr(moments,"counts_and_sums") else moments.numpy()[:2]
         counts[:,:,start:stop]=n;sums[:,:,start:stop]=s;seen[start:stop]=True
 
     def finish_group(self):
