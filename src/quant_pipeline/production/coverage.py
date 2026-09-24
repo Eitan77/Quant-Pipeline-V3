@@ -91,11 +91,20 @@ def _members(root,grid,reader_grid,state_kind):
 def plan_coverage(root,reader_manifest,resolutions,*,max_state_bytes=512*(1<<20)):
     """Persist exact logical membership independently of global promotion."""
     root=Path(root)
-    pair_cap=16; target_cap=2; group_cap=64
+    # Larger logical tiles avoid rereading the full observation stream for
+    # millions of tiny pair/target/group partitions. The largest r10 tile is
+    # 24 * 64 * 4 * 256 * 100 = 150 MiB, within the 512 MiB state budget.
+    pair_cap=64; target_cap=4; group_cap=256
     stage_id=digest({"evidence_id":reader_manifest["evidence_id"],"resolutions":resolutions,
                      "groupings":{grid:{key:value["definition_id"] for key,value in record["groups"].items()}
-                                  for grid,record in reader_manifest["grids"].items()},"schema":2})
+                                  for grid,record in reader_manifest["grids"].items()},
+                     "tile_policy":{"pairs":pair_cap,"targets":target_cap,"groups":group_cap},"schema":4})
     plan_path=root/"evidence"/"coverage_plan.jsonl"
+    manifest_path=root/"evidence"/"coverage_plan.json"
+    if manifest_path.exists() and plan_path.exists():
+        previous=json.loads(manifest_path.read_text(encoding="utf-8"))
+        if previous.get("stage_id")==stage_id and previous.get("task_count",0)>0:
+            return previous
     temporary=plan_path.with_suffix(".partial")
     plan_path.parent.mkdir(parents=True,exist_ok=True)
     counts={}; resolution_counts={}; task_count=0
@@ -105,22 +114,22 @@ def plan_coverage(root,reader_manifest,resolutions,*,max_state_bytes=512*(1<<20)
             for state_kind in ("single","dual"):
                 pair_ids,definitions=_members(root,grid,record,state_kind)
                 if not pair_ids: continue
-                for resolution in resolutions:
-                    for pair_start in range(0,len(pair_ids),pair_cap):
-                        subset=pair_ids[pair_start:pair_start+pair_cap]
-                        for target_start in range(0,len(target_ids),target_cap):
-                            targets=target_ids[target_start:target_start+target_cap]
-                            for grouping_id,grouping in record["groups"].items():
-                                group_count=int(grouping["groups"])
-                                scope_key=f"{grid}/{grouping_id}/{state_kind}"
-                                if group_count==0:
-                                    counts[scope_key]={"outcome":grouping.get("availability","empty") if grouping.get("availability")=="unavailable" else "empty","tasks":0}
-                                    continue
-                                cells=resolution if state_kind=="single" else resolution**2
-                                groups_per=min(group_count,group_cap)
-                                if 24*len(subset)*len(targets)*groups_per*cells>max_state_bytes:
-                                    raise MemoryError("Logical group partition exceeds live resource admission")
-                                for group_start in range(0,group_count,groups_per):
+                for pair_start in range(0,len(pair_ids),pair_cap):
+                    subset=pair_ids[pair_start:pair_start+pair_cap]
+                    for target_start in range(0,len(target_ids),target_cap):
+                        targets=target_ids[target_start:target_start+target_cap]
+                        for grouping_id,grouping in record["groups"].items():
+                            group_count=int(grouping["groups"])
+                            scope_key=f"{grid}/{grouping_id}/{state_kind}"
+                            if group_count==0:
+                                counts[scope_key]={"outcome":grouping.get("availability","empty") if grouping.get("availability")=="unavailable" else "empty","tasks":0}
+                                continue
+                            groups_per=min(group_count,group_cap)
+                            for group_start in range(0,group_count,groups_per):
+                                for resolution in resolutions:
+                                    cells=resolution if state_kind=="single" else resolution**2
+                                    if 24*len(subset)*len(targets)*groups_per*cells>max_state_bytes:
+                                        raise MemoryError("Logical group partition exceeds live resource admission")
                                     task=task_identity(stage_id,pair_ids=subset,target_ids=targets,resolution=resolution,
                                                        grouping_id=grouping_id,group_start=group_start,
                                                        group_stop=min(group_start+groups_per,group_count),state_kind=state_kind)
@@ -134,7 +143,7 @@ def plan_coverage(root,reader_manifest,resolutions,*,max_state_bytes=512*(1<<20)
     manifest={"stage_id":stage_id,"evidence_id":reader_manifest["evidence_id"],"task_count":task_count,
               "scope_counts":counts,"resolution_task_counts":resolution_counts,
               "path":plan_path.relative_to(root).as_posix(),"status":"planned"}
-    atomic_json(root/"evidence"/"coverage_plan.json",manifest)
+    atomic_json(manifest_path,manifest)
     return manifest
 
 
@@ -227,15 +236,14 @@ def execute_coverage(root,reader_manifest,plan,*,device,row_chunk,max_state_byte
                         reduced_in_batch.add(task["task_id"])
                     results=execute_segmented_batch(root=root,rows=batch,reader=reader,row_chunk=row_chunk,
                           max_state_bytes=max_state_bytes,device=device,cancelled=cancelled,
-                          consume_block=reduce_task)
+                          consume_block=reduce_task,materialize=False)
                     for row,result in zip(batch,results):
                         task=row["task"]
-                        if cache.get(task["task_id"]) is None:
+                        if cache.get(task["task_id"]) is None and task["task_id"] not in reduced_in_batch:
                             moments=load_tile(root,task)
                             consume_block({"journal":root/"evidence"/"sweep_summary.jsonl"},moments,
                                           {"task":task,"rows_evaluated":reader.rows})
-                            if task["task_id"] not in reduced_in_batch:
-                                sink.consume(grid,task,moments)
+                            sink.consume(grid,task,moments)
                         cache.record(grid,task,result,reader.rows)
                         metrics["tasks_processed"]+=1
                         metrics["bytes_written"]+=result["bytes"]
@@ -289,7 +297,7 @@ def execute_coverage(root,reader_manifest,plan,*,device,row_chunk,max_state_byte
                     task=row["task"]
                     cells=task["resolution"] if task["state_kind"]=="single" else task["resolution"]**2
                     need=24*len(task["pair_ids"])*len(task["target_ids"])*(task["group_stop"]-task["group_start"])*cells
-                    if batch and live_bytes+need>max_state_bytes//2:flush()
+                    if batch and live_bytes+need>max_state_bytes*9//10:flush()
                     batch.append(row);live_bytes+=need
                 flush()
                 sink.finish_group()

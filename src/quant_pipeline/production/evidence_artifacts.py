@@ -67,7 +67,7 @@ def committed_tile(root, task):
     return manifest
 
 
-def commit_tile(root, task, moments, *, rows_per_group=1024):
+def commit_tile(root, task, moments, *, rows_per_group=8192):
     """Caller must hold exclusive task ownership. No concurrent writers per task."""
     root = Path(root).resolve()
     previous = committed_tile(root, task)
@@ -87,25 +87,26 @@ def commit_tile(root, task, moments, *, rows_per_group=1024):
     directory.mkdir(parents=True, exist_ok=True)
     destination = directory / "moments.parquet"
     temporary = directory / "moments.partial.parquet"
-    rows, written = [], 0
+    populated = np.argwhere(np.any(n != 0, axis=-1))
+    written = 0
     try:
         with pq.ParquetWriter(temporary, SCHEMA, compression="zstd") as writer:
-            for t, target in enumerate(task["target_ids"]):
-                for p, pair in enumerate(task["pair_ids"]):
-                    for g in range(expected[2]):
-                        if not np.any(n[t, p, g]):
-                            continue
-                        rows.append(dict(pair_id=pair, target_id=target,
-                                         resolution=task["resolution"], group_id=task["group_start"] + g,
-                                         counts=n[t, p, g].tolist(), sums=sums[t, p, g].tolist(),
-                                         sumsq=sumsq[t, p, g].tolist()))
-                        if len(rows) >= rows_per_group:
-                            writer.write_table(pa.Table.from_pylist(rows, schema=SCHEMA))
-                            written += len(rows)
-                            rows.clear()
-            if rows:
-                writer.write_table(pa.Table.from_pylist(rows, schema=SCHEMA))
-                written += len(rows)
+            for offset in range(0, len(populated), rows_per_group):
+                tile = populated[offset:offset + rows_per_group]
+                ti, pi, gi = tile.T
+                count = len(tile)
+                offsets = pa.array(np.arange(count + 1, dtype=np.int32) * moments.cells)
+                arrays = [
+                    pa.array(np.asarray(task["pair_ids"])[pi], type=pa.string()),
+                    pa.array(np.asarray(task["target_ids"])[ti], type=pa.string()),
+                    pa.array(np.full(count, task["resolution"], dtype=np.int16)),
+                    pa.array(gi.astype(np.int64) + task["group_start"]),
+                    pa.ListArray.from_arrays(offsets, pa.array(n[ti, pi, gi].astype(np.uint64).ravel())),
+                    pa.ListArray.from_arrays(offsets, pa.array(sums[ti, pi, gi].ravel())),
+                    pa.ListArray.from_arrays(offsets, pa.array(sumsq[ti, pi, gi].ravel())),
+                ]
+                writer.write_table(pa.Table.from_arrays(arrays, schema=SCHEMA))
+                written += count
         with temporary.open("r+b") as stream:
             os.fsync(stream.fileno())
         os.replace(temporary, destination)

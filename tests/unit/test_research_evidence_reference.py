@@ -14,10 +14,11 @@ import pytest
 
 from quant_pipeline.production.evidence_identity import atomic_json, inside, task_identity
 from quant_pipeline.production.evidence_store import EvidenceReader,build_groupings
+from quant_pipeline.production.evidence_cache import EvidenceCache
 from quant_pipeline.production.evidence_query import group_cells, open_catalog
 from quant_pipeline.production.research_jobs import JobStore, worker_lock, run_one
 from quant_pipeline.production.segmented_scan import SegmentedMoments, encode_groups, local_group_codes, prepare_tile
-from quant_pipeline.production.segmented_task import execute_segmented_task
+from quant_pipeline.production.segmented_task import execute_segmented_batch, execute_segmented_task
 from quant_pipeline.production.variant_batches import plan_batches
 from quant_pipeline.production.research_service import ResearchService
 
@@ -92,6 +93,27 @@ def check_store_query(root):
                 observation_id="obs", row_chunk=3, max_state_bytes=1_000_000)
     result = execute_segmented_task(**args)
     assert result == execute_segmented_task(**args)
+    sparse_task = task_identity("sparse", pair_ids=["a-b"], target_ids=["t"], resolution=3,
+                                grouping_id="joint", group_start=0, group_stop=2)
+    sparse_args = {**args, "task": sparse_task}
+    sparse_result = execute_segmented_task(**sparse_args)
+    assert sparse_result["populated_groups"] == 2
+    batch_task = task_identity("sparse-batch", pair_ids=["a-b"], target_ids=["t"], resolution=3,
+                               grouping_id="joint", group_start=0, group_stop=2)
+    batch_result = execute_segmented_batch(root=root,
+        rows=[{"grid": "g", "task": batch_task, "pairs": {"a-b": ("a", "b")}}],
+        reader=reader, row_chunk=3, max_state_bytes=1_000_000)[0]
+    assert batch_result["sha256"] == sparse_result["sha256"]
+    transient_task = task_identity("transient", pair_ids=["a-b"], target_ids=["t"], resolution=3,
+                                   grouping_id="joint", group_start=0, group_stop=2)
+    transient = execute_segmented_batch(root=root,
+        rows=[{"grid": "g", "task": transient_task, "pairs": {"a-b": ("a", "b")}}],
+        reader=reader, row_chunk=3, max_state_bytes=1_000_000, materialize=False)[0]
+    assert transient["materialization_status"] == "recomputable" and transient["artifact"] is None
+    cache = EvidenceCache(root)
+    cache.record("g", transient_task, transient, reader.rows)
+    assert cache.get(transient_task["task_id"])["materialization_status"] == "recomputable"
+    cache.close()
     (root / result["artifact"]).parent.joinpath("complete.json").unlink()
     assert execute_segmented_task(**args)["sha256"] == result["sha256"]
     atomic_json(root / "catalog.json", {"tables": {"joint": {"files": [result["artifact"]]}}})

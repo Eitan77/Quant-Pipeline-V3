@@ -59,6 +59,10 @@ def test_publication_coverage_query_and_search(tmp_path,monkeypatch):
     same_scope=plan_coverage(root,manifest,[3],max_state_bytes=2_000_000)
     assert same_scope["stage_id"]==plan["stage_id"]
     assert task_ids==[json.loads(line)["task"]["task_id"] for line in (root/plan["path"]).read_text().splitlines()]
+    fused_plan=plan_coverage(root,manifest,[3,5,10],max_state_bytes=2_000_000)
+    fused_rows=[json.loads(line) for line in (root/fused_plan["path"]).read_text().splitlines()]
+    assert fused_plan["task_count"]==3*plan["task_count"]
+    assert [row["task"]["resolution"] for row in fused_rows[:3]]==[3,5,10]
     changed=json.loads(json.dumps(manifest));changed["grids"][grid]["groups"]["security"]["definition_id"]="changed"
     changed_plan=plan_coverage(root,changed,[3],max_state_bytes=2_000_000)
     assert changed_plan["stage_id"]!=plan["stage_id"]

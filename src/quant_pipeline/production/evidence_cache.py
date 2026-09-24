@@ -45,12 +45,13 @@ class EvidenceCache:
         self.con.execute("""INSERT INTO blocks
             (task_id,stage_id,task_json,grid,table_name,compute_status,materialization_status,
              artifact,bytes,sha256,populated_groups,rows_evaluated,last_used)
-            VALUES(?,?,?,?,?, 'complete','stored',?,?,?,?,?,unixepoch())
+            VALUES(?,?,?,?,?, 'complete',?,?,?,?,?,?,unixepoch())
             ON CONFLICT(task_id) DO UPDATE SET compute_status='complete',
-            materialization_status='stored',artifact=excluded.artifact,bytes=excluded.bytes,
+            materialization_status=excluded.materialization_status,artifact=excluded.artifact,bytes=excluded.bytes,
             sha256=excluded.sha256,populated_groups=excluded.populated_groups,
             rows_evaluated=excluded.rows_evaluated,last_used=unixepoch()""",
             (task["task_id"], task["stage_id"], json.dumps(task, sort_keys=True), grid, table,
+             "recomputable" if manifest.get("materialization_status")=="recomputable" else "stored",
              manifest["artifact"], manifest["bytes"], manifest["sha256"],
              manifest["populated_groups"], rows_evaluated))
 

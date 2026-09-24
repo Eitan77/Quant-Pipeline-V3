@@ -82,6 +82,16 @@ class SegmentedMoments:
             raise ValueError("Prepared observation axes disagree")
         if np.any(groups < -1) or np.any(groups >= group_count):
             raise ValueError("Codes must be local to this group partition")
+        active = np.flatnonzero(groups >= 0)
+        if not len(active):
+            return
+        if len(active) != len(groups):
+            groups = groups[active]
+            if self.torch is None:
+                packed, y = packed[active], y[active]
+            else:
+                indices = self.torch.as_tensor(active, device=self.device)
+                packed, y = packed.index_select(0, indices), y.index_select(0, indices)
         r = self.resolution
         if self.torch is None:
             pa = packed[:, left]

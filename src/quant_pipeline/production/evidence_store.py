@@ -204,7 +204,7 @@ class EvidenceReader:
             self.arrays.popitem(last=False)
         return array
 
-    def read_columns(self, kind, ids, start, stop):
+    def read_columns(self, kind, ids, start, stop, indices=None):
         if not 0 <= start <= stop <= self.rows or not ids:
             raise ValueError("Invalid read range or empty column request")
         result = []
@@ -213,7 +213,8 @@ class EvidenceReader:
             array = self._array(ref)
             if array.ndim != 2 or not 0 <= ref["column"] < array.shape[1]:
                 raise ValueError("Invalid column mapping")
-            result.append(array[start:stop, ref["column"]])
+            values = array[start:stop, ref["column"]]
+            result.append(values if indices is None else values[indices])
         return np.column_stack(result)
 
     def read_groups(self, grouping_id, start, stop):

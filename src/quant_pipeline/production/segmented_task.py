@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import numpy as np
+
 from .evidence_artifacts import commit_tile, committed_tile
 from .segmented_scan import SegmentedMoments, local_group_codes, prepare_tile
 
@@ -33,15 +35,21 @@ def execute_segmented_task(*, root, task, reader, pair_definitions,
         stop = min(start + row_chunk, reader.rows)
         groups = local_group_codes(reader.read_groups(task["grouping_id"], start, stop),
                                    task["group_start"], task["group_stop"])
-        moments.update(reader.read_columns("bins", features, start, stop), left, right,
-                       reader.read_columns("targets", task["target_ids"], start, stop), groups)
+        active = np.flatnonzero(groups >= 0)
+        if not len(active):
+            continue
+        sparse = active if len(active) < len(groups) else None
+        moments.update(reader.read_columns("bins", features, start, stop, sparse), left, right,
+                       reader.read_columns("targets", task["target_ids"], start, stop, sparse),
+                       groups if sparse is None else groups[sparse])
     if cancelled():
         raise InterruptedError("Job cancelled before commit")
     return commit_tile(root, task, moments)
 
 
 def execute_segmented_batch(*, root, rows, reader, row_chunk, max_state_bytes,
-                            device="cpu", cancelled=lambda: False, consume_block=None):
+                            device="cpu", cancelled=lambda: False, consume_block=None,
+                            materialize=True):
     """Scan one pair/target tile for all admitted grouping and resolution tasks."""
     rows = list(rows)
     if not rows:
@@ -78,12 +86,21 @@ def execute_segmented_batch(*, root, rows, reader, row_chunk, max_state_bytes,
         stop = min(start + row_chunk, reader.rows)
         if not live:
             break
-        prepared = prepare_tile(reader.read_columns("bins", features, start, stop),
-                                reader.read_columns("targets", first["target_ids"], start, stop), device)
         group_codes = {task["grouping_id"]: reader.read_groups(task["grouping_id"], start, stop)
                        for task, _ in live}
+        active = np.zeros(stop-start, dtype=np.bool_)
+        for task, _ in live:
+            codes = group_codes[task["grouping_id"]]
+            active |= (codes >= task["group_start"]) & (codes < task["group_stop"])
+        if not active.any():
+            continue
+        sparse = np.flatnonzero(active) if not active.all() else None
+        prepared = prepare_tile(reader.read_columns("bins", features, start, stop, sparse),
+                                reader.read_columns("targets", first["target_ids"], start, stop, sparse), device)
         for task, moments in live:
-            local = local_group_codes(group_codes[task["grouping_id"]], task["group_start"], task["group_stop"])
+            codes = group_codes[task["grouping_id"]]
+            local = local_group_codes(codes if sparse is None else codes[sparse],
+                                      task["group_start"], task["group_stop"])
             moments.update_prepared(prepared, left, right, local)
     computed = {}
     for task, moments in live:
@@ -91,5 +108,14 @@ def execute_segmented_batch(*, root, rows, reader, row_chunk, max_state_bytes,
             raise InterruptedError("Coverage cancelled before commit")
         if consume_block is not None:
             consume_block(task, moments, {"grid": rows[0]["grid"], "rows_evaluated": reader.rows})
-        computed[task["task_id"]] = commit_tile(root, task, moments)
+        if materialize:
+            computed[task["task_id"]] = commit_tile(root, task, moments)
+        else:
+            populated = (int(np.count_nonzero(np.any(moments.n, axis=-1))) if moments.torch is None
+                         else int(moments.n.any(dim=-1).sum().item()))
+            computed[task["task_id"]] = {
+                "compute_status": "complete", "materialization_status": "recomputable",
+                "artifact": None, "bytes": 0, "sha256": None,
+                "populated_groups": populated,
+            }
     return [computed.get(row["task"]["task_id"], previous) for row, previous in pending]

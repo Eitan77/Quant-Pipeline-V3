@@ -122,6 +122,10 @@ class V3ProductionRunner:
                 self._write_json(root/"evidence"/"coverage_status.json",mandatory)
             else:
                 reader_manifest=json.loads(reader_path.read_text(encoding="utf-8"))
+                previous_plan_path=root/"evidence"/"coverage_plan.json"
+                previous_storage_path=root/"evidence"/"storage_plan.json"
+                previous_plan=json.loads(previous_plan_path.read_text(encoding="utf-8")) if previous_plan_path.exists() else None
+                previous_storage=json.loads(previous_storage_path.read_text(encoding="utf-8")) if previous_storage_path.exists() else None
                 storage=plan_storage(reader_manifest,root,self.machine,self.research["resolutions"])
                 self._write_json(root/"evidence"/"storage_plan.json",storage)
                 if storage["status"]=="admitted_streaming":
@@ -132,9 +136,16 @@ class V3ProductionRunner:
                     except ImportError: device="cpu"
                     max_state_bytes=ResourcePolicy(self.machine).state_budget(device)
                     plan=plan_coverage(root,reader_manifest,self.research["resolutions"],max_state_bytes=max_state_bytes)
-                    storage=sample_storage(root,reader_manifest,plan,storage,device=device,
-                        row_chunk=int(self.research.get("cell_evidence",{}).get("observation_chunk",250000)),
-                        max_state_bytes=max_state_bytes)
+                    if (previous_plan and previous_plan.get("stage_id")==plan["stage_id"]
+                            and previous_storage and previous_storage.get("representative_tiles")):
+                        for key in ("representative_tiles","sampled_density","sampled_compression_ratio",
+                                    "sampled_input_bytes_per_second","temporary_bytes_required"):
+                            storage[key]=previous_storage[key]
+                        self._write_json(root/"evidence"/"storage_plan.json",storage)
+                    else:
+                        storage=sample_storage(root,reader_manifest,plan,storage,device=device,
+                            row_chunk=int(self.research.get("cell_evidence",{}).get("observation_chunk",250000)),
+                            max_state_bytes=max_state_bytes)
                     mandatory=execute_coverage(root,reader_manifest,plan,device=device,
                                               row_chunk=int(self.research.get("cell_evidence",{}).get("observation_chunk",250000)),
                                               max_state_bytes=max_state_bytes,cache_bytes=storage["cache_bytes"],

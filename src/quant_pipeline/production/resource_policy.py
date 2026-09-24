@@ -12,11 +12,13 @@ class ResourcePolicy:
 
     def state_budget(self, device="cpu"):
         host_free = max(0, psutil.virtual_memory().available - self.host_reserve)
-        budget = min(512 * (1 << 20), host_free // 4)
+        # GPU accumulators stay on device; larger batches reuse the same input
+        # pass across adjacent group partitions without consuming host RAM.
+        budget = min(2 * (1 << 30), host_free // 4)
         if device != "cpu":
             import torch
             free, _ = torch.cuda.mem_get_info(device)
-            budget = min(budget, self.gpu_ceiling, int(free * .6))
+            budget = min(5 * (1 << 30), host_free, self.gpu_ceiling, int(free * .5))
         if budget < 16 * (1 << 20):
             raise MemoryError("Insufficient live host/GPU headroom for a subgroup tile")
         return int(budget)
