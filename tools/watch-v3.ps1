@@ -1,5 +1,5 @@
 param(
-    [string]$RunId = "v3_discovery",
+    [string]$RunId = "v3_comprehensive_20260923",
     [int]$RefreshSeconds = 2,
     [switch]$Once
 )
