@@ -1,6 +1,6 @@
 # Quant Pipeline V3
 
-**Comprehensive research handoff status:** the implementation is ready for the configured run after bounded real-core, zoom, query/recomputation, diagnostic, replay, resume, CUDA, Windows locking and performance checks. The full discovery request has not been launched. Its dense storage estimate does not block the bounded recomputable path. See [implementation status](docs/RESEARCH_IMPLEMENTATION_STATUS.md). Existing `v3_discovery` artifacts retain their legacy coverage meaning.
+**Comprehensive research status:** the one-year `v3_comprehensive_20260923` request was launched on September 23, 2026. Completion and results must be verified from its run markers. The implementation passed bounded real-core, zoom, query/recomputation, diagnostic, replay, resume, CUDA, Windows locking and performance checks. See [implementation status](docs/RESEARCH_IMPLEMENTATION_STATUS.md). Existing `v3_discovery` artifacts retain their legacy coverage meaning.
 
 > A single-machine, GPU-accelerated quantitative research engine for searching large spaces of equity features, interactions, tails, and specialist effects without throwing away useful evidence too early.
 
@@ -547,7 +547,7 @@ The pipeline produces structured research data. Human/GPT analysis and downstrea
 
 The V3 production architecture is implemented and includes the exhaustive canonical search path, r3/r5/r10 evidence, cell-level specialist and temporal diagnostics, trial reconciliation, resumability, analysis-bundle generation, optional candidate zoom/dossiers, and sealed-period controls.
 
-The repository also includes parity and benchmark validation artifacts. The full discovery-year workload was intentionally **not** launched as part of the production-repair work; the supplied validation and discovery configs are intended to exercise the completed production path when the full run is started.
+The repository also includes parity and benchmark validation artifacts. The full discovery-year workload was launched separately as `v3_comprehensive_20260923` after the production-repair work; check its run markers for completion.
 
 ---
 

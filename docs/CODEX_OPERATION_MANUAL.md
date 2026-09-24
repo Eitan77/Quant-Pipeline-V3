@@ -2,27 +2,27 @@
 
 ## Comprehensive evidence status
 
-The `evidence.profile: comprehensive` path is **ready for the configured run** after bounded real-core checks of mandatory subgroup coverage, stored/evicted queries, recomputation, search, diagnostics, neighbor scan, and raw and benchmark-adjusted execution replay. The configured year-long request has **not** run; see [implementation status](RESEARCH_IMPLEMENTATION_STATUS.md) for measured gate results and full-scale limits. A dense byte estimate is not a permanent disk requirement. The existing analysis bundle remains a legacy summary, not complete subgroup coverage.
+The `evidence.profile: comprehensive` path passed bounded real-core checks of mandatory subgroup coverage, stored/evicted queries, recomputation, search, diagnostics, neighbor scan, and raw and benchmark-adjusted execution replay. The one-year `v3_comprehensive_20260923` run was launched on September 23, 2026; verify its completion from the run markers. See [implementation status](RESEARCH_IMPLEMENTATION_STATUS.md) for measured gate results and full-scale limits. A dense byte estimate is not a permanent disk requirement.
 
 ## Local comprehensive workflow (Windows PowerShell)
 
-Run from the repository root with the configured `configs\machines\local.yaml`. The short gate uses real source data and all configured subgroup types. The year-long command is listed for an authorized production start; it has not been launched for this handoff.
+Run from the repository root with the configured `configs\machines\local.yaml`. The short gate uses real source data and all configured subgroup types. The one-year command below names the active production run.
 
 The saved `configs\research\v3_comprehensive_20260922.preflight.json` contains the exact resolved scope and a dated machine/storage snapshot. Recheck live free space at launch; no full-year completion time is asserted from the bounded gate.
 
 ```powershell
 .\.venv\Scripts\python -m quant_pipeline run --request configs\research\v3_comprehensive_gate.yaml --machine configs\machines\local.yaml
 .\.venv\Scripts\python -m quant_pipeline resume --run-id v3_comprehensive_gate --machine configs\machines\local.yaml
-.\.venv\Scripts\python -m quant_pipeline run --request configs\research\v3_comprehensive_20260922.yaml --machine configs\machines\local.yaml
-.\.venv\Scripts\python -m quant_pipeline resume --run-id v3_comprehensive_20260922 --machine configs\machines\local.yaml
-.\.venv\Scripts\python -m quant_pipeline status --run-id v3_comprehensive_20260922 --machine configs\machines\local.yaml
-.\.venv\Scripts\python -m quant_pipeline research describe --machine configs\machines\local.yaml --run-id v3_comprehensive_20260922 --details
+.\.venv\Scripts\python -m quant_pipeline run --request configs\research\v3_comprehensive_20260923.yaml --machine configs\machines\local.yaml
+.\.venv\Scripts\python -m quant_pipeline resume --run-id v3_comprehensive_20260923 --machine configs\machines\local.yaml
+.\.venv\Scripts\python -m quant_pipeline status --run-id v3_comprehensive_20260923 --machine configs\machines\local.yaml
+.\.venv\Scripts\python -m quant_pipeline research describe --machine configs\machines\local.yaml --run-id v3_comprehensive_20260923 --details
 ```
 
 After coverage planning, select an actual pair/target from the run's saved plan. This builds request JSON from the run's IDs instead of assuming an example ID exists in a different scope. The request can be changed to another planned pair, target, resolution, grouping, or group ID.
 
 ```powershell
-$run = 'v3_comprehensive_20260922'
+$run = 'v3_comprehensive_20260923'
 $root = "D:\AlgoResearch\Quant-Pipeline-V3\runs\$run"
 $task = Get-Content "$root\evidence\coverage_plan.jsonl" | ForEach-Object { $_ | ConvertFrom-Json } | Where-Object { $_.task.grouping_id -eq 'security_time_bucket' -and $_.task.state_kind -eq 'dual' -and $_.task.resolution -eq 3 } | Select-Object -First 1
 $base = @{grid=$task.grid; grouping='security_time_bucket'; state_kind='dual'; pair_id=$task.task.pair_ids[0]; target_id=$task.task.target_ids[0]; resolution=3; group_id=$task.task.group_start}
