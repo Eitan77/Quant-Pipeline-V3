@@ -4,11 +4,21 @@ import duckdb
 from quant_pipeline.alpha_discovery.cache.rank_store import build_packed_bins,unpack_bins
 from quant_pipeline.alpha_discovery.scan.dual_coarse import DualTileScanner
 from quant_pipeline.alpha_discovery.run import AlphaDiscoveryRun
-from quant_pipeline.production.cell_specialist import _summaries
+from quant_pipeline.production.cell_specialist import _summaries,_summaries_cuda
 from quant_pipeline.production.cell_temporal import _reduce
 from quant_pipeline.production.surface_math import reconstruct_surface
 from quant_pipeline.production.bundle import build_v3_analysis_bundle
 from quant_pipeline.production.compatibility_moments import CompatibilitySink
+
+def test_specialist_cuda_matches_cpu():
+    import pytest,torch
+    if not torch.cuda.is_available():pytest.skip("CUDA unavailable")
+    rng=np.random.default_rng(19)
+    counts=rng.integers(0,40,size=(3,12,9),dtype=np.int64)
+    sums=rng.normal(0,.01,size=counts.shape)
+    counts[:,0,:]=0;sums[:,0,:]=0
+    for cpu,gpu in zip(_summaries(counts,sums,20),_summaries_cuda(counts,sums,20)):
+        for field in cpu:np.testing.assert_allclose(cpu[field],gpu[field],rtol=1e-10,atol=1e-10,equal_nan=True)
 
 def test_compatibility_summary_group_survives_resume(tmp_path):
     manifest={"grids":{"g":{"groups":{"security":{"groups":2},

@@ -13,12 +13,16 @@ SCHEMA=pa.schema([("pair_id",pa.string()),("target_id",pa.string()),("resolution
     ("cancellation_score",pa.list_(pa.float32()))])
 
 def _summaries(counts,sums,minimum):
-    means=np.divide(sums,counts,out=np.full_like(sums,np.nan,dtype=float),where=counts>0)*1e4
-    eligible=counts>=minimum; local=np.where(eligible,means,np.nan); n=eligible.sum(axis=1)
+    eligible=counts>=minimum
+    local=np.zeros_like(sums,dtype=float)
+    np.divide(sums,counts,out=local,where=eligible & (counts>0))
+    local*=1e4
+    n=eligible.sum(axis=1)
     positive=(local>0).sum(axis=1); negative=(local<0).sum(axis=1)
-    local_total=np.where(eligible,local,0.0).sum(axis=1)
+    local_total=local.sum(axis=1)
     local_mean=np.divide(local_total,n,out=np.zeros_like(local_total),where=n>0)
-    centered=np.where(eligible,local-local_mean[:,None,:],0.0)
+    centered=local-local_mean[:,None,:]
+    centered[~eligible]=0.0
     squared=(centered*centered).sum(axis=1)
     dispersion=np.sqrt(np.divide(squared,n-1,out=np.full_like(squared,np.nan),where=n>1))
     best_positive=np.max(np.where(local>0,local,-np.inf),axis=1); best_positive[~np.isfinite(best_positive)]=np.nan
@@ -26,11 +30,43 @@ def _summaries(counts,sums,minimum):
     contribution=np.where(eligible,np.abs(sums),0.0); total=contribution.sum(axis=1); top1=contribution.max(axis=1)
     keep=min(5,contribution.shape[1]); top5=np.partition(contribution,contribution.shape[1]-keep,axis=1)[:,-keep:,:].sum(axis=1)
     global_n=counts.sum(axis=1); global_mean=np.divide(sums.sum(axis=1),global_n,out=np.full_like(total,np.nan),where=global_n>0)*1e4
-    local_abs=np.nansum(np.abs(local),axis=1); cancellation=np.divide(local_abs,n,out=np.full_like(total,np.nan),where=n>0)/np.maximum(np.abs(global_mean),1e-9)
+    local_abs=np.abs(local).sum(axis=1); cancellation=np.divide(local_abs,n,out=np.full_like(total,np.nan),where=n>0)/np.maximum(np.abs(global_mean),1e-9)
     fraction_positive=np.divide(positive,n,out=np.full_like(total,np.nan),where=n>0); fraction_negative=np.divide(negative,n,out=np.full_like(total,np.nan),where=n>0)
     top1_share=np.divide(top1,total,out=np.full_like(total,np.nan),where=total!=0); top5_share=np.divide(top5,total,out=np.full_like(total,np.nan),where=total!=0)
     metrics=(np.minimum(n,65535),fraction_positive,fraction_negative,dispersion,best_positive,best_negative,top1_share,top5_share,cancellation)
     return [{name:values[pair].tolist() for name,values in zip(SCHEMA.names[3:],metrics)} for pair in range(counts.shape[0])]
+
+def _summaries_cuda(counts,sums,minimum):
+    import torch
+    with torch.no_grad():
+        c=torch.as_tensor(counts,device="cuda")
+        s=torch.as_tensor(sums,device="cuda")
+        eligible=c>=minimum
+        local=torch.where(eligible & (c>0),s/c.clamp_min(1)*1e4,0.0)
+        n=eligible.sum(dim=1)
+        nf=n.to(torch.float64)
+        positive=(local>0).sum(dim=1);negative=(local<0).sum(dim=1)
+        mean=local.sum(dim=1)/nf.clamp_min(1)
+        centered=torch.where(eligible,local-mean[:,None,:],0.0)
+        dispersion=torch.where(n>1,(centered.square().sum(dim=1)/(n-1).clamp_min(1)).sqrt(),torch.nan)
+        best_positive=torch.where(local>0,local,-torch.inf).amax(dim=1)
+        best_positive=torch.where(torch.isfinite(best_positive),best_positive,torch.nan)
+        best_negative=torch.where(local<0,local,torch.inf).amin(dim=1)
+        best_negative=torch.where(torch.isfinite(best_negative),best_negative,torch.nan)
+        contribution=torch.where(eligible,s.abs(),0.0)
+        total=contribution.sum(dim=1);top1=contribution.amax(dim=1)
+        top5=contribution.topk(min(5,contribution.shape[1]),dim=1).values.sum(dim=1)
+        global_n=c.sum(dim=1)
+        global_mean=torch.where(global_n>0,s.sum(dim=1)/global_n.clamp_min(1)*1e4,torch.nan)
+        cancellation=torch.where(n>0,(local.abs().sum(dim=1)/nf.clamp_min(1))/global_mean.abs().clamp_min(1e-9),torch.nan)
+        fraction_positive=torch.where(n>0,positive.to(torch.float64)/nf.clamp_min(1),torch.nan)
+        fraction_negative=torch.where(n>0,negative.to(torch.float64)/nf.clamp_min(1),torch.nan)
+        top1_share=torch.where(total!=0,top1/total,torch.nan)
+        top5_share=torch.where(total!=0,top5/total,torch.nan)
+        metrics=(n.clamp_max(65535),fraction_positive,fraction_negative,dispersion,
+                 best_positive,best_negative,top1_share,top5_share,cancellation)
+        arrays=[value.cpu().numpy() for value in metrics]
+    return [{name:values[pair].tolist() for name,values in zip(SCHEMA.names[3:],arrays)} for pair in range(counts.shape[0])]
 
 def _completed(parts:Path):
     files=list(parts.glob("*.parquet"))

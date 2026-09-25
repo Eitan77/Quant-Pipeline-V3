@@ -11,7 +11,7 @@ import numpy as np
 import pyarrow as pa
 import pyarrow.parquet as pq
 
-from .cell_specialist import SCHEMA as SPECIALIST_SCHEMA, _summaries
+from .cell_specialist import SCHEMA as SPECIALIST_SCHEMA, _summaries, _summaries_cuda
 from .cell_temporal import SCHEMA as TEMPORAL_SCHEMA, _reduce
 from .evidence_artifacts import load_tile
 from .evidence_store import EvidenceReader
@@ -22,9 +22,10 @@ from .evidence_identity import atomic_json
 class CompatibilitySink:
     """Reduce security/fold moments while their coverage tile is already live."""
 
-    def __init__(self, root, reader_manifest, stage_id, *, minimum, expected_folds, workers=1):
+    def __init__(self, root, reader_manifest, stage_id, *, minimum, expected_folds, workers=1, device="cpu"):
         self.root=Path(root);self.reader_manifest=reader_manifest;self.stage_id=stage_id
         self.minimum=minimum;self.expected_folds=expected_folds;self.parts={}
+        self.device=device
         self.workers=max(1,int(workers));self.executor=None
         self.manifest=self.root/"evidence"/"compatibility.json"
         previous=json.loads(self.manifest.read_text()) if self.manifest.exists() else {}
@@ -85,7 +86,8 @@ class CompatibilitySink:
 
         def reduce_job(job):
             grid,pairs,target,resolution,grouping,counts,sums=job
-            reduced=(_summaries(counts,sums,self.minimum) if grouping=="security"
+            reduced=((_summaries_cuda(counts,sums,self.minimum) if self.device.startswith("cuda") and counts.size>=100_000
+                      else _summaries(counts,sums,self.minimum)) if grouping=="security"
                      else _reduce(counts,sums,expected_folds=self.expected_folds or
                                   self.reader_manifest["grids"][grid]["groups"]["fold"]["expected_folds"]))
             return grouping,[{"pair_id":pair,"target_id":target,"resolution":resolution,**metrics}

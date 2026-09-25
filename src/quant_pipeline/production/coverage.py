@@ -195,7 +195,7 @@ def execute_coverage(root,reader_manifest,plan,*,device,row_chunk,max_state_byte
     completed_task_ids=cache.completed_task_ids(plan["stage_id"])
     sink=CompatibilitySink(root,reader_manifest,plan["stage_id"],
                            minimum=compatibility_minimum,expected_folds=expected_folds,
-                           workers=compatibility_workers)
+                           workers=compatibility_workers,device=device)
     storage_path=root/"evidence"/"storage_plan.json"
     storage=json.loads(storage_path.read_text()) if storage_path.exists() else {}
     budget=storage.get("cache_bytes",2*(1<<30)) if cache_bytes is None else cache_bytes
