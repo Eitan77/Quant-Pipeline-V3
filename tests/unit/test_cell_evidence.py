@@ -56,6 +56,7 @@ def test_incremental_bucket_rank_matches_prior_rolling_definition(tmp_path):
 def test_hidden_cells_receive_specialist_and_temporal_metrics():
     counts=np.zeros((1,4,4),int); sums=np.zeros((1,4,4),float); counts[0,:,0]=20; sums[0,:,0]=np.array([.2,.2,-.2,-.2]); counts[0,:,3]=20; sums[0,:,3]=.4
     specialist=_summaries(counts,sums,20)[0]; assert specialist["eligible_symbol_count"][0]==4 and specialist["positive_symbol_fraction"][0]==.5 and specialist["negative_symbol_fraction"][0]==.5
+    np.testing.assert_allclose(specialist["symbol_effect_dispersion_bps"][0],np.std([100,100,-100,-100],ddof=1))
     fold_counts=np.full((1,5,4),10); fold_sums=np.zeros((1,5,4)); fold_sums[0,:,1]=.01; temporal=_reduce(fold_counts,fold_sums)[0]; assert temporal["fold_positive_fraction"][1]==1.0
 
 def test_bundle_cell_evidence_view_covers_every_cell(tmp_path):

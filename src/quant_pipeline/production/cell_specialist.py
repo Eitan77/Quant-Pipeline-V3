@@ -1,7 +1,7 @@
 from __future__ import annotations
 from pathlib import Path
 from hashlib import sha256
-import json,os,warnings
+import json,os
 import duckdb,numpy as np,pandas as pd,pyarrow as pa,pyarrow.dataset as ds,pyarrow.parquet as pq
 from quant_pipeline.production.outputs import ProductionData
 
@@ -16,8 +16,11 @@ def _summaries(counts,sums,minimum):
     means=np.divide(sums,counts,out=np.full_like(sums,np.nan,dtype=float),where=counts>0)*1e4
     eligible=counts>=minimum; local=np.where(eligible,means,np.nan); n=eligible.sum(axis=1)
     positive=(local>0).sum(axis=1); negative=(local<0).sum(axis=1)
-    with warnings.catch_warnings():
-        warnings.simplefilter("ignore",RuntimeWarning); dispersion=np.nanstd(local,axis=1,ddof=1)
+    local_total=np.where(eligible,local,0.0).sum(axis=1)
+    local_mean=np.divide(local_total,n,out=np.zeros_like(local_total),where=n>0)
+    centered=np.where(eligible,local-local_mean[:,None,:],0.0)
+    squared=(centered*centered).sum(axis=1)
+    dispersion=np.sqrt(np.divide(squared,n-1,out=np.full_like(squared,np.nan),where=n>1))
     best_positive=np.max(np.where(local>0,local,-np.inf),axis=1); best_positive[~np.isfinite(best_positive)]=np.nan
     best_negative=np.min(np.where(local<0,local,np.inf),axis=1); best_negative[~np.isfinite(best_negative)]=np.nan
     contribution=np.where(eligible,np.abs(sums),0.0); total=contribution.sum(axis=1); top1=contribution.max(axis=1)
