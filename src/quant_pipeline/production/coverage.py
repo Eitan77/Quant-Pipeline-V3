@@ -186,13 +186,16 @@ def sample_storage(root,reader_manifest,plan,storage,*,device,row_chunk,max_stat
 
 
 def execute_coverage(root,reader_manifest,plan,*,device,row_chunk,max_state_bytes,cancelled=lambda:False,
-                     cache_bytes=None,compatibility_minimum=20,expected_folds=None):
+                     cache_bytes=None,compatibility_minimum=20,expected_folds=None,
+                     compatibility_workers=1):
     """Resume and stream all declared tasks through a bounded recomputable cache."""
     from .evidence_store import EvidenceReader
     root=Path(root)
     cache=EvidenceCache(root)
+    completed_task_ids=cache.completed_task_ids(plan["stage_id"])
     sink=CompatibilitySink(root,reader_manifest,plan["stage_id"],
-                           minimum=compatibility_minimum,expected_folds=expected_folds)
+                           minimum=compatibility_minimum,expected_folds=expected_folds,
+                           workers=compatibility_workers)
     storage_path=root/"evidence"/"storage_plan.json"
     storage=json.loads(storage_path.read_text()) if storage_path.exists() else {}
     budget=storage.get("cache_bytes",2*(1<<30)) if cache_bytes is None else cache_bytes
@@ -219,17 +222,19 @@ def execute_coverage(root,reader_manifest,plan,*,device,row_chunk,max_state_byte
         with (root/plan["path"]).open(encoding="utf-8") as stream:
             rows=(json.loads(line) for line in stream)
             for group_key, grouped in groupby(rows,key):
+                grouped=list(grouped)
                 grid=group_key[0]
                 if grid not in readers:
                     readers[grid]=EvidenceReader(root,"evidence/reader.json",grid)
                 reader=readers[grid]
                 batch=[]; live_bytes=0
+                replay=[]
                 def flush():
                     nonlocal batch,live_bytes,batches
                     if not batch:return
                     reduced_in_batch=set()
                     def reduce_task(task,moments,metadata):
-                        if cache.get(task["task_id"]) is None:
+                        if task["task_id"] not in completed_task_ids:
                             consume_block({"journal":root/"evidence"/"sweep_summary.jsonl"},moments,
                                           {"task":task,"rows_evaluated":metadata["rows_evaluated"]})
                         sink.consume(grid,task,moments)
@@ -239,12 +244,15 @@ def execute_coverage(root,reader_manifest,plan,*,device,row_chunk,max_state_byte
                           consume_block=reduce_task,materialize=False)
                     for row,result in zip(batch,results):
                         task=row["task"]
-                        if cache.get(task["task_id"]) is None and task["task_id"] not in reduced_in_batch:
+                        if task["task_id"] not in completed_task_ids and task["task_id"] not in reduced_in_batch:
                             moments=load_tile(root,task)
                             consume_block({"journal":root/"evidence"/"sweep_summary.jsonl"},moments,
                                           {"task":task,"rows_evaluated":reader.rows})
                             sink.consume(grid,task,moments)
-                        cache.record(grid,task,result,reader.rows)
+
+                        if task["task_id"] not in completed_task_ids:
+                            cache.record(grid,task,result,reader.rows)
+                            completed_task_ids.add(task["task_id"])
                         metrics["tasks_processed"]+=1
                         metrics["bytes_written"]+=result["bytes"]
                         metrics["estimated_input_bytes_read"]+=reader.rows*(len({feature for pair in row["pairs"].values() for feature in pair})+8*len(task["target_ids"])+8)
@@ -254,7 +262,6 @@ def execute_coverage(root,reader_manifest,plan,*,device,row_chunk,max_state_byte
                             sample["tiles"]+=1;sample["compressed_bytes"]+=result["bytes"]
                             sample["populated_groups"]+=result["populated_groups"]
                             sample["possible_groups"]+=len(task["pair_ids"])*len(task["target_ids"])*(task["group_stop"]-task["group_start"])
-                    cache.evict_to_budget(budget,reader_manifest["evidence_id"],plan["stage_id"])
                     metrics["peak_process_rss_bytes"]=max(metrics["peak_process_rss_bytes"],process.memory_info().rss)
                     if device!="cpu":
                         import torch
@@ -273,6 +280,7 @@ def execute_coverage(root,reader_manifest,plan,*,device,row_chunk,max_state_byte
                         raise RuntimeError("Active query pins prevent bounded coverage cache eviction")
                     batches+=1
                     if batches%32==0:
+                        cache.evict_to_budget(budget,reader_manifest["evidence_id"],plan["stage_id"])
                         cache.publish_catalog(reader_manifest["evidence_id"],plan["stage_id"])
                         storage["sampled_density"]={key:value["populated_groups"]/value["possible_groups"] if value["possible_groups"] else 0 for key,value in samples.items()}
                         storage["projected_compressed_bytes"]={key:int(value["compressed_bytes"]/value["tiles"]*plan["resolution_task_counts"][key]) for key,value in samples.items() if value["tiles"]}
@@ -282,20 +290,19 @@ def execute_coverage(root,reader_manifest,plan,*,device,row_chunk,max_state_byte
                     batch=[];live_bytes=0
                 for row in grouped:
                     if cancelled(): raise InterruptedError("Coverage cancelled")
-                    if (existing:=cache.get(row["task"]["task_id"])) and existing["compute_status"]=="complete":
-                        task=row["task"]
-                        if not sink.ready and task["state_kind"]=="dual" and task["grouping_id"] in {"security","fold"}:
-                            moments=load_tile(root,task)
-                            if moments is None:
-                                result=execute_segmented_task(root=root,task=task,reader=reader,
-                                    pair_definitions=row["pairs"],observation_id=reader.grid["observation_id"],
-                                    row_chunk=row_chunk,max_state_bytes=max_state_bytes,device=device,cancelled=cancelled)
-                                cache.record(grid,task,result,reader.rows)
-                                moments=load_tile(root,task)
-                            sink.consume(grid,task,moments)
-                        continue
                     task=row["task"]
+                    task_id=task["task_id"]
+                    if task_id in completed_task_ids:
+                        if not sink.ready and task["state_kind"]=="dual" and task["grouping_id"] in {"security","fold"}:
+                            replay.append(row)
+                        continue
                     cells=task["resolution"] if task["state_kind"]=="single" else task["resolution"]**2
+                    need=16*len(task["pair_ids"])*len(task["target_ids"])*(task["group_stop"]-task["group_start"])*cells
+                    if batch and live_bytes+need>max_state_bytes*9//10:flush()
+                    batch.append(row);live_bytes+=need
+                for row in sink.consume_existing(grid,replay):
+                    task=row["task"]
+                    cells=task["resolution"]**2
                     need=16*len(task["pair_ids"])*len(task["target_ids"])*(task["group_stop"]-task["group_start"])*cells
                     if batch and live_bytes+need>max_state_bytes*9//10:flush()
                     batch.append(row);live_bytes+=need

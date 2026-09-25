@@ -143,8 +143,12 @@ def load_tile(root, task):
     targets = {value: i for i, value in enumerate(task["target_ids"])}
     pairs = {value: i for i, value in enumerate(task["pair_ids"])}
     for batch in pq.ParquetFile(inside(root, manifest["artifact"])).iter_batches(batch_size=1024):
-        for row in batch.to_pylist():
-            key = (targets[row["target_id"]], pairs[row["pair_id"]], row["group_id"] - task["group_start"])
-            for array, column in zip(arrays, ("counts", "sums", "sumsq")):
-                array[key] = row[column]
+        target_index=np.fromiter((targets[value] for value in batch.column("target_id").to_pylist()),
+                                 dtype=np.int64,count=batch.num_rows)
+        pair_index=np.fromiter((pairs[value] for value in batch.column("pair_id").to_pylist()),
+                               dtype=np.int64,count=batch.num_rows)
+        group_index=batch.column("group_id").to_numpy(zero_copy_only=False).astype(np.int64,copy=False)-task["group_start"]
+        for array, column in zip(arrays, ("counts", "sums", "sumsq")):
+            values=batch.column(column).flatten().to_numpy(zero_copy_only=False).reshape(batch.num_rows,-1)
+            array[target_index,pair_index,group_index]=values
     return _StoredMoments(task, arrays)

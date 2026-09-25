@@ -150,7 +150,8 @@ class V3ProductionRunner:
                                               row_chunk=int(self.research.get("cell_evidence",{}).get("observation_chunk",250000)),
                                               max_state_bytes=max_state_bytes,cache_bytes=storage["cache_bytes"],
                                               compatibility_minimum=int(self.research.get("specialist",{}).get("min_local_n",20)),
-                                              expected_folds=int(legacy_run.config.stability["chronological_folds"]))
+                                              expected_folds=int(legacy_run.config.stability["chronological_folds"]),
+                                              compatibility_workers=ResourcePolicy(self.machine).compatibility_workers())
                     if mandatory["mandatory_coverage_complete"]:
                         moment_derived=True
                 else:

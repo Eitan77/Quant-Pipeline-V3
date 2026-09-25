@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import json
 import os
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
 import numpy as np
@@ -20,21 +21,38 @@ from .evidence_identity import atomic_json
 class CompatibilitySink:
     """Reduce security/fold moments while their coverage tile is already live."""
 
-    def __init__(self, root, reader_manifest, stage_id, *, minimum, expected_folds):
+    def __init__(self, root, reader_manifest, stage_id, *, minimum, expected_folds, workers=1):
         self.root=Path(root);self.reader_manifest=reader_manifest;self.stage_id=stage_id
         self.minimum=minimum;self.expected_folds=expected_folds;self.parts={}
+        self.workers=max(1,int(workers));self.executor=None
         self.manifest=self.root/"evidence"/"compatibility.json"
         previous=json.loads(self.manifest.read_text()) if self.manifest.exists() else {}
         self.ready=(previous.get("stage_id")==stage_id and
                     all((self.root/name).exists() for name in
                         ("cell_specialist_summary.parquet","cell_temporal_summary.parquet")))
         self.writers={};self.temporary={};self.counts={"security":0,"fold":0}
+        self.write_buffers={"security":[],"fold":[]}
+        self.write_buffer_rows={"security":0,"fold":0}
+        self.write_flush_rows=2048
         if not self.ready:
+            if self.workers>1:self.executor=ThreadPoolExecutor(max_workers=self.workers,
+                                                               thread_name_prefix="compatibility")
             for grouping,name,schema in (("security","cell_specialist_summary.parquet",SPECIALIST_SCHEMA),
                                          ("fold","cell_temporal_summary.parquet",TEMPORAL_SCHEMA)):
                 temporary=(self.root/name).with_suffix(".partial.parquet")
                 self.temporary[grouping]=temporary
                 self.writers[grouping]=pq.ParquetWriter(temporary,schema,compression="zstd")
+
+    def consume_existing(self, grid, rows):
+        """Load reusable moment tiles concurrently; return rows whose tile was evicted."""
+        if self.ready or not rows:return []
+        load=lambda row:load_tile(self.root,row["task"])
+        moments=(map(load,rows) if self.executor is None else self.executor.map(load,rows))
+        missing=[]
+        for row,value in zip(rows,moments):
+            if value is None:missing.append(row)
+            else:self.consume(grid,row["task"],value)
+        return missing
 
     def consume(self, grid, task, moments):
         grouping=task["grouping_id"]
@@ -52,23 +70,51 @@ class CompatibilitySink:
 
     def finish_group(self):
         if self.ready:return
+        jobs=[]
         for key,(counts,sums,seen) in self.parts.items():
             if not seen.all():raise ValueError("Incomplete compatibility group partitions")
             grid,pairs,targets,resolution,grouping=key
-            schema=SPECIALIST_SCHEMA if grouping=="security" else TEMPORAL_SCHEMA
-            records=[]
             for ti,target in enumerate(targets):
-                reduced=(_summaries(counts[ti],sums[ti],self.minimum) if grouping=="security"
-                         else _reduce(counts[ti],sums[ti],expected_folds=self.expected_folds or
-                                      self.reader_manifest["grids"][grid]["groups"]["fold"]["expected_folds"]))
-                records.extend({"pair_id":pair,"target_id":target,"resolution":resolution,**metrics}
-                               for pair,metrics in zip(pairs,reduced))
-            self.writers[grouping].write_table(pa.Table.from_pylist(records,schema=schema))
+                jobs.append((grid,pairs,target,resolution,grouping,counts[ti],sums[ti]))
+
+        def reduce_job(job):
+            grid,pairs,target,resolution,grouping,counts,sums=job
+            reduced=(_summaries(counts,sums,self.minimum) if grouping=="security"
+                     else _reduce(counts,sums,expected_folds=self.expected_folds or
+                                  self.reader_manifest["grids"][grid]["groups"]["fold"]["expected_folds"]))
+            return grouping,[{"pair_id":pair,"target_id":target,"resolution":resolution,**metrics}
+                             for pair,metrics in zip(pairs,reduced)]
+
+        results=(map(reduce_job,jobs) if self.executor is None else self.executor.map(reduce_job,jobs))
+        grouped={"security":[],"fold":[]}
+        for grouping,records in results:grouped[grouping].extend(records)
+        for grouping,records in grouped.items():
+            if not records:continue
+            schema=SPECIALIST_SCHEMA if grouping=="security" else TEMPORAL_SCHEMA
+            table=pa.Table.from_pylist(records,schema=schema)
+            self.write_buffers[grouping].append(table)
+            self.write_buffer_rows[grouping]+=table.num_rows
+            if self.write_buffer_rows[grouping]>=self.write_flush_rows:
+                self._flush_writer(grouping)
             self.counts[grouping]+=len(records)
         self.parts.clear()
 
+    def _flush_writer(self,grouping):
+        tables=self.write_buffers[grouping]
+        if not tables:return
+        self.writers[grouping].write_table(pa.concat_tables(tables))
+        tables.clear()
+        self.write_buffer_rows[grouping]=0
+
+    def _shutdown(self):
+        if self.executor is not None:
+            self.executor.shutdown(wait=True);self.executor=None
+
     def publish(self):
         if self.ready:return
+        self._shutdown()
+        for grouping in self.writers:
+            self._flush_writer(grouping)
         for grouping,writer in self.writers.items():
             writer.close()
             name="cell_specialist_summary.parquet" if grouping=="security" else "cell_temporal_summary.parquet"
@@ -77,6 +123,7 @@ class CompatibilitySink:
         self.ready=True
 
     def abort(self):
+        self._shutdown()
         for grouping,writer in self.writers.items():
             if not self.ready:
                 writer.close()

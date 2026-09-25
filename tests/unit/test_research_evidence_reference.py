@@ -119,6 +119,9 @@ def check_store_query(root):
     cache = EvidenceCache(root)
     cache.record("g", transient_task, transient, reader.rows)
     assert cache.get(transient_task["task_id"])["materialization_status"] == "recomputable"
+    assert transient_task["task_id"] in cache.completed_task_ids(
+        transient_task["stage_id"]
+    )
     cache.close()
     (root / result["artifact"]).parent.joinpath("complete.json").unlink()
     assert execute_segmented_task(**args)["sha256"] == result["sha256"]

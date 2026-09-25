@@ -40,3 +40,12 @@ class ResourcePolicy:
                              float(compute.feature_memory_guard_multiplier)*(1<<30)))
         limit=min(limit,max(1,available//per_worker))
         return max(1, limit)
+
+    def compatibility_workers(self):
+        """Threaded Arrow/Numpy reductions share storage and accumulator memory."""
+        logical=max(1,psutil.cpu_count(logical=True) or 1)
+        available=max(0,psutil.virtual_memory().available-self.host_reserve)
+        # Bound concurrent decoded tiles while allowing the shared-memory reducer
+        # to use the host; unlike feature workers these are not full processes.
+        memory_cap=max(1,available//(512*(1<<20)))
+        return max(1,min(logical,int(memory_cap)))

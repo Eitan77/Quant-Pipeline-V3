@@ -40,6 +40,14 @@ class EvidenceCache:
         row = self.con.execute("SELECT * FROM blocks WHERE task_id=?", (task_id,)).fetchone()
         return dict(row) if row else None
 
+    def completed_task_ids(self, stage_id):
+        rows = self.con.execute(
+            "SELECT task_id FROM blocks "
+            "WHERE stage_id=? AND compute_status='complete'",
+            (stage_id,),
+        )
+        return {row[0] for row in rows}
+
     def record(self, grid, task, manifest, rows_evaluated):
         table = f"{grid}_{task['grouping_id']}_{task['state_kind']}"
         self.con.execute("""INSERT INTO blocks

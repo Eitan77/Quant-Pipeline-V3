@@ -76,7 +76,8 @@ def test_publication_coverage_query_and_search(tmp_path,monkeypatch):
     with pytest.raises(InterruptedError):
         execute_coverage(root,manifest,plan,device="cpu",row_chunk=3,max_state_bytes=1_000_000,
                          cancelled=interrupted)
-    status=execute_coverage(root,manifest,plan,device="cpu",row_chunk=3,max_state_bytes=1_000_000)
+    status=execute_coverage(root,manifest,plan,device="cpu",row_chunk=3,max_state_bytes=1_000_000,
+                            compatibility_workers=4)
     assert status["mandatory_coverage_complete"] and status["planned_tasks"]==6
     assert status["recomputable_tasks"]==6
     derived=derive_compatibility(root,plan,manifest,minimum=1,expected_folds=2,
