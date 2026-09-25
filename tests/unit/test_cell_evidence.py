@@ -8,6 +8,26 @@ from quant_pipeline.production.cell_specialist import _summaries
 from quant_pipeline.production.cell_temporal import _reduce
 from quant_pipeline.production.surface_math import reconstruct_surface
 from quant_pipeline.production.bundle import build_v3_analysis_bundle
+from quant_pipeline.production.compatibility_moments import CompatibilitySink
+
+def test_compatibility_summary_group_survives_resume(tmp_path):
+    manifest={"grids":{"g":{"groups":{"security":{"groups":2},
+                                           "fold":{"groups":2,"expected_folds":2}}}}}
+    key=("g","dual",("p",),("t",))
+    class Moments:
+        def counts_and_sums(self):
+            return np.ones((1,1,2,9),dtype=np.int64),np.ones((1,1,2,9),dtype=float)
+    sink=CompatibilitySink(tmp_path,manifest,"stage",minimum=1,expected_folds=2)
+    for grouping in ("security","fold"):
+        sink.consume("g",{"state_kind":"dual","pair_ids":["p"],"target_ids":["t"],
+                          "resolution":3,"grouping_id":grouping,"group_start":0,"group_stop":2},Moments())
+    sink.finish_group(key)
+    sink.abort()
+    resumed=CompatibilitySink(tmp_path,manifest,"stage",minimum=1,expected_folds=2)
+    assert resumed.has_group(key)
+    resumed.publish()
+    assert pd.read_parquet(tmp_path/"cell_specialist_summary.parquet").shape[0]==1
+    assert pd.read_parquet(tmp_path/"cell_temporal_summary.parquet").shape[0]==1
 
 def test_full_surface_packed_parity_all_resolutions():
     rng=np.random.default_rng(91); n=600; values=rng.normal(size=(n,2)); codes=np.repeat(np.arange(60),10); packed=build_packed_bins(values,codes); y=rng.normal(0,.01,n); fused=DualTileScanner(bins=10,prefer_cuda=False).scan_packed_resolutions(n,1,lambda start,end:(packed[start:end,:1],packed[start:end,1:2],y[start:end]),resolutions=(3,5,10))

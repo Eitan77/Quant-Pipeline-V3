@@ -292,7 +292,7 @@ def execute_coverage(root,reader_manifest,plan,*,device,row_chunk,max_state_byte
                     task=row["task"]
                     task_id=task["task_id"]
                     if task_id in completed_task_ids:
-                        if not sink.ready and task["state_kind"]=="dual" and task["grouping_id"] in {"security","fold"}:
+                        if not sink.has_group(group_key) and task["state_kind"]=="dual" and task["grouping_id"] in {"security","fold"}:
                             replay.append(row)
                         continue
                     cells=task["resolution"] if task["state_kind"]=="single" else task["resolution"]**2
@@ -306,7 +306,7 @@ def execute_coverage(root,reader_manifest,plan,*,device,row_chunk,max_state_byte
                     if batch and live_bytes+need>max_state_bytes*9//10:flush()
                     batch.append(row);live_bytes+=need
                 flush()
-                sink.finish_group()
+                sink.finish_group(group_key)
         cache.evict_to_budget(budget,reader_manifest["evidence_id"],plan["stage_id"])
         sink.publish()
         summary=coverage_status()

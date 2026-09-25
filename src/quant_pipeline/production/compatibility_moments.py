@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import json
 import os
+from hashlib import sha256
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
@@ -30,18 +31,22 @@ class CompatibilitySink:
         self.ready=(previous.get("stage_id")==stage_id and
                     all((self.root/name).exists() for name in
                         ("cell_specialist_summary.parquet","cell_temporal_summary.parquet")))
-        self.writers={};self.temporary={};self.counts={"security":0,"fold":0}
-        self.write_buffers={"security":[],"fold":[]}
-        self.write_buffer_rows={"security":0,"fold":0}
-        self.write_flush_rows=2048
+        self.part_dir=self.root/"evidence"/"compatibility_parts"/stage_id
+        self.completed={}
         if not self.ready:
+            self.part_dir.mkdir(parents=True,exist_ok=True)
+            for marker in self.part_dir.glob("*.json"):
+                payload=json.loads(marker.read_text(encoding="utf-8"))
+                if payload.get("stage_id")!=stage_id or payload.get("schema_version")!=1:
+                    continue
+                if all((self.part_dir/name).exists() for name in payload["files"].values()):
+                    key=payload["key"]
+                    self.completed[(key[0],key[1],tuple(key[2]),tuple(key[3]))]=payload
             if self.workers>1:self.executor=ThreadPoolExecutor(max_workers=self.workers,
                                                                thread_name_prefix="compatibility")
-            for grouping,name,schema in (("security","cell_specialist_summary.parquet",SPECIALIST_SCHEMA),
-                                         ("fold","cell_temporal_summary.parquet",TEMPORAL_SCHEMA)):
-                temporary=(self.root/name).with_suffix(".partial.parquet")
-                self.temporary[grouping]=temporary
-                self.writers[grouping]=pq.ParquetWriter(temporary,schema,compression="zstd")
+
+    def has_group(self, key):
+        return self.ready or key in self.completed
 
     def consume_existing(self, grid, rows):
         """Load reusable moment tiles concurrently; return rows whose tile was evicted."""
@@ -56,20 +61,21 @@ class CompatibilitySink:
 
     def consume(self, grid, task, moments):
         grouping=task["grouping_id"]
-        if self.ready or task["state_kind"]!="dual" or grouping not in self.writers:return
+        key=(grid,task["state_kind"],tuple(task["pair_ids"]),tuple(task["target_ids"]))
+        if self.has_group(key) or task["state_kind"]!="dual" or grouping not in {"security","fold"}:return
         groups=int(self.reader_manifest["grids"][grid]["groups"][grouping]["groups"])
-        key=(grid,tuple(task["pair_ids"]),tuple(task["target_ids"]),task["resolution"],grouping)
-        if key not in self.parts:
+        part_key=(grid,tuple(task["pair_ids"]),tuple(task["target_ids"]),task["resolution"],grouping)
+        if part_key not in self.parts:
             shape=(len(task["target_ids"]),len(task["pair_ids"]),groups,task["resolution"]**2)
-            self.parts[key]=(np.zeros(shape,np.int64),np.zeros(shape,np.float64),np.zeros(groups,bool))
-        counts,sums,seen=self.parts[key]
+            self.parts[part_key]=(np.zeros(shape,np.int64),np.zeros(shape,np.float64),np.zeros(groups,bool))
+        counts,sums,seen=self.parts[part_key]
         start,stop=task["group_start"],task["group_stop"]
         if seen[start:stop].any():raise ValueError("Duplicate compatibility group partition")
         n,s=moments.counts_and_sums() if hasattr(moments,"counts_and_sums") else moments.numpy()[:2]
         counts[:,:,start:stop]=n;sums[:,:,start:stop]=s;seen[start:stop]=True
 
-    def finish_group(self):
-        if self.ready:return
+    def finish_group(self, group_key):
+        if self.has_group(group_key):return
         jobs=[]
         for key,(counts,sums,seen) in self.parts.items():
             if not seen.all():raise ValueError("Incomplete compatibility group partitions")
@@ -88,23 +94,24 @@ class CompatibilitySink:
         results=(map(reduce_job,jobs) if self.executor is None else self.executor.map(reduce_job,jobs))
         grouped={"security":[],"fold":[]}
         for grouping,records in results:grouped[grouping].extend(records)
+        key_json=json.dumps(group_key,separators=(",",":"))
+        prefix=sha256(key_json.encode()).hexdigest()[:24]
+        files={};rows={}
         for grouping,records in grouped.items():
             if not records:continue
             schema=SPECIALIST_SCHEMA if grouping=="security" else TEMPORAL_SCHEMA
             table=pa.Table.from_pylist(records,schema=schema)
-            self.write_buffers[grouping].append(table)
-            self.write_buffer_rows[grouping]+=table.num_rows
-            if self.write_buffer_rows[grouping]>=self.write_flush_rows:
-                self._flush_writer(grouping)
-            self.counts[grouping]+=len(records)
+            name=f"{prefix}-{grouping}.parquet"
+            temporary=self.part_dir/f"{name}.partial"
+            pq.write_table(table,temporary,compression="zstd")
+            os.replace(temporary,self.part_dir/name)
+            files[grouping]=name;rows[grouping]=len(records)
+        if files:
+            payload={"schema_version":1,"stage_id":self.stage_id,"key":group_key,
+                     "files":files,"rows":rows}
+            atomic_json(self.part_dir/f"{prefix}.json",payload)
+            self.completed[group_key]=payload
         self.parts.clear()
-
-    def _flush_writer(self,grouping):
-        tables=self.write_buffers[grouping]
-        if not tables:return
-        self.writers[grouping].write_table(pa.concat_tables(tables))
-        tables.clear()
-        self.write_buffer_rows[grouping]=0
 
     def _shutdown(self):
         if self.executor is not None:
@@ -113,21 +120,22 @@ class CompatibilitySink:
     def publish(self):
         if self.ready:return
         self._shutdown()
-        for grouping in self.writers:
-            self._flush_writer(grouping)
-        for grouping,writer in self.writers.items():
-            writer.close()
+        counts={"security":0,"fold":0}
+        for grouping,schema in (("security",SPECIALIST_SCHEMA),("fold",TEMPORAL_SCHEMA)):
             name="cell_specialist_summary.parquet" if grouping=="security" else "cell_temporal_summary.parquet"
-            os.replace(self.temporary[grouping],self.root/name)
-        atomic_json(self.manifest,{"stage_id":self.stage_id,"rows":self.counts,"status":"complete"})
+            temporary=(self.root/name).with_suffix(".partial.parquet")
+            with pq.ParquetWriter(temporary,schema,compression="zstd") as writer:
+                for key in sorted(self.completed):
+                    payload=self.completed[key]
+                    if grouping in payload["files"]:
+                        writer.write_table(pq.read_table(self.part_dir/payload["files"][grouping]))
+                        counts[grouping]+=payload["rows"][grouping]
+            os.replace(temporary,self.root/name)
+        atomic_json(self.manifest,{"stage_id":self.stage_id,"rows":counts,"status":"complete"})
         self.ready=True
 
     def abort(self):
         self._shutdown()
-        for grouping,writer in self.writers.items():
-            if not self.ready:
-                writer.close()
-                self.temporary[grouping].unlink(missing_ok=True)
 
 
 def derive_compatibility(root, plan, reader_manifest, *, minimum, expected_folds,
