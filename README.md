@@ -27,6 +27,20 @@ Start a new run only with a new governed request and run name:
 .\.venv\Scripts\python -m quant_pipeline run --request configs\research\v3_comprehensive_20260923.yaml --machine configs\machines\local.yaml
 ```
 
+## Fused CUDA evidence
+
+On the CUDA 12.1 host, install `pip install -e ".[fused-cuda121]"` and set
+`evidence_fused_cuda: true` and `evidence_resident_inputs: true` in the machine
+YAML. This accumulates counts and FP64 moments directly, retaining verified grid
+inputs on the GPU across batches when accumulator headroom permits. Larger grids
+fall back to fused streaming. The default remains the Torch path; task identities,
+coverage scope, and resume checkpoints are shared by both paths.
+When the complete grid has at most 12 distinct valid packed bin codes and the
+state fits, one joint histogram supplies all three resolutions. The code verifies
+the full alphabet and retains int64 counts and FP64 sums.
+
+See [measured performance and validation](docs/EVIDENCE_PERFORMANCE.md).
+
 ## Completion
 
 Treat a run as complete only when its `EVIDENCE_COMPLETE.json` exists and agrees with `STATUS.json`, stage checkpoints, and published evidence. A live process or a clean Git tree is not completion.

@@ -187,7 +187,7 @@ def sample_storage(root,reader_manifest,plan,storage,*,device,row_chunk,max_stat
 
 def execute_coverage(root,reader_manifest,plan,*,device,row_chunk,max_state_bytes,cancelled=lambda:False,
                      cache_bytes=None,compatibility_minimum=20,expected_folds=None,
-                     compatibility_workers=1):
+                     compatibility_workers=1, fused_cuda=False, resident_inputs=False):
     """Resume and stream all declared tasks through a bounded recomputable cache."""
     from .evidence_store import EvidenceReader
     root=Path(root)
@@ -202,6 +202,8 @@ def execute_coverage(root,reader_manifest,plan,*,device,row_chunk,max_state_byte
     if budget < 1: raise ValueError("A positive recomputable cache budget is required")
     samples=storage.setdefault("samples",{})
     readers={}
+    resident_grid=None
+    resident_grid_id=None
     started=time.perf_counter()
     metrics={"tasks_processed":0,"bytes_written":0,"estimated_input_bytes_read":0,"peak_process_rss_bytes":0,
              "peak_cuda_allocated_bytes":0}
@@ -234,8 +236,23 @@ def execute_coverage(root,reader_manifest,plan,*,device,row_chunk,max_state_byte
                 batch=[]; live_bytes=0
                 replay=[]
                 def flush():
-                    nonlocal batch,live_bytes,batches
+                    nonlocal batch,live_bytes,batches,resident_grid,resident_grid_id
                     if not batch:return
+                    if fused_cuda and resident_inputs and device!="cpu" and resident_grid_id!=grid:
+                        import torch
+                        from .segmented_cuda import ResidentEvidenceGrid
+                        resident_grid=None
+                        torch.cuda.empty_cache()
+                        try:
+                            resident_grid=ResidentEvidenceGrid(reader,device,
+                                reserve_bytes=max_state_bytes+512*(1<<20),row_chunk=row_chunk,cancelled=cancelled)
+                        except MemoryError:
+                            # The fused streaming path preserves bounded operation
+                            # on machines whose verified grid cannot fit on device.
+                            resident_grid=None
+                        resident_grid_id=grid
+                        metrics["resident_input_bytes"]=0 if resident_grid is None else resident_grid.bytes
+                        metrics["cuda_backend"]="fused_resident" if resident_grid is not None else "fused_streaming"
                     reduced_in_batch=set()
                     def reduce_task(task,moments,metadata):
                         if task["task_id"] not in completed_task_ids:
@@ -245,7 +262,11 @@ def execute_coverage(root,reader_manifest,plan,*,device,row_chunk,max_state_byte
                         reduced_in_batch.add(task["task_id"])
                     results=execute_segmented_batch(root=root,rows=batch,reader=reader,row_chunk=row_chunk,
                           max_state_bytes=max_state_bytes,device=device,cancelled=cancelled,
-                          consume_block=reduce_task,materialize=False)
+                          consume_block=reduce_task,materialize=False,fused_cuda=fused_cuda,
+                          resident_grid=resident_grid)
+                    if resident_grid is not None:
+                        metrics["joint_bin_codes"]=len(resident_grid.joint_codes)
+                        metrics["joint_resolution_batches"]=resident_grid.joint_batches
                     for row,result in zip(batch,results):
                         task=row["task"]
                         if task["task_id"] not in completed_task_ids and task["task_id"] not in reduced_in_batch:

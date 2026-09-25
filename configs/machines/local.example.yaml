@@ -5,6 +5,9 @@ run_root: D:/AlgoResearch/Quant-Pipeline-V3/runs
 scratch_root: D:/AlgoResearch/Quant-Pipeline-V3/scratch
 duckdb_temp: D:/AlgoResearch/Quant-Pipeline-V3/scratch/duckdb
 gpu_device: cuda:0
+# Optional: install the fused-cuda121 extra before enabling these.
+evidence_fused_cuda: false
+evidence_resident_inputs: false
 resource_budget: {ram_gb: 32, reserve_ram_gb: 6, vram_soft_limit_gb: 10.0}
 feature_workers: auto
 feature_autoscale:

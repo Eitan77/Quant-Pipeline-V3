@@ -17,6 +17,7 @@ dependencies = [
 ]
 [project.optional-dependencies]
 dev = ["pytest>=8.0.0"]
+fused-cuda121 = ["cupy-cuda12x>=14,<15", "nvidia-cuda-runtime-cu12==12.1.105"]
 [project.scripts]
 quant-v3 = "quant_pipeline.__main__:main"
 [tool.setuptools.packages.find]

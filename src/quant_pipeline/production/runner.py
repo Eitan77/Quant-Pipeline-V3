@@ -151,7 +151,9 @@ class V3ProductionRunner:
                                               max_state_bytes=max_state_bytes,cache_bytes=storage["cache_bytes"],
                                               compatibility_minimum=int(self.research.get("specialist",{}).get("min_local_n",20)),
                                               expected_folds=int(legacy_run.config.stability["chronological_folds"]),
-                                              compatibility_workers=ResourcePolicy(self.machine).compatibility_workers())
+                                              compatibility_workers=ResourcePolicy(self.machine).compatibility_workers(),
+                                              fused_cuda=bool(self.machine.get("evidence_fused_cuda",False)),
+                                              resident_inputs=bool(self.machine.get("evidence_resident_inputs",False)))
                     if mandatory["mandatory_coverage_complete"]:
                         moment_derived=True
                 else:

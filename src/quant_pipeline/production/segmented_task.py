@@ -49,7 +49,7 @@ def execute_segmented_task(*, root, task, reader, pair_definitions,
 
 def execute_segmented_batch(*, root, rows, reader, row_chunk, max_state_bytes,
                             device="cpu", cancelled=lambda: False, consume_block=None,
-                            materialize=True):
+                            materialize=True, fused_cuda=False, resident_grid=None):
     """Scan one pair/target tile for all admitted grouping and resolution tasks."""
     rows = list(rows)
     if not rows:
@@ -67,6 +67,11 @@ def execute_segmented_batch(*, root, rows, reader, row_chunk, max_state_bytes,
     index = {key: i for i, key in enumerate(features)}
     left = [index[pair[0]] for pair in pairs]
     right = None if singles else [index[pair[1]] for pair in pairs]
+    if resident_grid is not None and not materialize and all(previous is None for _, previous in pending):
+        results = resident_grid.joint_batch(rows, pairs, first["target_ids"], max_state_bytes,
+                                           consume_block, cancelled)
+        if results is not None:
+            return results
     live = []
     state_bytes = 0
     for row, previous in pending:
@@ -81,7 +86,13 @@ def execute_segmented_batch(*, root, rows, reader, row_chunk, max_state_bytes,
                     groups=task["group_stop"]-task["group_start"], resolution=task["resolution"],
                     singles=singles, device=device, max_state_bytes=max_state_bytes,
                     track_sumsq=materialize)))
-    for start in range(0, reader.rows, row_chunk):
+    fused = None
+    if live and resident_grid is not None:
+        resident_grid.accumulate(live, pairs, first["target_ids"], cancelled)
+    elif live and fused_cuda and device != "cpu":
+        from .segmented_cuda import FusedSegmentedBatch
+        fused = FusedSegmentedBatch(live, left, right)
+    for start in range(0, 0 if resident_grid is not None else reader.rows, row_chunk):
         if cancelled():
             raise InterruptedError("Coverage cancelled at observation-chunk boundary")
         stop = min(start + row_chunk, reader.rows)
@@ -100,6 +111,10 @@ def execute_segmented_batch(*, root, rows, reader, row_chunk, max_state_bytes,
         sparse = np.flatnonzero(active) if not active.all() else None
         prepared = prepare_tile(reader.read_columns("bins", features, start, stop, sparse),
                                 reader.read_columns("targets", first["target_ids"], start, stop, sparse), device)
+        if fused is not None:
+            fused.update(prepared, {family: codes if sparse is None else codes[sparse]
+                                    for family, codes in group_codes.items()})
+            continue
         local_codes = {
             partition: local_group_codes(group_codes[partition[0]] if sparse is None else
                                          group_codes[partition[0]][sparse], partition[1], partition[2])

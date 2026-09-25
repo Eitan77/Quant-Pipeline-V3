@@ -125,12 +125,15 @@ class SegmentedMoments:
             g = t.as_tensor(groups, device=self.device)
             valid &= g[:, None] >= 0
             keys = ((t.arange(pairs, device=self.device)[None, :] * group_count + g[:, None]) * cells + cell)
+            # Boolean indexing invokes CUDA nonzero and synchronizes the host for
+            # every target. Keep a fixed-size scatter and give excluded rows zero
+            # weight. Invalid packed codes must still map to an in-bounds cell.
+            indices = t.where(valid, keys, 0).reshape(-1)
             values_y = y
             for target in range(targets):
                 keep = valid & t.isfinite(values_y[:, target, None])
-                indices = keys[keep]
-                values = values_y[:, target, None].expand(-1, pairs)[keep]
-                self.n[target].view(-1).scatter_add_(0, indices, t.ones_like(indices))
+                values = t.where(keep, values_y[:, target, None], 0).reshape(-1)
+                self.n[target].view(-1).scatter_add_(0, indices, keep.to(t.int64).reshape(-1))
                 self.s[target].view(-1).scatter_add_(0, indices, values)
                 if self.q is not None:
                     self.q[target].view(-1).scatter_add_(0, indices, values.square())

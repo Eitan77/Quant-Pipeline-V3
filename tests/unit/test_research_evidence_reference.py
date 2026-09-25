@@ -75,6 +75,40 @@ def check_moments():
     np.testing.assert_array_equal(local_group_codes(np.array([-1, 0, 1, 2, 3]), 1, 3), [-1, -1, 0, 1, -1])
 
 
+def test_cuda_segmented_scatter_and_sweep_parity():
+    torch = pytest.importorskip("torch")
+    if not torch.cuda.is_available():
+        pytest.skip("CUDA required")
+    from quant_pipeline.production.evidence_reducer import consume_block
+    rng = np.random.default_rng(43)
+    packed = rng.integers(0, 150, (113, 3), dtype=np.uint8)
+    packed[:9, 0] = 255
+    y = rng.normal(size=(113, 2)) / 10000
+    y[:4, 0] = [np.nan, np.inf, -np.inf, 0]
+    groups = rng.integers(-1, 3, size=113)
+    for single in (True, False):
+        for resolution in (3, 5, 10):
+            for empty in (False, True):
+                codes = np.full_like(groups, -1) if empty else groups
+                moments = []
+                for device in ("cpu", "cuda:0"):
+                    m = SegmentedMoments(pairs=2, targets=2, groups=3, resolution=resolution,
+                                         singles=single, device=device, max_state_bytes=1_000_000)
+                    for start, stop in ((0, 17), (17, 113)):
+                        m.update(packed[start:stop], [0, 1], None if single else [1, 2],
+                                 y[start:stop], codes[start:stop])
+                    moments.append(m)
+                for cpu, gpu in zip(moments[0].numpy(), moments[1].numpy()):
+                    np.testing.assert_allclose(cpu, gpu, rtol=1e-12, atol=1e-16)
+                metadata = {"task": {"task_id": "parity"}, "rows_evaluated": len(y)}
+                cpu, gpu = [consume_block({}, m, metadata) for m in moments]
+                for key in cpu:
+                    if key == "max_abs_mean_bps" and cpu[key] is not None:
+                        assert gpu[key] == pytest.approx(cpu[key], rel=1e-12)
+                    else:
+                        assert gpu[key] == cpu[key]
+
+
 def check_store_query(root):
     root.mkdir()
     group_frame = pd.DataFrame({"security": [0, 0, 1, 1] * 2, "bucket": [0, 1, 0, 1] * 2})
