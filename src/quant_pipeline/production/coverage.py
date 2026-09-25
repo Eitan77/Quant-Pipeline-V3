@@ -215,6 +215,10 @@ def execute_coverage(root,reader_manifest,plan,*,device,row_chunk,max_state_byte
             current["mandatory_coverage_complete"]=False
             current["status"]="unavailable"
         return current
+    if cache.stored_bytes(plan["stage_id"])>budget:
+        cache.evict_to_budget(budget,reader_manifest["evidence_id"],plan["stage_id"])
+        if cache.stored_bytes(plan["stage_id"])>budget:
+            raise RuntimeError("Active query pins prevent bounded coverage cache eviction")
     def key(row):
         task=row["task"]
         return (row["grid"],task["state_kind"],tuple(task["pair_ids"]),tuple(task["target_ids"]))
@@ -266,21 +270,16 @@ def execute_coverage(root,reader_manifest,plan,*,device,row_chunk,max_state_byte
                     if device!="cpu":
                         import torch
                         metrics["peak_cuda_allocated_bytes"]=max(metrics["peak_cuda_allocated_bytes"],torch.cuda.max_memory_allocated(device))
-                    for _ in range(20):
-                        if cache.stored_bytes(plan["stage_id"])<=budget:break
-                        if cancelled():raise InterruptedError("Coverage cancelled while waiting for query pins")
-                        time.sleep(.1)
-                        cache.evict_to_budget(budget,reader_manifest["evidence_id"],plan["stage_id"])
-                    if cache.stored_bytes(plan["stage_id"])>budget:
-                        blocked=coverage_status()
-                        blocked.update(status="blocked_storage",mandatory_coverage_complete=False,
-                                       reason="Active query snapshot pins prevent cache eviction",
-                                       stored_bytes=cache.stored_bytes(plan["stage_id"]),cache_budget_bytes=budget)
-                        atomic_json(root/"evidence"/"coverage_status.json",blocked)
-                        raise RuntimeError("Active query pins prevent bounded coverage cache eviction")
                     batches+=1
                     if batches%32==0:
                         cache.evict_to_budget(budget,reader_manifest["evidence_id"],plan["stage_id"])
+                        if cache.stored_bytes(plan["stage_id"])>budget:
+                            blocked=coverage_status()
+                            blocked.update(status="blocked_storage",mandatory_coverage_complete=False,
+                                           reason="Active query snapshot pins prevent cache eviction",
+                                           stored_bytes=cache.stored_bytes(plan["stage_id"]),cache_budget_bytes=budget)
+                            atomic_json(root/"evidence"/"coverage_status.json",blocked)
+                            raise RuntimeError("Active query pins prevent bounded coverage cache eviction")
                         cache.publish_catalog(reader_manifest["evidence_id"],plan["stage_id"])
                         storage["sampled_density"]={key:value["populated_groups"]/value["possible_groups"] if value["possible_groups"] else 0 for key,value in samples.items()}
                         storage["projected_compressed_bytes"]={key:int(value["compressed_bytes"]/value["tiles"]*plan["resolution_task_counts"][key]) for key,value in samples.items() if value["tiles"]}
@@ -308,7 +307,7 @@ def execute_coverage(root,reader_manifest,plan,*,device,row_chunk,max_state_byte
                     batch.append(row);live_bytes+=need
                 flush()
                 sink.finish_group()
-                cache.evict_to_budget(budget,reader_manifest["evidence_id"],plan["stage_id"])
+        cache.evict_to_budget(budget,reader_manifest["evidence_id"],plan["stage_id"])
         sink.publish()
         summary=coverage_status()
         cache.publish_catalog(reader_manifest["evidence_id"],plan["stage_id"])

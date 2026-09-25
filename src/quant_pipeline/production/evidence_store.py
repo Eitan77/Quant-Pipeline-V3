@@ -180,7 +180,7 @@ class ByteLRU:
 class EvidenceReader:
     """Read an imported, verified immutable grid; never call legacy initialization."""
 
-    def __init__(self, root, manifest_path, grid_id, max_open_arrays=16):
+    def __init__(self, root, manifest_path, grid_id, max_open_arrays=64):
         if max_open_arrays < 1:
             raise ValueError("max_open_arrays must be positive")
         self.root = root
@@ -188,11 +188,15 @@ class EvidenceReader:
         self.grid = self.manifest["grids"][grid_id]
         self.rows = int(self.grid["rows"])
         self.limit, self.arrays = max_open_arrays, OrderedDict()
+        self.paths = {}
 
     def _array(self, reference):
         if reference["observation_id"] != self.grid["observation_id"]:
             raise ValueError("Array belongs to a different observation order")
-        path = str(inside(self.root, reference["path"]))
+        relative = reference["path"]
+        if relative not in self.paths:
+            self.paths[relative] = str(inside(self.root, relative))
+        path = self.paths[relative]
         if path not in self.arrays:
             self.arrays[path] = np.load(path, mmap_mode="r", allow_pickle=False)
         array = self.arrays[path]

@@ -87,22 +87,27 @@ def execute_segmented_batch(*, root, rows, reader, row_chunk, max_state_bytes,
         stop = min(start + row_chunk, reader.rows)
         if not live:
             break
-        group_codes = {task["grouping_id"]: reader.read_groups(task["grouping_id"], start, stop)
-                       for task, _ in live}
+        partitions = {(task["grouping_id"], task["group_start"], task["group_stop"])
+                      for task, _ in live}
+        group_codes = {grouping: reader.read_groups(grouping, start, stop)
+                       for grouping, _, _ in partitions}
         active = np.zeros(stop-start, dtype=np.bool_)
-        for task, _ in live:
-            codes = group_codes[task["grouping_id"]]
-            active |= (codes >= task["group_start"]) & (codes < task["group_stop"])
+        for grouping, group_start, group_stop in partitions:
+            codes = group_codes[grouping]
+            active |= (codes >= group_start) & (codes < group_stop)
         if not active.any():
             continue
         sparse = np.flatnonzero(active) if not active.all() else None
         prepared = prepare_tile(reader.read_columns("bins", features, start, stop, sparse),
                                 reader.read_columns("targets", first["target_ids"], start, stop, sparse), device)
+        local_codes = {
+            partition: local_group_codes(group_codes[partition[0]] if sparse is None else
+                                         group_codes[partition[0]][sparse], partition[1], partition[2])
+            for partition in partitions
+        }
         for task, moments in live:
-            codes = group_codes[task["grouping_id"]]
-            local = local_group_codes(codes if sparse is None else codes[sparse],
-                                      task["group_start"], task["group_stop"])
-            moments.update_prepared(prepared, left, right, local)
+            partition = (task["grouping_id"], task["group_start"], task["group_stop"])
+            moments.update_prepared(prepared, left, right, local_codes[partition])
     computed = {}
     for task, moments in live:
         if cancelled():
