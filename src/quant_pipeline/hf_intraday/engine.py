@@ -6,6 +6,47 @@ from scipy.stats import skew,kurtosis
 from .math import lag,rolling,cs_rank,baseline,empirical,project,fit_models
 from .spec import FEATURES,TARGETS
 
+FACTOR_FEATURES=FEATURES[70:90]
+EVENT_FEATURES=("post_shock_recovery_1m","post_shock_recovery_3m")
+FACTOR_TARGETS=tuple(key for key in TARGETS if "factor_resid" in key)
+
+def factor_features(r,u,evalid,models,liqrank,cfg,tod):
+    shape=r[1].shape;eps=cfg["eps"];f={}
+    def div(a,b): return np.asarray(a)/(np.asarray(b)+eps)
+    for z in (1,2):
+        f[f'factor_resid_{z}m']=u[z]; f[f'factor_resid_tod_tail_{z}m']=tod(f'u{z}',u[z])
+    f['factor_common_share_1m']=np.minimum(div(abs(r[1]-u[1]),abs(r[1])),cfg['factor_common_cap'])
+    f['factor_resid_cs_rank_1m']=cs_rank(np.where(evalid,u[1],np.nan))
+    peerkeys=['peer_basket_resid_1m','peer_gap_1m','peer_gap_2m','peer_lead_pred_1m','peer_lead_pred_2m',
+              'peer_breadth_sign_1m','peer_shock_breadth_1m','peer_dispersion_1m','peer_move_concentration_1m',
+              'peer_leader_count_1m','leader_liquidity_advantage']
+    f.update({key:np.full(shape,np.nan) for key in peerkeys})
+    for i,peer in enumerate(models['peers']):
+        if peer is None: continue
+        js,weights=peer; pu=u[1][:,js]; basket=pu@weights
+        f['peer_basket_resid_1m'][:,i]=basket
+        f['peer_gap_1m'][:,i]=basket-u[1][:,i]; f['peer_gap_2m'][:,i]=u[2][:,js]@weights-u[2][:,i]
+        f['peer_dispersion_1m'][:,i]=np.sqrt(((pu-basket[:,None])**2)@weights)
+        contributions=abs(pu*weights); den=contributions.sum(axis=1)
+        shares=contributions/np.where(den>0,den,np.nan)[:,None]
+        f['peer_move_concentration_1m'][:,i]=np.sum(shares**2,axis=1)
+        f['leader_liquidity_advantage'][:,i]=liqrank[js]@weights-liqrank[i]
+        coef=models['lead1'][i]
+        if coef is not None:
+            pred=pu@coef; direction=np.sign(pred)
+            f['peer_lead_pred_1m'][:,i]=pred
+            good=np.isfinite(pu).all(axis=1)&np.isfinite(pred)
+            f['peer_breadth_sign_1m'][:,i]=np.where(good,(np.sign(pu)==direction[:,None])@weights,np.nan)
+            pt=f['factor_resid_tod_tail_1m'][:,js]
+            f['peer_shock_breadth_1m'][:,i]=np.where(good&np.isfinite(pt).all(axis=1),((pt*direction[:,None])>=.98)@weights,np.nan)
+            f['peer_leader_count_1m'][:,i]=np.where(good& (abs(pred)>eps),(abs(pu*coef)>=.1*abs(pred[:,None])).sum(axis=1),np.nan)
+        if models['lead2'][i] is not None:
+            f['peer_lead_pred_2m'][:,i]=np.concatenate((pu,lag(pu)),axis=1)@models['lead2'][i]
+    f['peer_gap_velocity_1m']=f['peer_gap_1m']-lag(f['peer_gap_1m'])
+    f['network_lead_strength']=np.broadcast_to(models['outgoing'],shape).copy()
+    f['network_follow_strength']=np.broadcast_to(models['incoming'],shape).copy()
+    return f
+
 class HFEngine:
     """One bounded session at a time; state is updated only after all outputs."""
     def __init__(self,settings,device='cpu',history_root=None):
@@ -38,6 +79,53 @@ class HFEngine:
         while self.history_maps:
             mapped,path=self.history_maps.popleft()
             mapped._mmap.close(); path.unlink()
+
+    def repair(self,bars,market_close,eligible,recovery=None,liquidity_rank=None):
+        """Recompute the factor block and two event bins; retain other builds."""
+        cfg=self.cfg;eps=cfg['eps'];minimum=cfg['tod_min_sessions']
+        c=bars['close'];shape=c.shape;evalid=eligible[None,:]&np.isfinite(c)
+        def hist(key): return [day[key] for day in self.history]
+        saved={}
+        def tod(key,value):
+            saved[key]=value
+            return baseline(value,hist(key),'tail',minimum,eps)
+        r={z:c/lag(c,z)-1 for z in (1,2)}
+        m=market_close/lag(market_close)-1
+        models=fit_models(list(self.returns),list(self.markets),eligible,cfg,self.device)
+        e1=r[1]-models['beta']*m[:,None];saved['e1']=e1
+        u={z:project(r[z],models['loadings']) for z in (1,2)}
+        if liquidity_rank is None:
+            liq=np.full(shape[1],np.nan)
+            if len(self.liquidity)==20:
+                h=np.stack(self.liquidity);good=np.isfinite(h).any(axis=1).all(axis=0)&eligible
+                liq[good]=np.nanmedian(h[:,:,good],axis=(0,1))
+            liquidity_rank=cs_rank(liq[None,:])[0]
+        f=factor_features(r,u,evalid,models,liquidity_rank,cfg,tod)
+        if recovery is None:
+            tail=baseline(e1,hist('e1'),'tail',minimum,eps)
+            event=np.where(np.isfinite(tail),(abs(tail)>=.98).astype(float),np.nan)
+            value=np.full(shape,np.nan)
+            for i in range(shape[1]):
+                shock=None;unknown=None
+                for t in range(shape[0]):
+                    if not np.isfinite(c[t,i]):shock=None;unknown=t;continue
+                    if shock is not None and (unknown is None or shock>unknown) and 1<=t-shock<=3:
+                        value[t,i]=-np.sign(e1[shock,i])*(c[t,i]/c[shock,i]-1)
+                    if event[t,i]==1:shock=t
+                    elif not np.isfinite(event[t,i]):unknown=t
+            recovery=dict(post_shock_recovery_1m=np.where(lag(event)==1,-np.sign(lag(e1))*r[1],np.nan),post_shock_recovery_3m=value)
+        f.update(recovery)
+        q={key:empirical(value,hist(key),1 if key in EVENT_FEATURES and len(self.history)==60 else minimum) for key,value in f.items()}
+        y={}
+        for z in (1,2,3,5,10,15,30):y[f'fwd_factor_resid_{z}m']=project(lag(c,-z)/c-1,models['loadings'])
+        for z in range(1,6):y[f'step_factor_resid_p{z}']=project(lag(c,-z)/lag(c,-(z-1))-1,models['loadings'])
+        for mapping in (f,q,y):
+            for key,value in mapping.items():mapping[key]=np.where(evalid&np.isfinite(value),value,np.nan)
+        saved.update(f);self._save_history(saved)
+        self.returns.append(np.where(evalid,r[1],np.nan));self.markets.append(m.copy())
+        dv=bars['vwap']*bars['volume']*bars.get('split_factor',1)
+        self.liquidity.append(np.where(evalid,dv,np.nan))
+        return f,y,q,models
 
     def build(self,bars,market_close,eligible):
         cfg=self.cfg; eps=cfg['eps']; minimum=cfg['tod_min_sessions']
@@ -143,38 +231,7 @@ class HFEngine:
         denom=(evalid&np.isfinite(r[1])).sum(axis=1)
         f['breadth_positive_1m']=broadcast(np.where(denom>0,((r[1]>0)&evalid).sum(axis=1)/np.maximum(denom,1),np.nan))
         f['breadth_change_1m']=f['breadth_positive_1m']-lag(f['breadth_positive_1m'])
-        for z in (1,2):
-            f[f'factor_resid_{z}m']=u[z]; f[f'factor_resid_tod_tail_{z}m']=tod(f'u{z}',u[z])
-        f['factor_common_share_1m']=np.minimum(div(abs(r[1]-u[1]),abs(r[1])),cfg['factor_common_cap'])
-        f['factor_resid_cs_rank_1m']=cs_rank(np.where(evalid,u[1],np.nan))
-        peerkeys=['peer_basket_resid_1m','peer_gap_1m','peer_gap_2m','peer_lead_pred_1m','peer_lead_pred_2m',
-                  'peer_breadth_sign_1m','peer_shock_breadth_1m','peer_dispersion_1m','peer_move_concentration_1m',
-                  'peer_leader_count_1m','leader_liquidity_advantage']
-        f.update({key:np.full(shape,np.nan) for key in peerkeys})
-        for i,peer in enumerate(models['peers']):
-            if peer is None: continue
-            js,weights=peer; pu=u[1][:,js]; basket=pu@weights
-            f['peer_basket_resid_1m'][:,i]=basket
-            f['peer_gap_1m'][:,i]=basket-u[1][:,i]; f['peer_gap_2m'][:,i]=u[2][:,js]@weights-u[2][:,i]
-            f['peer_dispersion_1m'][:,i]=np.sqrt(((pu-basket[:,None])**2)@weights)
-            contributions=abs(pu*weights); den=contributions.sum(axis=1)
-            shares=contributions/np.where(den>0,den,np.nan)[:,None]
-            f['peer_move_concentration_1m'][:,i]=np.sum(shares**2,axis=1)
-            f['leader_liquidity_advantage'][:,i]=liqrank[js]@weights-liqrank[i]
-            coef=models['lead1'][i]
-            if coef is not None:
-                pred=pu@coef; direction=np.sign(pred)
-                f['peer_lead_pred_1m'][:,i]=pred
-                good=np.isfinite(pu).all(axis=1)&np.isfinite(pred)
-                f['peer_breadth_sign_1m'][:,i]=np.where(good,(np.sign(pu)==direction[:,None])@weights,np.nan)
-                pt=f['factor_resid_tod_tail_1m'][:,js]
-                f['peer_shock_breadth_1m'][:,i]=np.where(good&np.isfinite(pt).all(axis=1),((pt*direction[:,None])>=.98)@weights,np.nan)
-                f['peer_leader_count_1m'][:,i]=np.where(good& (abs(pred)>eps),(abs(pu*coef)>=.1*abs(pred[:,None])).sum(axis=1),np.nan)
-            if models['lead2'][i] is not None:
-                f['peer_lead_pred_2m'][:,i]=np.concatenate((pu,lag(pu)),axis=1)@models['lead2'][i]
-        f['peer_gap_velocity_1m']=f['peer_gap_1m']-lag(f['peer_gap_1m'])
-        f['network_lead_strength']=np.broadcast_to(models['outgoing'],shape).copy()
-        f['network_follow_strength']=np.broadcast_to(models['incoming'],shape).copy()
+        f.update(factor_features(r,u,evalid,models,liqrank,cfg,tod))
         # Invalid/missing minute bars poison session accumulations from that point.
         cumv=np.cumsum(v,axis=0); svwap=div(np.cumsum(w*v,axis=0),cumv)
         sh=np.maximum.accumulate(h,axis=0); sl=np.minimum.accumulate(l,axis=0)
@@ -247,7 +304,7 @@ class HFEngine:
         # Conditional recovery values are NA outside events. Requiring an event
         # on all 60 sessions makes their bins structurally empty. After a full
         # prior60 calendar window, rank only observed prior events; never fill NA.
-        event_features={'post_shock_recovery_1m','post_shock_recovery_3m'}
+        event_features=set(EVENT_FEATURES)
         ranks={key:empirical(value,hist(key),1 if key in event_features and len(hist(key))==60 else minimum)
                for key,value in f.items()}
         for mapping in (f,targets,ranks):

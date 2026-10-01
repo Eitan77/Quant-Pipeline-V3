@@ -1,4 +1,5 @@
 from types import SimpleNamespace
+import json
 import duckdb,numpy as np,pandas as pd,pytest,torch
 from quant_pipeline.hf_intraday.spec import TARGETS
 from hf_scan_reference import scan_task
@@ -6,7 +7,7 @@ from quant_pipeline.production.hf_execution import connect_inputs,ResidentTarget
 
 
 @pytest.mark.parametrize('device',['cpu','cuda:0'])
-def test_shared_execution_matches_exact_reference(tmp_path,device):
+def test_shared_execution_matches_exact_reference(tmp_path,device,monkeypatch):
     if device!='cpu' and not torch.cuda.is_available(): pytest.skip('CUDA required')
     rng=np.random.default_rng(812); n=240
     data=dict(symbol=np.repeat(['A','B'],120),session_date=np.tile(np.repeat(['2025-05-01','2025-06-02','2025-06-03'],40),2),
@@ -36,6 +37,23 @@ def test_shared_execution_matches_exact_reference(tmp_path,device):
         keys=['target','cell','grouping','group_value']
         expected=expected.sort_values(keys).reset_index(drop=True);actual=actual.sort_values(keys).reset_index(drop=True)
         pd.testing.assert_frame_equal(actual[expected.columns],expected,check_dtype=False,check_exact=False,atol=1e-8,rtol=1e-9)
+        if i==0:
+            from quant_pipeline.hf_intraday.engine import FACTOR_TARGETS
+            from quant_pipeline.production import hf_execution
+            parent=tmp_path/'parent';folder=parent/'single_results.parquet';folder.mkdir(parents=True)
+            old=actual.copy();old.loc[old.target.isin(FACTOR_TARGETS),'mean_bps']=np.nan
+            old.to_parquet(folder/f'{task["key"]}.parquet',index=False)
+            checkpoints=parent/'scan_checkpoints';checkpoints.mkdir()
+            (checkpoints/f'{task["key"]}.json').write_text(json.dumps(dict(task=task)))
+            calls=[];original=hf_execution.distributions
+            def spy(con,selected_task,selected_targets,batch_size):
+                calls.append(list(selected_targets));return original(con,selected_task,selected_targets,batch_size)
+            with monkeypatch.context() as patch:
+                patch.setattr(hf_execution,'distributions',spy)
+                repaired=scan_surface(database,metadata|dict(reuse_source=str(parent)),task,machine,1,2,device,resident,4)
+            assert calls==[[key for key in targets if key in FACTOR_TARGETS]]
+            repaired=repaired.sort_values(keys).reset_index(drop=True)
+            pd.testing.assert_frame_equal(repaired[actual.columns],actual,check_dtype=False,check_exact=False,atol=1e-8,rtol=1e-9)
 
 
 def test_empty_surface_preserves_complete_cells_without_reading_inputs(tmp_path):

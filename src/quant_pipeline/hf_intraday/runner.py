@@ -125,6 +125,9 @@ def run_hf(research,machine,repo_root,telemetry):
     if reused is not None:
         telemetry.event('hf_build_reused',stage='hf:prepare-scan',sessions=reused['sessions'],observations=reused['observations'])
         return finish_hf(root,research,machine,settings,device,telemetry,reused['observations'],source['source_manifest_hash'])
+    if 'hf_repair' in research:
+        from .repair import run_repair
+        return run_repair(root,research,machine,repo_root,telemetry,settings,device,ident,source)
     atomic_frame(pd.DataFrame(SPEC['features']).assign(grid='intraday_1m',availability='completed_minute_close',price_basis='split_consistent'),root/'feature_registry.parquet')
     atomic_frame(pd.DataFrame(SPEC['targets']).assign(grid='intraday_1m',entry_reference='C_t',same_session=True),root/'target_registry.parquet')
     prep=dict(research)

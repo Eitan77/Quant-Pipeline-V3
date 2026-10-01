@@ -86,7 +86,7 @@ def fused_moments(con,task,targets,device,resident,row_chunk=250_000):
         s=torch.zeros(shape,dtype=torch.float64,device=device); q=torch.zeros_like(s)
         moments=SimpleNamespace(n=n,s=s,q=q,device=n.device,shape=shape,cells=cells,singles=True)
         native_task=dict(grouping_id='all',group_start=0,group_stop=1,resolution=task['resolution'])
-        fused=FusedSegmentedBatch([(native_task,moments)],[0],None,joint_codes=np.arange(cells))
+        fused=FusedSegmentedBatch([(native_task,moments)],[0],None,joint_codes=np.arange(cells),target_columns=getattr(resident,'target_columns',None))
     features=[f'q_{task["a"]}']+([f'q_{task["b"]}'] if task['b'] else [])
     fields=['_hf_rowid']+features+([] if resident.values is not None else targets)
     from quant_pipeline.hf_intraday.scan import sql_state
@@ -147,11 +147,11 @@ def distributions(con,task,targets,batch_size):
     return pd.concat(frames,ignore_index=True) if frames else pd.DataFrame()
 
 
-def finish_result(task,frame,targets,moments):
+def finish_result(task,frame,targets,moments,all_targets=None):
     from quant_pipeline.hf_intraday.spec import SPEC,TARGETS
     from quant_pipeline.hf_intraday.scan import cell_count
     cells=cell_count(task); frames=[]; counts,sums,sumsq=moments
-    for key in TARGETS:
+    for key in TARGETS if all_targets is None else all_targets:
         df=frame.loc[frame.target==key].drop(columns='target').copy() if not frame.empty else pd.DataFrame()
         allrows=df[df.grouping=='all'].set_index('cell') if not df.empty else pd.DataFrame()
         j=targets.index(key) if key in targets else None
@@ -187,15 +187,32 @@ def finish_result(task,frame,targets,moments):
 def scan_surface(database,metadata,task,machine,workers,memory_gb,device,resident,batch_size):
     from quant_pipeline.hf_intraday.scan import cell_count
     targets=resident.targets
+    reused=None
+    if metadata.get('reuse_source'):
+        from quant_pipeline.hf_intraday.engine import FACTOR_FEATURES,EVENT_FEATURES,FACTOR_TARGETS
+        affected=set(FACTOR_FEATURES+EVENT_FEATURES)
+        folder={'single':'single_results.parquet','dual':'dual_results.parquet','tail':'tail_results.parquet'}[task['kind']]
+        parent=Path(metadata['reuse_source']);path=parent/folder/f'{task["key"]}.parquet'
+        marker=parent/'scan_checkpoints'/f'{task["key"]}.json'
+        if task['a'] not in affected and task['b'] not in affected and path.exists() and marker.exists():
+            if json.loads(marker.read_text())['task']!=task:raise RuntimeError('Reused scan task changed')
+            reused=pd.read_parquet(path);reused=reused.loc[~reused.target.isin(FACTOR_TARGETS)].copy()
+            targets=[key for key in targets if key in FACTOR_TARGETS]
+    if reused is not None:
+        # Select only missing targets from shared resident storage, if admitted.
+        resident=SimpleNamespace(values=resident.values,lock=resident.lock,
+            target_columns=[resident.targets.index(key) for key in targets] if resident.values is not None else None)
     empty=any(metadata['finite'][f'q_{key}']==0 for key in [task['a']]+([task['b']] if task['b'] else []))
     if empty or not targets:
         zeros=np.zeros((cell_count(task),len(targets)))
-        return finish_result(task,pd.DataFrame(),targets,(zeros.astype(np.int64),zeros,zeros))
+        result=finish_result(task,pd.DataFrame(),targets,(zeros.astype(np.int64),zeros,zeros),targets if reused is not None else None)
+        return pd.concat([reused,result],ignore_index=True) if reused is not None else result
     with connect_inputs(database,machine,workers,memory_gb) as con:
         moments=fused_moments(con,task,targets,device,resident)
         # Empty state masks require no distribution reads, but still publish all cells.
         frame=distributions(con,task,targets,batch_size) if moments[0].any() else pd.DataFrame()
-    return finish_result(task,frame,targets,moments)
+    result=finish_result(task,frame,targets,moments,targets if reused is not None else None)
+    return pd.concat([reused,result],ignore_index=True) if reused is not None else result
 
 
 def execute_hf(root,settings,device,telemetry,machine):
@@ -203,6 +220,11 @@ def execute_hf(root,settings,device,telemetry,machine):
     from quant_pipeline.hf_intraday.spec import TARGETS
     from quant_pipeline.hf_intraday.runner import write_json
     database,metadata=prepare_inputs(root,machine,telemetry); root=Path(root)
+    request=root/'request.yaml'
+    if request.exists():
+        import yaml
+        repair=yaml.safe_load(request.read_text()).get('hf_repair')
+        if repair:metadata=metadata|dict(reuse_source=str(root.parent/repair['source_run']))
     policy=ResourcePolicy(machine); autoscale=machine.get('feature_autoscale',{})
     memory_gb=min(4,policy.duckdb_gib()); worker_bytes=int(memory_gb*(1<<30)*1.25)
     maximum=max(1,min(policy.compatibility_workers(),max(1,(psutil.virtual_memory().available-policy.host_reserve)//worker_bytes)))

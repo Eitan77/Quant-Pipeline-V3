@@ -4,10 +4,10 @@ Clean-room quantitative discovery and evidence pipeline with point-in-time input
 
 ## Current feature-pack scan
 
-Run `hf_intraday_run_all_20261001_coveragefix` repairs PCA/peer and conditional-recovery coverage, then scans 117 features, 305 exact listed pairs, and 31 targets. It uses the production fused CUDA kernel and shared resource policy. Completed feature builds and committed surfaces are reused on resume. See [HF run instructions](docs/HF_INTRADAY_RUN_ALL.md).
+Run `hf_intraday_run_all_20261001_targetedfix` repairs only failed PCA/peer columns and recovery bins, retaining the valid columns from all 251 built sessions and completed warmup work. It scans the same 117 features, 305 exact pairs and 31 targets using the production fused CUDA kernel. See [HF run instructions](docs/HF_INTRADAY_RUN_ALL.md).
 
 ```powershell
-.\.venv\Scripts\python -m quant_pipeline resume --run-id hf_intraday_run_all_20261001_coveragefix --machine configs\machines\hf_local.yaml
+.\.venv\Scripts\python -m quant_pipeline resume --run-id hf_intraday_run_all_20261001_targetedfix --machine configs\machines\hf_local.yaml
 ```
 
 ## Completed canonical run

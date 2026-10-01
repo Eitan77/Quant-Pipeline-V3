@@ -1,9 +1,12 @@
 # HF intraday run-all pack
 
 Status: the original scan was stopped after zero-coverage defects were
-diagnosed. Corrected run: `hf_intraday_run_all_20261001_coveragefix`.
-It rebuilds affected causal feature/target outputs from the verified existing
-source/panel; scanning is blocked until every requested column has finite coverage.
+diagnosed. Active targeted run: `hf_intraday_run_all_20261001_targetedfix`.
+The full rebuild (`hf_intraday_run_all_20261001_coveragefix`) is stopped.
+Targeted repair retains 97 feature values, 95 feature bins and 19 targets from
+all 251 completed days. It recomputes only 20 PCA/peer feature values, their
+bins, two recovery bins and 12 PCA targets. The 81 completed warmup sessions
+are reused. Scanning is blocked until every requested column has finite coverage.
 
 This is a feature/target/pair contract in the existing V3 `run`, `resume`, and
 `status` entry points. The scan executor uses the existing production
@@ -153,9 +156,8 @@ in `execution_cleanup_audit.json`. Feature/model/formula files and the request
 are unchanged. Empty evidence remains explicit: 22 feature columns and 12 PCA
 target columns had zero finite observations in the completed build.
 
-```powershell
-.\.venv\Scripts\python -m quant_pipeline resume --run-id hf_intraday_run_all_20260930 --machine configs\machines\hf_local.yaml
-```
+The original run is retained as evidence and a validated column source; never
+resume it.
 
 Coverage repair (2026-10-01): sampled real prior20 data restored 489 PCA models,
 443 one-minute peer models and 387 two-minute peer models out of 503 eligible
@@ -166,6 +168,17 @@ The new run retains all 117 features, 31 targets and 305 exact pairs; old output
 are preserved separately. `coverage_repair_audit.json` records reused source and
 panel identity and focused validation.
 
+The full corrected rebuild is stopped in favor of targeted repair. Its last
+60 completed warmup history maps seed the targeted run; the preceding 20 raw
+return/market/liquidity sessions restore the model state. Selected columns are
+copied into the new owned history cache without modifying the seed maps.
+Unchanged observation keys, feature values, bins and raw/beta targets are copied
+from the validated original files; beta fits must reconcile before publication.
+For already committed surfaces with unchanged feature bins, 19 raw/beta target
+rows are reused and only 12 PCA targets are scanned. Other surfaces use the
+same shared production scanner with all targets. No formulas, settings, requested
+features or pairs are added. `targeted_repair_audit.json` records provenance.
+
 ```powershell
-.\.venv\Scripts\python -m quant_pipeline resume --run-id hf_intraday_run_all_20261001_coveragefix --machine configs\machines\hf_local.yaml
+.\.venv\Scripts\python -m quant_pipeline resume --run-id hf_intraday_run_all_20261001_targetedfix --machine configs\machines\hf_local.yaml
 ```
