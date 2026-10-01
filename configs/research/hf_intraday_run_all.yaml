@@ -1,0 +1,28 @@
+run_name: hf_intraday_run_all_20260930
+mode: hf-intraday-run-all
+fixture: null
+periods:
+  discovery: {start: '2025-05-01', end: '2026-04-30'}
+  replication: {start: '2026-05-01', end: '2026-08-31', sealed: true}
+  final_holdout: {start: '2026-09-01', end: null, sealed: true}
+allow_replication_access: false
+allow_final_holdout_access: false
+resolutions: [3, 5, 10]
+discovery:
+  canonical_duals: exact_list
+  single_parent_gate: false
+  retain_negative_effects: true
+hf_intraday:
+  model_sessions: 20
+  tod_sessions: 60
+  tod_min_sessions: 60
+  model_min_rows: 1000
+  pca_components: 5
+  peer_count: 10
+  ridge: 0.001
+  factor_common_cap: 10.0
+  eps: 1.0e-12
+  resolutions: [3, 5, 10]
+  empirical_bins: same_clock_prior60
+  tail_first_leg: listed_orientation
+  episode_gap_minutes: 1

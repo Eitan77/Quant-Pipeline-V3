@@ -1,0 +1,2177 @@
+{
+  "source_sha256": "b9bb89c1924dcc2a8ff3870a6bf8472704c9b057012a0ed3f8e87b253d5c4c1f",
+  "features": [
+    {
+      "id": "ret_tod_tail_1m",
+      "definition": "TOD_TAIL(r_1)"
+    },
+    {
+      "id": "resid_tod_tail_1m",
+      "definition": "TOD_TAIL(e_1)"
+    },
+    {
+      "id": "resid_tod_tail_2m",
+      "definition": "TOD_TAIL(e_2)"
+    },
+    {
+      "id": "resid_tod_tail_3m",
+      "definition": "TOD_TAIL(e_3)"
+    },
+    {
+      "id": "resid_tod_tail_5m",
+      "definition": "TOD_TAIL(e_5)"
+    },
+    {
+      "id": "ret_tod_robz_1m",
+      "definition": "TOD_ROBZ(r_1)"
+    },
+    {
+      "id": "resid_tod_robz_1m",
+      "definition": "TOD_ROBZ(e_1)"
+    },
+    {
+      "id": "resid_prevol_norm_1m",
+      "definition": "e_1(t) / (std(e_1[t-30:t-1]) + eps)"
+    },
+    {
+      "id": "resid_prevol_norm_2m",
+      "definition": "e_2(t) / (std(e_1[t-30:t-1]) * sqrt(2) + eps)"
+    },
+    {
+      "id": "shock_accel_1m",
+      "definition": "e_1(t) - e_1(t-1)"
+    },
+    {
+      "id": "shock_excess_1pct",
+      "definition": "sign(e_1)*max(abs(e_1)-q99_TOD(abs(e_1)),0)/(q99_TOD(abs(e_1))+eps)"
+    },
+    {
+      "id": "idio_share_1m",
+      "definition": "abs(e_1)/(abs(e_1)+abs(beta_d*m_1)+eps)"
+    },
+    {
+      "id": "body_ret_1m",
+      "definition": "C_t/O_t - 1"
+    },
+    {
+      "id": "gap_ret_1m",
+      "definition": "O_t/C_(t-1) - 1"
+    },
+    {
+      "id": "body_share_1m",
+      "definition": "abs(C_t-O_t)/(H_t-L_t+eps)"
+    },
+    {
+      "id": "clv_signed_1m",
+      "definition": "2*(C_t-L_t)/(H_t-L_t+eps)-1"
+    },
+    {
+      "id": "dir_close_extreme_1m",
+      "definition": "sign(e_1)*clv_signed_1m"
+    },
+    {
+      "id": "last1_abs_share_3m",
+      "definition": "abs(e_1(t))/sum(abs(e_1(t-k)),k=0..2)"
+    },
+    {
+      "id": "last1_abs_share_5m",
+      "definition": "abs(e_1(t))/sum(abs(e_1(t-k)),k=0..4)"
+    },
+    {
+      "id": "path_eff_3m",
+      "definition": "abs(sum(e_1(t-k),k=0..2))/sum(abs(e_1(t-k)),k=0..2)"
+    },
+    {
+      "id": "path_eff_5m",
+      "definition": "abs(sum(e_1(t-k),k=0..4))/sum(abs(e_1(t-k)),k=0..4)"
+    },
+    {
+      "id": "path_eff_10m",
+      "definition": "abs(sum(e_1(t-k),k=0..9))/sum(abs(e_1(t-k)),k=0..9)"
+    },
+    {
+      "id": "same_sign_streak_1m",
+      "definition": "sign(e_1(t))*consecutive_same_sign_run_length_ending_at_t"
+    },
+    {
+      "id": "sign_switch_rate_5m",
+      "definition": "mean(sign(e_1(k)) != sign(e_1(k-1))) over recent 5m"
+    },
+    {
+      "id": "tail_event_count_5m",
+      "definition": "count(abs(resid_tod_tail_1m)>=0.98) in last 5m"
+    },
+    {
+      "id": "tail_event_count_15m",
+      "definition": "count(abs(resid_tod_tail_1m)>=0.98) in last 15m"
+    },
+    {
+      "id": "range_tod_tail_1m",
+      "definition": "TOD_TAIL((H_t-L_t)/C_(t-1))"
+    },
+    {
+      "id": "volume_tod_tail_1m",
+      "definition": "TOD_TAIL(log(1+V_t))"
+    },
+    {
+      "id": "dollar_volume_tod_tail_1m",
+      "definition": "TOD_TAIL(log(1+W_t*V_t))"
+    },
+    {
+      "id": "trade_count_tod_tail_1m",
+      "definition": "TOD_TAIL(log(1+N_t))"
+    },
+    {
+      "id": "avg_trade_size_tod_tail_1m",
+      "definition": "TOD_TAIL(log(1+V_t/max(N_t,1)))"
+    },
+    {
+      "id": "dollar_per_trade_tod_tail_1m",
+      "definition": "TOD_TAIL(log(1+(W_t*V_t)/max(N_t,1)))"
+    },
+    {
+      "id": "impact_per_dollar_1m",
+      "definition": "abs(e_1)/(DV_t/1e6+eps)"
+    },
+    {
+      "id": "impact_tod_tail_1m",
+      "definition": "TOD_TAIL(log(1+impact_per_dollar_1m))"
+    },
+    {
+      "id": "range_per_dollar_1m",
+      "definition": "((H_t-L_t)/C_(t-1))/(DV_t/1e6+eps)"
+    },
+    {
+      "id": "effort_result_1m",
+      "definition": "TOD_ROBZ(log(1+DV_t))-TOD_ROBZ(abs(e_1))"
+    },
+    {
+      "id": "volume_return_mismatch_1m",
+      "definition": "TOD_ROBZ(log(1+V_t))-TOD_ROBZ(abs(e_1))"
+    },
+    {
+      "id": "trade_intensity_mismatch_1m",
+      "definition": "TOD_ROBZ(log(1+N_t))-TOD_ROBZ(abs(e_1))"
+    },
+    {
+      "id": "prevol_tod_tail_30m",
+      "definition": "TOD_TAIL(sqrt(sum(e_1(t-k)^2,k=1..30)))"
+    },
+    {
+      "id": "liquidity_rank_20d",
+      "definition": "cross-sectional percentile of prior-20-session median 1m dollar volume"
+    },
+    {
+      "id": "signed_dollar_pressure_1m",
+      "definition": "clv_signed_1m*TOD_ROBZ(log(1+DV_t))"
+    },
+    {
+      "id": "signed_volume_pressure_1m",
+      "definition": "clv_signed_1m*TOD_ROBZ(log(1+V_t))"
+    },
+    {
+      "id": "vwap_close_location_1m",
+      "definition": "(C_t-W_t)/(H_t-L_t+eps)"
+    },
+    {
+      "id": "vwap_bar_location_1m",
+      "definition": "(W_t-L_t)/(H_t-L_t+eps)"
+    },
+    {
+      "id": "vwap_pressure_1m",
+      "definition": "vwap_close_location_1m*TOD_ROBZ(log(1+DV_t))"
+    },
+    {
+      "id": "upper_rejection_pressure_1m",
+      "definition": "((H_t-max(O_t,C_t))/(H_t-L_t+eps))*max(TOD_ROBZ(log(1+DV_t)),0)"
+    },
+    {
+      "id": "lower_rejection_pressure_1m",
+      "definition": "((min(O_t,C_t)-L_t)/(H_t-L_t+eps))*max(TOD_ROBZ(log(1+DV_t)),0)"
+    },
+    {
+      "id": "wick_skew_pressure_1m",
+      "definition": "((min(O_t,C_t)-L_t)-(H_t-max(O_t,C_t)))/(H_t-L_t+eps)*max(TOD_ROBZ(log(1+DV_t)),0)"
+    },
+    {
+      "id": "pressure_return_divergence_1m",
+      "definition": "signed_dollar_pressure_1m-resid_tod_robz_1m"
+    },
+    {
+      "id": "absorption_score_1m",
+      "definition": "clv_signed_1m*max(TOD_ROBZ(log(1+DV_t))-abs(resid_tod_robz_1m),0)"
+    },
+    {
+      "id": "resid_cs_rank_1m",
+      "definition": "cross-sectional percentile rank of e_1 at t"
+    },
+    {
+      "id": "resid_cs_rank_2m",
+      "definition": "cross-sectional percentile rank of e_2 at t"
+    },
+    {
+      "id": "resid_cs_rank_5m",
+      "definition": "cross-sectional percentile rank of e_5 at t"
+    },
+    {
+      "id": "resid_rank_velocity_1m",
+      "definition": "resid_cs_rank_1m(t)-resid_cs_rank_1m(t-1)"
+    },
+    {
+      "id": "resid_rank_accel_1m",
+      "definition": "resid_rank_velocity_1m(t)-resid_rank_velocity_1m(t-1)"
+    },
+    {
+      "id": "resid_dispersion_1m",
+      "definition": "cross-sectional std_i(e_1(i,t))"
+    },
+    {
+      "id": "resid_dispersion_tod_tail_1m",
+      "definition": "TOD_TAIL(resid_dispersion_1m)"
+    },
+    {
+      "id": "tail_breadth_down_1m",
+      "definition": "fraction of eligible stocks with resid_tod_tail_1m<=-0.98"
+    },
+    {
+      "id": "tail_breadth_up_1m",
+      "definition": "fraction of eligible stocks with resid_tod_tail_1m>=+0.98"
+    },
+    {
+      "id": "tail_breadth_imbalance_1m",
+      "definition": "tail_breadth_up_1m-tail_breadth_down_1m"
+    },
+    {
+      "id": "cs_resid_skew_1m",
+      "definition": "cross-sectional skewness of e_1"
+    },
+    {
+      "id": "cs_resid_kurt_1m",
+      "definition": "cross-sectional excess kurtosis of e_1"
+    },
+    {
+      "id": "median_stock_ret_1m",
+      "definition": "cross-sectional median of r_1"
+    },
+    {
+      "id": "benchmark_minus_median_1m",
+      "definition": "m_1-median_stock_ret_1m"
+    },
+    {
+      "id": "market_tod_tail_1m",
+      "definition": "TOD_TAIL(m_1)"
+    },
+    {
+      "id": "market_tod_tail_2m",
+      "definition": "TOD_TAIL(m_2)"
+    },
+    {
+      "id": "market_vol_tod_tail_5m",
+      "definition": "TOD_TAIL(sqrt(sum(m_1(t-k)^2,k=0..4)))"
+    },
+    {
+      "id": "lagged_market_response_gap_1m",
+      "definition": "beta_d*m_1(t-1)-r_1(t)"
+    },
+    {
+      "id": "breadth_positive_1m",
+      "definition": "fraction of eligible stocks with r_1>0"
+    },
+    {
+      "id": "breadth_change_1m",
+      "definition": "breadth_positive_1m(t)-breadth_positive_1m(t-1)"
+    },
+    {
+      "id": "factor_resid_1m",
+      "definition": "u_1(t), residual from daily-frozen K=5 PCA common-factor model"
+    },
+    {
+      "id": "factor_resid_tod_tail_1m",
+      "definition": "TOD_TAIL(u_1)"
+    },
+    {
+      "id": "factor_resid_2m",
+      "definition": "u_2(t) using same daily-frozen factor model"
+    },
+    {
+      "id": "factor_resid_tod_tail_2m",
+      "definition": "TOD_TAIL(u_2)"
+    },
+    {
+      "id": "factor_common_share_1m",
+      "definition": "abs(r_1-u_1)/(abs(r_1)+eps), clipped at configured cap"
+    },
+    {
+      "id": "factor_resid_cs_rank_1m",
+      "definition": "cross-sectional percentile rank of u_1"
+    },
+    {
+      "id": "peer_basket_resid_1m",
+      "definition": "sum_j w_ij*u_1(j,t) over daily-frozen peer set"
+    },
+    {
+      "id": "peer_gap_1m",
+      "definition": "peer_basket_resid_1m-u_1(i,t)"
+    },
+    {
+      "id": "peer_gap_2m",
+      "definition": "sum_j w_ij*u_2(j,t)-u_2(i,t)"
+    },
+    {
+      "id": "peer_gap_velocity_1m",
+      "definition": "peer_gap_1m(t)-peer_gap_1m(t-1)"
+    },
+    {
+      "id": "peer_lead_pred_1m",
+      "definition": "daily-frozen prior-only prediction of u_i(t+1) from peer residuals at t"
+    },
+    {
+      "id": "peer_lead_pred_2m",
+      "definition": "daily-frozen prior-only prediction of u_i(t+2) from peer current/lagged residuals"
+    },
+    {
+      "id": "peer_breadth_sign_1m",
+      "definition": "weighted fraction of peers whose residual sign agrees with peer_lead_pred_1m"
+    },
+    {
+      "id": "peer_shock_breadth_1m",
+      "definition": "weighted fraction of peers in their own 2% residual tail in predicted direction"
+    },
+    {
+      "id": "peer_dispersion_1m",
+      "definition": "weighted std of peer u_1 returns"
+    },
+    {
+      "id": "peer_move_concentration_1m",
+      "definition": "HHI of abs(w_ij*u_1(j,t)) contributions"
+    },
+    {
+      "id": "peer_leader_count_1m",
+      "definition": "count of peers contributing >=10% of abs(peer_lead_pred_1m)"
+    },
+    {
+      "id": "network_lead_strength",
+      "definition": "daily-frozen aggregate outgoing lead strength of stock i"
+    },
+    {
+      "id": "network_follow_strength",
+      "definition": "daily-frozen aggregate incoming follower sensitivity of stock i"
+    },
+    {
+      "id": "leader_liquidity_advantage",
+      "definition": "weighted peer liquidity rank-stock liquidity_rank_20d"
+    },
+    {
+      "id": "dist_session_vwap",
+      "definition": "C_t/cumulative_session_VWAP_t-1"
+    },
+    {
+      "id": "dist_session_open",
+      "definition": "C_t/session_open-1"
+    },
+    {
+      "id": "dist_prior_close",
+      "definition": "C_t/prior_session_close-1"
+    },
+    {
+      "id": "dist_session_high",
+      "definition": "C_t/session_high_to_t-1"
+    },
+    {
+      "id": "dist_session_low",
+      "definition": "C_t/session_low_to_t-1"
+    },
+    {
+      "id": "session_range_expansion_tod",
+      "definition": "current session-to-date range/prior-session median same-clock session range-1"
+    },
+    {
+      "id": "same_minute_resid_lag1d",
+      "definition": "e_1 at exact same clock minute on prior session"
+    },
+    {
+      "id": "same_minute_resid_mean5d",
+      "definition": "mean e_1 at exact same clock minute over prior 5 sessions"
+    },
+    {
+      "id": "same_minute_resid_mean20d",
+      "definition": "mean e_1 at exact same clock minute over prior 20 sessions"
+    },
+    {
+      "id": "same_minute_rank_mean20d",
+      "definition": "mean residual cross-sectional rank at exact same clock minute over prior 20 sessions"
+    },
+    {
+      "id": "prevol_ratio_5_30",
+      "definition": "sqrt(sum last-5 e_1^2)/(sqrt(sum prior-30 e_1^2)*sqrt(5/30)+eps)"
+    },
+    {
+      "id": "range_ratio_5_30",
+      "definition": "sum last-5 one-minute ranges/scaled sum prior-30 ranges"
+    },
+    {
+      "id": "dollar_volume_ratio_5_30",
+      "definition": "sum last-5 DV/scaled sum prior-30 DV"
+    },
+    {
+      "id": "squeeze_score_5_30",
+      "definition": "-TOD_ROBZ(prevol_ratio_5_30)"
+    },
+    {
+      "id": "breakout_dist_high_5m",
+      "definition": "C_t/max(C_(t-5:t-1))-1"
+    },
+    {
+      "id": "breakout_dist_low_5m",
+      "definition": "C_t/min(C_(t-5:t-1))-1"
+    },
+    {
+      "id": "breakout_dist_high_15m",
+      "definition": "C_t/max(C_(t-15:t-1))-1"
+    },
+    {
+      "id": "breakout_dist_low_15m",
+      "definition": "C_t/min(C_(t-15:t-1))-1"
+    },
+    {
+      "id": "dist_orh_5m",
+      "definition": "C_t/opening_range_high_first5m-1, valid after 09:35"
+    },
+    {
+      "id": "dist_orl_5m",
+      "definition": "C_t/opening_range_low_first5m-1, valid after 09:35"
+    },
+    {
+      "id": "vwap_cross_age_signed",
+      "definition": "sign(C_t-session_VWAP_t)*minutes since last session-VWAP side change"
+    },
+    {
+      "id": "breakout_age_signed_15m",
+      "definition": "signed minutes since latest break of prior-15m high/low"
+    },
+    {
+      "id": "minutes_since_tail_event",
+      "definition": "minutes since previous abs(resid_tod_tail_1m)>=0.98 event, capped at 30"
+    },
+    {
+      "id": "post_shock_recovery_1m",
+      "definition": "if prior minute was 2% tail shock: sign(-shock)*r_1(t), else NA"
+    },
+    {
+      "id": "post_shock_recovery_3m",
+      "definition": "signed cumulative recovery since most recent <=3-minute-old 2% tail shock"
+    },
+    {
+      "id": "shock_cluster_score_15m",
+      "definition": "sum I(tail shock)*exp(-age/5) over prior 15m"
+    },
+    {
+      "id": "vol_accel_1_5",
+      "definition": "abs(e_1(t))/(sqrt(sum last-5 e_1^2)/sqrt(5)+eps)"
+    }
+  ],
+  "targets": [
+    {
+      "id": "fwd_raw_1m",
+      "basis": "raw",
+      "definition": "C_(t+1)/C_t - 1"
+    },
+    {
+      "id": "fwd_raw_2m",
+      "basis": "raw",
+      "definition": "C_(t+2)/C_t - 1"
+    },
+    {
+      "id": "fwd_raw_3m",
+      "basis": "raw",
+      "definition": "C_(t+3)/C_t - 1"
+    },
+    {
+      "id": "fwd_raw_5m",
+      "basis": "raw",
+      "definition": "C_(t+5)/C_t - 1"
+    },
+    {
+      "id": "fwd_raw_10m",
+      "basis": "raw",
+      "definition": "C_(t+10)/C_t - 1"
+    },
+    {
+      "id": "fwd_raw_15m",
+      "basis": "raw",
+      "definition": "C_(t+15)/C_t - 1"
+    },
+    {
+      "id": "fwd_raw_30m",
+      "basis": "raw",
+      "definition": "C_(t+30)/C_t - 1"
+    },
+    {
+      "id": "fwd_beta_resid_1m",
+      "basis": "beta-residual",
+      "definition": "fwd_raw_1 - beta_d*fwd_market_1"
+    },
+    {
+      "id": "fwd_beta_resid_2m",
+      "basis": "beta-residual",
+      "definition": "fwd_raw_2 - beta_d*fwd_market_2"
+    },
+    {
+      "id": "fwd_beta_resid_3m",
+      "basis": "beta-residual",
+      "definition": "fwd_raw_3 - beta_d*fwd_market_3"
+    },
+    {
+      "id": "fwd_beta_resid_5m",
+      "basis": "beta-residual",
+      "definition": "fwd_raw_5 - beta_d*fwd_market_5"
+    },
+    {
+      "id": "fwd_beta_resid_10m",
+      "basis": "beta-residual",
+      "definition": "fwd_raw_10 - beta_d*fwd_market_10"
+    },
+    {
+      "id": "fwd_beta_resid_15m",
+      "basis": "beta-residual",
+      "definition": "fwd_raw_15 - beta_d*fwd_market_15"
+    },
+    {
+      "id": "fwd_beta_resid_30m",
+      "basis": "beta-residual",
+      "definition": "fwd_raw_30 - beta_d*fwd_market_30"
+    },
+    {
+      "id": "fwd_factor_resid_1m",
+      "basis": "PCA-factor-residual",
+      "definition": "future 1-minute return residualized wit1 same daily-frozen PCA loadings"
+    },
+    {
+      "id": "fwd_factor_resid_2m",
+      "basis": "PCA-factor-residual",
+      "definition": "future 2-minute return residualized wit2 same daily-frozen PCA loadings"
+    },
+    {
+      "id": "fwd_factor_resid_3m",
+      "basis": "PCA-factor-residual",
+      "definition": "future 3-minute return residualized wit3 same daily-frozen PCA loadings"
+    },
+    {
+      "id": "fwd_factor_resid_5m",
+      "basis": "PCA-factor-residual",
+      "definition": "future 5-minute return residualized wit5 same daily-frozen PCA loadings"
+    },
+    {
+      "id": "fwd_factor_resid_10m",
+      "basis": "PCA-factor-residual",
+      "definition": "future 10-minute return residualized wit10 same daily-frozen PCA loadings"
+    },
+    {
+      "id": "fwd_factor_resid_15m",
+      "basis": "PCA-factor-residual",
+      "definition": "future 15-minute return residualized wit15 same daily-frozen PCA loadings"
+    },
+    {
+      "id": "fwd_factor_resid_30m",
+      "basis": "PCA-factor-residual",
+      "definition": "future 30-minute return residualized wit30 same daily-frozen PCA loadings"
+    },
+    {
+      "id": "step_raw_p1",
+      "basis": "raw incremental",
+      "definition": "C_(t+1)/C_(t+0) - 1"
+    },
+    {
+      "id": "step_raw_p2",
+      "basis": "raw incremental",
+      "definition": "C_(t+2)/C_(t+1) - 1"
+    },
+    {
+      "id": "step_raw_p3",
+      "basis": "raw incremental",
+      "definition": "C_(t+3)/C_(t+2) - 1"
+    },
+    {
+      "id": "step_raw_p4",
+      "basis": "raw incremental",
+      "definition": "C_(t+4)/C_(t+3) - 1"
+    },
+    {
+      "id": "step_raw_p5",
+      "basis": "raw incremental",
+      "definition": "C_(t+5)/C_(t+4) - 1"
+    },
+    {
+      "id": "step_factor_resid_p1",
+      "basis": "factor-residual incremental",
+      "definition": "incremental minute +1 residual using frozen PCA model"
+    },
+    {
+      "id": "step_factor_resid_p2",
+      "basis": "factor-residual incremental",
+      "definition": "incremental minute +2 residual using frozen PCA model"
+    },
+    {
+      "id": "step_factor_resid_p3",
+      "basis": "factor-residual incremental",
+      "definition": "incremental minute +3 residual using frozen PCA model"
+    },
+    {
+      "id": "step_factor_resid_p4",
+      "basis": "factor-residual incremental",
+      "definition": "incremental minute +4 residual using frozen PCA model"
+    },
+    {
+      "id": "step_factor_resid_p5",
+      "basis": "factor-residual incremental",
+      "definition": "incremental minute +5 residual using frozen PCA model"
+    }
+  ],
+  "pairs": [
+    {
+      "id": 1,
+      "a": "resid_tod_tail_1m",
+      "b": "body_share_1m"
+    },
+    {
+      "id": 2,
+      "a": "resid_tod_tail_1m",
+      "b": "dir_close_extreme_1m"
+    },
+    {
+      "id": 3,
+      "a": "resid_tod_tail_1m",
+      "b": "last1_abs_share_3m"
+    },
+    {
+      "id": 4,
+      "a": "resid_tod_tail_1m",
+      "b": "last1_abs_share_5m"
+    },
+    {
+      "id": 5,
+      "a": "resid_tod_tail_1m",
+      "b": "path_eff_3m"
+    },
+    {
+      "id": 6,
+      "a": "resid_tod_tail_1m",
+      "b": "path_eff_5m"
+    },
+    {
+      "id": 7,
+      "a": "resid_tod_tail_1m",
+      "b": "same_sign_streak_1m"
+    },
+    {
+      "id": 8,
+      "a": "resid_tod_tail_1m",
+      "b": "sign_switch_rate_5m"
+    },
+    {
+      "id": 9,
+      "a": "resid_tod_tail_1m",
+      "b": "tail_event_count_5m"
+    },
+    {
+      "id": 10,
+      "a": "resid_tod_tail_1m",
+      "b": "tail_event_count_15m"
+    },
+    {
+      "id": 11,
+      "a": "resid_tod_tail_1m",
+      "b": "range_tod_tail_1m"
+    },
+    {
+      "id": 12,
+      "a": "resid_tod_tail_1m",
+      "b": "volume_tod_tail_1m"
+    },
+    {
+      "id": 13,
+      "a": "resid_tod_tail_1m",
+      "b": "dollar_volume_tod_tail_1m"
+    },
+    {
+      "id": 14,
+      "a": "resid_tod_tail_1m",
+      "b": "trade_count_tod_tail_1m"
+    },
+    {
+      "id": 15,
+      "a": "resid_tod_tail_1m",
+      "b": "avg_trade_size_tod_tail_1m"
+    },
+    {
+      "id": 16,
+      "a": "resid_tod_tail_1m",
+      "b": "dollar_per_trade_tod_tail_1m"
+    },
+    {
+      "id": 17,
+      "a": "resid_tod_tail_1m",
+      "b": "impact_tod_tail_1m"
+    },
+    {
+      "id": 18,
+      "a": "resid_tod_tail_1m",
+      "b": "range_per_dollar_1m"
+    },
+    {
+      "id": 19,
+      "a": "resid_tod_tail_1m",
+      "b": "effort_result_1m"
+    },
+    {
+      "id": 20,
+      "a": "resid_tod_tail_1m",
+      "b": "volume_return_mismatch_1m"
+    },
+    {
+      "id": 21,
+      "a": "resid_tod_tail_1m",
+      "b": "trade_intensity_mismatch_1m"
+    },
+    {
+      "id": 22,
+      "a": "resid_tod_tail_1m",
+      "b": "prevol_tod_tail_30m"
+    },
+    {
+      "id": 23,
+      "a": "resid_tod_tail_1m",
+      "b": "liquidity_rank_20d"
+    },
+    {
+      "id": 24,
+      "a": "resid_tod_tail_1m",
+      "b": "idio_share_1m"
+    },
+    {
+      "id": 25,
+      "a": "resid_tod_tail_1m",
+      "b": "resid_dispersion_tod_tail_1m"
+    },
+    {
+      "id": 26,
+      "a": "resid_tod_tail_1m",
+      "b": "tail_breadth_down_1m"
+    },
+    {
+      "id": 27,
+      "a": "resid_tod_tail_1m",
+      "b": "tail_breadth_up_1m"
+    },
+    {
+      "id": 28,
+      "a": "resid_tod_tail_1m",
+      "b": "tail_breadth_imbalance_1m"
+    },
+    {
+      "id": 29,
+      "a": "resid_tod_tail_1m",
+      "b": "market_tod_tail_1m"
+    },
+    {
+      "id": 30,
+      "a": "resid_tod_tail_1m",
+      "b": "market_vol_tod_tail_5m"
+    },
+    {
+      "id": 31,
+      "a": "resid_tod_tail_1m",
+      "b": "breadth_positive_1m"
+    },
+    {
+      "id": 32,
+      "a": "resid_tod_tail_1m",
+      "b": "breadth_change_1m"
+    },
+    {
+      "id": 33,
+      "a": "resid_tod_tail_1m",
+      "b": "factor_common_share_1m"
+    },
+    {
+      "id": 34,
+      "a": "resid_tod_tail_1m",
+      "b": "resid_cs_rank_1m"
+    },
+    {
+      "id": 35,
+      "a": "resid_tod_tail_1m",
+      "b": "resid_rank_velocity_1m"
+    },
+    {
+      "id": 36,
+      "a": "resid_tod_tail_1m",
+      "b": "factor_resid_cs_rank_1m"
+    },
+    {
+      "id": 37,
+      "a": "resid_tod_tail_1m",
+      "b": "peer_gap_1m"
+    },
+    {
+      "id": 38,
+      "a": "resid_tod_tail_1m",
+      "b": "peer_gap_2m"
+    },
+    {
+      "id": 39,
+      "a": "resid_tod_tail_1m",
+      "b": "peer_lead_pred_1m"
+    },
+    {
+      "id": 40,
+      "a": "resid_tod_tail_1m",
+      "b": "peer_lead_pred_2m"
+    },
+    {
+      "id": 41,
+      "a": "resid_tod_tail_1m",
+      "b": "peer_breadth_sign_1m"
+    },
+    {
+      "id": 42,
+      "a": "resid_tod_tail_1m",
+      "b": "peer_shock_breadth_1m"
+    },
+    {
+      "id": 43,
+      "a": "resid_tod_tail_1m",
+      "b": "peer_dispersion_1m"
+    },
+    {
+      "id": 44,
+      "a": "resid_tod_tail_1m",
+      "b": "peer_move_concentration_1m"
+    },
+    {
+      "id": 45,
+      "a": "resid_tod_tail_1m",
+      "b": "leader_liquidity_advantage"
+    },
+    {
+      "id": 46,
+      "a": "resid_tod_tail_1m",
+      "b": "network_follow_strength"
+    },
+    {
+      "id": 47,
+      "a": "factor_resid_tod_tail_1m",
+      "b": "body_share_1m"
+    },
+    {
+      "id": 48,
+      "a": "factor_resid_tod_tail_1m",
+      "b": "dir_close_extreme_1m"
+    },
+    {
+      "id": 49,
+      "a": "factor_resid_tod_tail_1m",
+      "b": "last1_abs_share_3m"
+    },
+    {
+      "id": 50,
+      "a": "factor_resid_tod_tail_1m",
+      "b": "last1_abs_share_5m"
+    },
+    {
+      "id": 51,
+      "a": "factor_resid_tod_tail_1m",
+      "b": "path_eff_3m"
+    },
+    {
+      "id": 52,
+      "a": "factor_resid_tod_tail_1m",
+      "b": "path_eff_5m"
+    },
+    {
+      "id": 53,
+      "a": "factor_resid_tod_tail_1m",
+      "b": "same_sign_streak_1m"
+    },
+    {
+      "id": 54,
+      "a": "factor_resid_tod_tail_1m",
+      "b": "sign_switch_rate_5m"
+    },
+    {
+      "id": 55,
+      "a": "factor_resid_tod_tail_1m",
+      "b": "tail_event_count_5m"
+    },
+    {
+      "id": 56,
+      "a": "factor_resid_tod_tail_1m",
+      "b": "tail_event_count_15m"
+    },
+    {
+      "id": 57,
+      "a": "factor_resid_tod_tail_1m",
+      "b": "range_tod_tail_1m"
+    },
+    {
+      "id": 58,
+      "a": "factor_resid_tod_tail_1m",
+      "b": "volume_tod_tail_1m"
+    },
+    {
+      "id": 59,
+      "a": "factor_resid_tod_tail_1m",
+      "b": "dollar_volume_tod_tail_1m"
+    },
+    {
+      "id": 60,
+      "a": "factor_resid_tod_tail_1m",
+      "b": "trade_count_tod_tail_1m"
+    },
+    {
+      "id": 61,
+      "a": "factor_resid_tod_tail_1m",
+      "b": "avg_trade_size_tod_tail_1m"
+    },
+    {
+      "id": 62,
+      "a": "factor_resid_tod_tail_1m",
+      "b": "dollar_per_trade_tod_tail_1m"
+    },
+    {
+      "id": 63,
+      "a": "factor_resid_tod_tail_1m",
+      "b": "impact_tod_tail_1m"
+    },
+    {
+      "id": 64,
+      "a": "factor_resid_tod_tail_1m",
+      "b": "range_per_dollar_1m"
+    },
+    {
+      "id": 65,
+      "a": "factor_resid_tod_tail_1m",
+      "b": "effort_result_1m"
+    },
+    {
+      "id": 66,
+      "a": "factor_resid_tod_tail_1m",
+      "b": "volume_return_mismatch_1m"
+    },
+    {
+      "id": 67,
+      "a": "factor_resid_tod_tail_1m",
+      "b": "trade_intensity_mismatch_1m"
+    },
+    {
+      "id": 68,
+      "a": "factor_resid_tod_tail_1m",
+      "b": "prevol_tod_tail_30m"
+    },
+    {
+      "id": 69,
+      "a": "factor_resid_tod_tail_1m",
+      "b": "liquidity_rank_20d"
+    },
+    {
+      "id": 70,
+      "a": "factor_resid_tod_tail_1m",
+      "b": "idio_share_1m"
+    },
+    {
+      "id": 71,
+      "a": "factor_resid_tod_tail_1m",
+      "b": "resid_dispersion_tod_tail_1m"
+    },
+    {
+      "id": 72,
+      "a": "factor_resid_tod_tail_1m",
+      "b": "tail_breadth_down_1m"
+    },
+    {
+      "id": 73,
+      "a": "factor_resid_tod_tail_1m",
+      "b": "tail_breadth_up_1m"
+    },
+    {
+      "id": 74,
+      "a": "factor_resid_tod_tail_1m",
+      "b": "tail_breadth_imbalance_1m"
+    },
+    {
+      "id": 75,
+      "a": "factor_resid_tod_tail_1m",
+      "b": "market_tod_tail_1m"
+    },
+    {
+      "id": 76,
+      "a": "factor_resid_tod_tail_1m",
+      "b": "market_vol_tod_tail_5m"
+    },
+    {
+      "id": 77,
+      "a": "factor_resid_tod_tail_1m",
+      "b": "breadth_positive_1m"
+    },
+    {
+      "id": 78,
+      "a": "factor_resid_tod_tail_1m",
+      "b": "breadth_change_1m"
+    },
+    {
+      "id": 79,
+      "a": "factor_resid_tod_tail_1m",
+      "b": "factor_common_share_1m"
+    },
+    {
+      "id": 80,
+      "a": "factor_resid_tod_tail_1m",
+      "b": "resid_cs_rank_1m"
+    },
+    {
+      "id": 81,
+      "a": "factor_resid_tod_tail_1m",
+      "b": "resid_rank_velocity_1m"
+    },
+    {
+      "id": 82,
+      "a": "factor_resid_tod_tail_1m",
+      "b": "factor_resid_cs_rank_1m"
+    },
+    {
+      "id": 83,
+      "a": "factor_resid_tod_tail_1m",
+      "b": "peer_gap_1m"
+    },
+    {
+      "id": 84,
+      "a": "factor_resid_tod_tail_1m",
+      "b": "peer_gap_2m"
+    },
+    {
+      "id": 85,
+      "a": "factor_resid_tod_tail_1m",
+      "b": "peer_lead_pred_1m"
+    },
+    {
+      "id": 86,
+      "a": "factor_resid_tod_tail_1m",
+      "b": "peer_lead_pred_2m"
+    },
+    {
+      "id": 87,
+      "a": "factor_resid_tod_tail_1m",
+      "b": "peer_breadth_sign_1m"
+    },
+    {
+      "id": 88,
+      "a": "factor_resid_tod_tail_1m",
+      "b": "peer_shock_breadth_1m"
+    },
+    {
+      "id": 89,
+      "a": "factor_resid_tod_tail_1m",
+      "b": "peer_dispersion_1m"
+    },
+    {
+      "id": 90,
+      "a": "factor_resid_tod_tail_1m",
+      "b": "peer_move_concentration_1m"
+    },
+    {
+      "id": 91,
+      "a": "factor_resid_tod_tail_1m",
+      "b": "leader_liquidity_advantage"
+    },
+    {
+      "id": 92,
+      "a": "factor_resid_tod_tail_1m",
+      "b": "network_follow_strength"
+    },
+    {
+      "id": 93,
+      "a": "resid_prevol_norm_1m",
+      "b": "body_share_1m"
+    },
+    {
+      "id": 94,
+      "a": "resid_prevol_norm_1m",
+      "b": "dir_close_extreme_1m"
+    },
+    {
+      "id": 95,
+      "a": "resid_prevol_norm_1m",
+      "b": "last1_abs_share_3m"
+    },
+    {
+      "id": 96,
+      "a": "resid_prevol_norm_1m",
+      "b": "last1_abs_share_5m"
+    },
+    {
+      "id": 97,
+      "a": "resid_prevol_norm_1m",
+      "b": "path_eff_3m"
+    },
+    {
+      "id": 98,
+      "a": "resid_prevol_norm_1m",
+      "b": "path_eff_5m"
+    },
+    {
+      "id": 99,
+      "a": "resid_prevol_norm_1m",
+      "b": "same_sign_streak_1m"
+    },
+    {
+      "id": 100,
+      "a": "resid_prevol_norm_1m",
+      "b": "sign_switch_rate_5m"
+    },
+    {
+      "id": 101,
+      "a": "resid_prevol_norm_1m",
+      "b": "tail_event_count_5m"
+    },
+    {
+      "id": 102,
+      "a": "resid_prevol_norm_1m",
+      "b": "tail_event_count_15m"
+    },
+    {
+      "id": 103,
+      "a": "resid_prevol_norm_1m",
+      "b": "range_tod_tail_1m"
+    },
+    {
+      "id": 104,
+      "a": "resid_prevol_norm_1m",
+      "b": "volume_tod_tail_1m"
+    },
+    {
+      "id": 105,
+      "a": "resid_prevol_norm_1m",
+      "b": "dollar_volume_tod_tail_1m"
+    },
+    {
+      "id": 106,
+      "a": "resid_prevol_norm_1m",
+      "b": "trade_count_tod_tail_1m"
+    },
+    {
+      "id": 107,
+      "a": "resid_prevol_norm_1m",
+      "b": "avg_trade_size_tod_tail_1m"
+    },
+    {
+      "id": 108,
+      "a": "resid_prevol_norm_1m",
+      "b": "dollar_per_trade_tod_tail_1m"
+    },
+    {
+      "id": 109,
+      "a": "resid_prevol_norm_1m",
+      "b": "impact_tod_tail_1m"
+    },
+    {
+      "id": 110,
+      "a": "resid_prevol_norm_1m",
+      "b": "range_per_dollar_1m"
+    },
+    {
+      "id": 111,
+      "a": "resid_prevol_norm_1m",
+      "b": "effort_result_1m"
+    },
+    {
+      "id": 112,
+      "a": "resid_prevol_norm_1m",
+      "b": "volume_return_mismatch_1m"
+    },
+    {
+      "id": 113,
+      "a": "resid_prevol_norm_1m",
+      "b": "trade_intensity_mismatch_1m"
+    },
+    {
+      "id": 114,
+      "a": "resid_prevol_norm_1m",
+      "b": "prevol_tod_tail_30m"
+    },
+    {
+      "id": 115,
+      "a": "resid_prevol_norm_1m",
+      "b": "liquidity_rank_20d"
+    },
+    {
+      "id": 116,
+      "a": "resid_prevol_norm_1m",
+      "b": "idio_share_1m"
+    },
+    {
+      "id": 117,
+      "a": "resid_prevol_norm_1m",
+      "b": "resid_dispersion_tod_tail_1m"
+    },
+    {
+      "id": 118,
+      "a": "resid_prevol_norm_1m",
+      "b": "tail_breadth_down_1m"
+    },
+    {
+      "id": 119,
+      "a": "resid_prevol_norm_1m",
+      "b": "tail_breadth_up_1m"
+    },
+    {
+      "id": 120,
+      "a": "resid_prevol_norm_1m",
+      "b": "tail_breadth_imbalance_1m"
+    },
+    {
+      "id": 121,
+      "a": "resid_prevol_norm_1m",
+      "b": "market_tod_tail_1m"
+    },
+    {
+      "id": 122,
+      "a": "resid_prevol_norm_1m",
+      "b": "market_vol_tod_tail_5m"
+    },
+    {
+      "id": 123,
+      "a": "resid_prevol_norm_1m",
+      "b": "breadth_positive_1m"
+    },
+    {
+      "id": 124,
+      "a": "resid_prevol_norm_1m",
+      "b": "breadth_change_1m"
+    },
+    {
+      "id": 125,
+      "a": "resid_prevol_norm_1m",
+      "b": "factor_common_share_1m"
+    },
+    {
+      "id": 126,
+      "a": "resid_prevol_norm_1m",
+      "b": "resid_cs_rank_1m"
+    },
+    {
+      "id": 127,
+      "a": "resid_prevol_norm_1m",
+      "b": "resid_rank_velocity_1m"
+    },
+    {
+      "id": 128,
+      "a": "resid_prevol_norm_1m",
+      "b": "factor_resid_cs_rank_1m"
+    },
+    {
+      "id": 129,
+      "a": "resid_prevol_norm_1m",
+      "b": "peer_gap_1m"
+    },
+    {
+      "id": 130,
+      "a": "resid_prevol_norm_1m",
+      "b": "peer_gap_2m"
+    },
+    {
+      "id": 131,
+      "a": "resid_prevol_norm_1m",
+      "b": "peer_lead_pred_1m"
+    },
+    {
+      "id": 132,
+      "a": "resid_prevol_norm_1m",
+      "b": "peer_lead_pred_2m"
+    },
+    {
+      "id": 133,
+      "a": "resid_prevol_norm_1m",
+      "b": "peer_breadth_sign_1m"
+    },
+    {
+      "id": 134,
+      "a": "resid_prevol_norm_1m",
+      "b": "peer_shock_breadth_1m"
+    },
+    {
+      "id": 135,
+      "a": "resid_prevol_norm_1m",
+      "b": "peer_dispersion_1m"
+    },
+    {
+      "id": 136,
+      "a": "resid_prevol_norm_1m",
+      "b": "peer_move_concentration_1m"
+    },
+    {
+      "id": 137,
+      "a": "resid_prevol_norm_1m",
+      "b": "leader_liquidity_advantage"
+    },
+    {
+      "id": 138,
+      "a": "resid_prevol_norm_1m",
+      "b": "network_follow_strength"
+    },
+    {
+      "id": 139,
+      "a": "shock_excess_1pct",
+      "b": "body_share_1m"
+    },
+    {
+      "id": 140,
+      "a": "shock_excess_1pct",
+      "b": "dir_close_extreme_1m"
+    },
+    {
+      "id": 141,
+      "a": "shock_excess_1pct",
+      "b": "last1_abs_share_3m"
+    },
+    {
+      "id": 142,
+      "a": "shock_excess_1pct",
+      "b": "last1_abs_share_5m"
+    },
+    {
+      "id": 143,
+      "a": "shock_excess_1pct",
+      "b": "path_eff_3m"
+    },
+    {
+      "id": 144,
+      "a": "shock_excess_1pct",
+      "b": "path_eff_5m"
+    },
+    {
+      "id": 145,
+      "a": "shock_excess_1pct",
+      "b": "same_sign_streak_1m"
+    },
+    {
+      "id": 146,
+      "a": "shock_excess_1pct",
+      "b": "sign_switch_rate_5m"
+    },
+    {
+      "id": 147,
+      "a": "shock_excess_1pct",
+      "b": "tail_event_count_5m"
+    },
+    {
+      "id": 148,
+      "a": "shock_excess_1pct",
+      "b": "tail_event_count_15m"
+    },
+    {
+      "id": 149,
+      "a": "shock_excess_1pct",
+      "b": "range_tod_tail_1m"
+    },
+    {
+      "id": 150,
+      "a": "shock_excess_1pct",
+      "b": "volume_tod_tail_1m"
+    },
+    {
+      "id": 151,
+      "a": "shock_excess_1pct",
+      "b": "dollar_volume_tod_tail_1m"
+    },
+    {
+      "id": 152,
+      "a": "shock_excess_1pct",
+      "b": "trade_count_tod_tail_1m"
+    },
+    {
+      "id": 153,
+      "a": "shock_excess_1pct",
+      "b": "avg_trade_size_tod_tail_1m"
+    },
+    {
+      "id": 154,
+      "a": "shock_excess_1pct",
+      "b": "dollar_per_trade_tod_tail_1m"
+    },
+    {
+      "id": 155,
+      "a": "shock_excess_1pct",
+      "b": "impact_tod_tail_1m"
+    },
+    {
+      "id": 156,
+      "a": "shock_excess_1pct",
+      "b": "range_per_dollar_1m"
+    },
+    {
+      "id": 157,
+      "a": "shock_excess_1pct",
+      "b": "effort_result_1m"
+    },
+    {
+      "id": 158,
+      "a": "shock_excess_1pct",
+      "b": "volume_return_mismatch_1m"
+    },
+    {
+      "id": 159,
+      "a": "shock_excess_1pct",
+      "b": "trade_intensity_mismatch_1m"
+    },
+    {
+      "id": 160,
+      "a": "shock_excess_1pct",
+      "b": "prevol_tod_tail_30m"
+    },
+    {
+      "id": 161,
+      "a": "shock_excess_1pct",
+      "b": "liquidity_rank_20d"
+    },
+    {
+      "id": 162,
+      "a": "shock_excess_1pct",
+      "b": "idio_share_1m"
+    },
+    {
+      "id": 163,
+      "a": "shock_excess_1pct",
+      "b": "resid_dispersion_tod_tail_1m"
+    },
+    {
+      "id": 164,
+      "a": "shock_excess_1pct",
+      "b": "tail_breadth_down_1m"
+    },
+    {
+      "id": 165,
+      "a": "shock_excess_1pct",
+      "b": "tail_breadth_up_1m"
+    },
+    {
+      "id": 166,
+      "a": "shock_excess_1pct",
+      "b": "tail_breadth_imbalance_1m"
+    },
+    {
+      "id": 167,
+      "a": "shock_excess_1pct",
+      "b": "market_tod_tail_1m"
+    },
+    {
+      "id": 168,
+      "a": "shock_excess_1pct",
+      "b": "market_vol_tod_tail_5m"
+    },
+    {
+      "id": 169,
+      "a": "shock_excess_1pct",
+      "b": "breadth_positive_1m"
+    },
+    {
+      "id": 170,
+      "a": "shock_excess_1pct",
+      "b": "breadth_change_1m"
+    },
+    {
+      "id": 171,
+      "a": "shock_excess_1pct",
+      "b": "factor_common_share_1m"
+    },
+    {
+      "id": 172,
+      "a": "shock_excess_1pct",
+      "b": "resid_cs_rank_1m"
+    },
+    {
+      "id": 173,
+      "a": "shock_excess_1pct",
+      "b": "resid_rank_velocity_1m"
+    },
+    {
+      "id": 174,
+      "a": "shock_excess_1pct",
+      "b": "factor_resid_cs_rank_1m"
+    },
+    {
+      "id": 175,
+      "a": "shock_excess_1pct",
+      "b": "peer_gap_1m"
+    },
+    {
+      "id": 176,
+      "a": "shock_excess_1pct",
+      "b": "peer_gap_2m"
+    },
+    {
+      "id": 177,
+      "a": "shock_excess_1pct",
+      "b": "peer_lead_pred_1m"
+    },
+    {
+      "id": 178,
+      "a": "shock_excess_1pct",
+      "b": "peer_lead_pred_2m"
+    },
+    {
+      "id": 179,
+      "a": "shock_excess_1pct",
+      "b": "peer_breadth_sign_1m"
+    },
+    {
+      "id": 180,
+      "a": "shock_excess_1pct",
+      "b": "peer_shock_breadth_1m"
+    },
+    {
+      "id": 181,
+      "a": "shock_excess_1pct",
+      "b": "peer_dispersion_1m"
+    },
+    {
+      "id": 182,
+      "a": "shock_excess_1pct",
+      "b": "peer_move_concentration_1m"
+    },
+    {
+      "id": 183,
+      "a": "shock_excess_1pct",
+      "b": "leader_liquidity_advantage"
+    },
+    {
+      "id": 184,
+      "a": "shock_excess_1pct",
+      "b": "network_follow_strength"
+    },
+    {
+      "id": 185,
+      "a": "signed_dollar_pressure_1m",
+      "b": "resid_tod_tail_1m"
+    },
+    {
+      "id": 186,
+      "a": "signed_volume_pressure_1m",
+      "b": "resid_tod_tail_1m"
+    },
+    {
+      "id": 187,
+      "a": "vwap_pressure_1m",
+      "b": "resid_tod_tail_1m"
+    },
+    {
+      "id": 188,
+      "a": "wick_skew_pressure_1m",
+      "b": "resid_tod_tail_1m"
+    },
+    {
+      "id": 189,
+      "a": "pressure_return_divergence_1m",
+      "b": "impact_tod_tail_1m"
+    },
+    {
+      "id": 190,
+      "a": "pressure_return_divergence_1m",
+      "b": "liquidity_rank_20d"
+    },
+    {
+      "id": 191,
+      "a": "absorption_score_1m",
+      "b": "resid_tod_tail_1m"
+    },
+    {
+      "id": 192,
+      "a": "absorption_score_1m",
+      "b": "impact_tod_tail_1m"
+    },
+    {
+      "id": 193,
+      "a": "absorption_score_1m",
+      "b": "peer_gap_1m"
+    },
+    {
+      "id": 194,
+      "a": "effort_result_1m",
+      "b": "clv_signed_1m"
+    },
+    {
+      "id": 195,
+      "a": "effort_result_1m",
+      "b": "vwap_close_location_1m"
+    },
+    {
+      "id": 196,
+      "a": "volume_return_mismatch_1m",
+      "b": "dir_close_extreme_1m"
+    },
+    {
+      "id": 197,
+      "a": "trade_intensity_mismatch_1m",
+      "b": "dir_close_extreme_1m"
+    },
+    {
+      "id": 198,
+      "a": "upper_rejection_pressure_1m",
+      "b": "resid_tod_tail_1m"
+    },
+    {
+      "id": 199,
+      "a": "lower_rejection_pressure_1m",
+      "b": "resid_tod_tail_1m"
+    },
+    {
+      "id": 200,
+      "a": "vwap_close_location_1m",
+      "b": "dollar_volume_tod_tail_1m"
+    },
+    {
+      "id": 201,
+      "a": "vwap_bar_location_1m",
+      "b": "clv_signed_1m"
+    },
+    {
+      "id": 202,
+      "a": "impact_per_dollar_1m",
+      "b": "prevol_tod_tail_30m"
+    },
+    {
+      "id": 203,
+      "a": "resid_cs_rank_1m",
+      "b": "resid_rank_velocity_1m"
+    },
+    {
+      "id": 204,
+      "a": "resid_cs_rank_1m",
+      "b": "resid_rank_accel_1m"
+    },
+    {
+      "id": 205,
+      "a": "resid_cs_rank_1m",
+      "b": "resid_dispersion_tod_tail_1m"
+    },
+    {
+      "id": 206,
+      "a": "resid_cs_rank_1m",
+      "b": "tail_breadth_imbalance_1m"
+    },
+    {
+      "id": 207,
+      "a": "resid_cs_rank_1m",
+      "b": "liquidity_rank_20d"
+    },
+    {
+      "id": 208,
+      "a": "resid_rank_velocity_1m",
+      "b": "volume_tod_tail_1m"
+    },
+    {
+      "id": 209,
+      "a": "resid_rank_velocity_1m",
+      "b": "peer_lead_pred_1m"
+    },
+    {
+      "id": 210,
+      "a": "resid_rank_accel_1m",
+      "b": "path_eff_3m"
+    },
+    {
+      "id": 211,
+      "a": "resid_cs_rank_2m",
+      "b": "resid_cs_rank_1m"
+    },
+    {
+      "id": 212,
+      "a": "resid_cs_rank_5m",
+      "b": "resid_cs_rank_1m"
+    },
+    {
+      "id": 213,
+      "a": "factor_resid_cs_rank_1m",
+      "b": "resid_cs_rank_1m"
+    },
+    {
+      "id": 214,
+      "a": "factor_resid_cs_rank_1m",
+      "b": "resid_dispersion_tod_tail_1m"
+    },
+    {
+      "id": 215,
+      "a": "tail_breadth_imbalance_1m",
+      "b": "market_tod_tail_1m"
+    },
+    {
+      "id": 216,
+      "a": "benchmark_minus_median_1m",
+      "b": "breadth_positive_1m"
+    },
+    {
+      "id": 217,
+      "a": "cs_resid_skew_1m",
+      "b": "resid_dispersion_tod_tail_1m"
+    },
+    {
+      "id": 218,
+      "a": "cs_resid_kurt_1m",
+      "b": "resid_dispersion_tod_tail_1m"
+    },
+    {
+      "id": 219,
+      "a": "market_tod_tail_1m",
+      "b": "resid_cs_rank_1m"
+    },
+    {
+      "id": 220,
+      "a": "market_tod_tail_1m",
+      "b": "resid_rank_velocity_1m"
+    },
+    {
+      "id": 221,
+      "a": "market_tod_tail_1m",
+      "b": "lagged_market_response_gap_1m"
+    },
+    {
+      "id": 222,
+      "a": "market_tod_tail_1m",
+      "b": "market_vol_tod_tail_5m"
+    },
+    {
+      "id": 223,
+      "a": "market_tod_tail_1m",
+      "b": "breadth_positive_1m"
+    },
+    {
+      "id": 224,
+      "a": "market_tod_tail_2m",
+      "b": "factor_resid_tod_tail_1m"
+    },
+    {
+      "id": 225,
+      "a": "lagged_market_response_gap_1m",
+      "b": "liquidity_rank_20d"
+    },
+    {
+      "id": 226,
+      "a": "lagged_market_response_gap_1m",
+      "b": "peer_lead_pred_1m"
+    },
+    {
+      "id": 227,
+      "a": "factor_resid_tod_tail_2m",
+      "b": "path_eff_3m"
+    },
+    {
+      "id": 228,
+      "a": "breadth_change_1m",
+      "b": "market_tod_tail_1m"
+    },
+    {
+      "id": 229,
+      "a": "benchmark_minus_median_1m",
+      "b": "resid_dispersion_tod_tail_1m"
+    },
+    {
+      "id": 230,
+      "a": "peer_lead_pred_1m",
+      "b": "peer_breadth_sign_1m"
+    },
+    {
+      "id": 231,
+      "a": "peer_lead_pred_1m",
+      "b": "peer_shock_breadth_1m"
+    },
+    {
+      "id": 232,
+      "a": "peer_lead_pred_1m",
+      "b": "peer_dispersion_1m"
+    },
+    {
+      "id": 233,
+      "a": "peer_lead_pred_1m",
+      "b": "peer_move_concentration_1m"
+    },
+    {
+      "id": 234,
+      "a": "peer_lead_pred_1m",
+      "b": "peer_leader_count_1m"
+    },
+    {
+      "id": 235,
+      "a": "peer_lead_pred_1m",
+      "b": "leader_liquidity_advantage"
+    },
+    {
+      "id": 236,
+      "a": "peer_lead_pred_1m",
+      "b": "network_follow_strength"
+    },
+    {
+      "id": 237,
+      "a": "peer_lead_pred_1m",
+      "b": "factor_resid_1m"
+    },
+    {
+      "id": 238,
+      "a": "peer_lead_pred_1m",
+      "b": "factor_resid_cs_rank_1m"
+    },
+    {
+      "id": 239,
+      "a": "peer_lead_pred_2m",
+      "b": "peer_breadth_sign_1m"
+    },
+    {
+      "id": 240,
+      "a": "peer_gap_1m",
+      "b": "peer_breadth_sign_1m"
+    },
+    {
+      "id": 241,
+      "a": "peer_gap_1m",
+      "b": "peer_shock_breadth_1m"
+    },
+    {
+      "id": 242,
+      "a": "peer_gap_1m",
+      "b": "peer_dispersion_1m"
+    },
+    {
+      "id": 243,
+      "a": "peer_gap_1m",
+      "b": "peer_move_concentration_1m"
+    },
+    {
+      "id": 244,
+      "a": "peer_gap_1m",
+      "b": "leader_liquidity_advantage"
+    },
+    {
+      "id": 245,
+      "a": "peer_gap_1m",
+      "b": "resid_rank_velocity_1m"
+    },
+    {
+      "id": 246,
+      "a": "peer_gap_2m",
+      "b": "peer_lead_pred_1m"
+    },
+    {
+      "id": 247,
+      "a": "peer_gap_velocity_1m",
+      "b": "peer_breadth_sign_1m"
+    },
+    {
+      "id": 248,
+      "a": "peer_gap_velocity_1m",
+      "b": "resid_cs_rank_1m"
+    },
+    {
+      "id": 249,
+      "a": "network_follow_strength",
+      "b": "liquidity_rank_20d"
+    },
+    {
+      "id": 250,
+      "a": "network_lead_strength",
+      "b": "liquidity_rank_20d"
+    },
+    {
+      "id": 251,
+      "a": "dist_session_vwap",
+      "b": "volume_tod_tail_1m"
+    },
+    {
+      "id": 252,
+      "a": "dist_session_vwap",
+      "b": "resid_tod_tail_1m"
+    },
+    {
+      "id": 253,
+      "a": "dist_session_vwap",
+      "b": "vwap_cross_age_signed"
+    },
+    {
+      "id": 254,
+      "a": "dist_session_open",
+      "b": "market_tod_tail_1m"
+    },
+    {
+      "id": 255,
+      "a": "dist_prior_close",
+      "b": "resid_tod_tail_1m"
+    },
+    {
+      "id": 256,
+      "a": "dist_session_high",
+      "b": "volume_tod_tail_1m"
+    },
+    {
+      "id": 257,
+      "a": "dist_session_low",
+      "b": "volume_tod_tail_1m"
+    },
+    {
+      "id": 258,
+      "a": "session_range_expansion_tod",
+      "b": "resid_tod_tail_1m"
+    },
+    {
+      "id": 259,
+      "a": "same_minute_resid_lag1d",
+      "b": "same_minute_resid_mean20d"
+    },
+    {
+      "id": 260,
+      "a": "same_minute_resid_mean5d",
+      "b": "resid_cs_rank_1m"
+    },
+    {
+      "id": 261,
+      "a": "same_minute_resid_mean20d",
+      "b": "resid_cs_rank_1m"
+    },
+    {
+      "id": 262,
+      "a": "same_minute_rank_mean20d",
+      "b": "resid_rank_velocity_1m"
+    },
+    {
+      "id": 263,
+      "a": "same_minute_resid_mean20d",
+      "b": "market_tod_tail_1m"
+    },
+    {
+      "id": 264,
+      "a": "same_minute_resid_mean20d",
+      "b": "prevol_tod_tail_30m"
+    },
+    {
+      "id": 265,
+      "a": "squeeze_score_5_30",
+      "b": "breakout_dist_high_5m"
+    },
+    {
+      "id": 266,
+      "a": "squeeze_score_5_30",
+      "b": "breakout_dist_low_5m"
+    },
+    {
+      "id": 267,
+      "a": "squeeze_score_5_30",
+      "b": "breakout_dist_high_15m"
+    },
+    {
+      "id": 268,
+      "a": "squeeze_score_5_30",
+      "b": "breakout_dist_low_15m"
+    },
+    {
+      "id": 269,
+      "a": "squeeze_score_5_30",
+      "b": "volume_tod_tail_1m"
+    },
+    {
+      "id": 270,
+      "a": "prevol_ratio_5_30",
+      "b": "path_eff_5m"
+    },
+    {
+      "id": 271,
+      "a": "range_ratio_5_30",
+      "b": "volume_tod_tail_1m"
+    },
+    {
+      "id": 272,
+      "a": "dollar_volume_ratio_5_30",
+      "b": "breakout_dist_high_15m"
+    },
+    {
+      "id": 273,
+      "a": "dollar_volume_ratio_5_30",
+      "b": "breakout_dist_low_15m"
+    },
+    {
+      "id": 274,
+      "a": "breakout_dist_high_5m",
+      "b": "dir_close_extreme_1m"
+    },
+    {
+      "id": 275,
+      "a": "breakout_dist_low_5m",
+      "b": "dir_close_extreme_1m"
+    },
+    {
+      "id": 276,
+      "a": "breakout_dist_high_15m",
+      "b": "peer_lead_pred_1m"
+    },
+    {
+      "id": 277,
+      "a": "breakout_dist_low_15m",
+      "b": "peer_lead_pred_1m"
+    },
+    {
+      "id": 278,
+      "a": "dist_orh_5m",
+      "b": "volume_tod_tail_1m"
+    },
+    {
+      "id": 279,
+      "a": "dist_orl_5m",
+      "b": "volume_tod_tail_1m"
+    },
+    {
+      "id": 280,
+      "a": "breakout_age_signed_15m",
+      "b": "path_eff_5m"
+    },
+    {
+      "id": 281,
+      "a": "vol_accel_1_5",
+      "b": "resid_tod_tail_1m"
+    },
+    {
+      "id": 282,
+      "a": "vol_accel_1_5",
+      "b": "impact_tod_tail_1m"
+    },
+    {
+      "id": 283,
+      "a": "minutes_since_tail_event",
+      "b": "resid_tod_tail_1m"
+    },
+    {
+      "id": 284,
+      "a": "shock_cluster_score_15m",
+      "b": "resid_tod_tail_1m"
+    },
+    {
+      "id": 285,
+      "a": "shock_cluster_score_15m",
+      "b": "peer_shock_breadth_1m"
+    },
+    {
+      "id": 286,
+      "a": "tail_event_count_15m",
+      "b": "resid_dispersion_tod_tail_1m"
+    },
+    {
+      "id": 287,
+      "a": "sign_switch_rate_5m",
+      "b": "absorption_score_1m"
+    },
+    {
+      "id": 288,
+      "a": "post_shock_recovery_1m",
+      "b": "liquidity_rank_20d"
+    },
+    {
+      "id": 289,
+      "a": "post_shock_recovery_1m",
+      "b": "impact_tod_tail_1m"
+    },
+    {
+      "id": 290,
+      "a": "post_shock_recovery_3m",
+      "b": "peer_gap_1m"
+    },
+    {
+      "id": 291,
+      "a": "resid_tod_tail_1m",
+      "b": "resid_tod_tail_5m"
+    },
+    {
+      "id": 292,
+      "a": "resid_tod_tail_2m",
+      "b": "resid_tod_tail_5m"
+    },
+    {
+      "id": 293,
+      "a": "resid_tod_tail_1m",
+      "b": "resid_tod_tail_2m"
+    },
+    {
+      "id": 294,
+      "a": "factor_resid_tod_tail_1m",
+      "b": "factor_resid_tod_tail_2m"
+    },
+    {
+      "id": 295,
+      "a": "shock_accel_1m",
+      "b": "resid_tod_tail_5m"
+    },
+    {
+      "id": 296,
+      "a": "peer_lead_pred_1m",
+      "b": "peer_gap_velocity_1m"
+    },
+    {
+      "id": 297,
+      "a": "peer_lead_pred_2m",
+      "b": "peer_gap_1m"
+    },
+    {
+      "id": 298,
+      "a": "same_minute_resid_mean20d",
+      "b": "peer_lead_pred_1m"
+    },
+    {
+      "id": 299,
+      "a": "same_minute_resid_mean20d",
+      "b": "factor_resid_tod_tail_1m"
+    },
+    {
+      "id": 300,
+      "a": "squeeze_score_5_30",
+      "b": "peer_lead_pred_1m"
+    },
+    {
+      "id": 301,
+      "a": "squeeze_score_5_30",
+      "b": "resid_tod_tail_1m"
+    },
+    {
+      "id": 302,
+      "a": "vwap_cross_age_signed",
+      "b": "resid_tod_tail_1m"
+    },
+    {
+      "id": 303,
+      "a": "dist_session_vwap",
+      "b": "peer_gap_1m"
+    },
+    {
+      "id": 304,
+      "a": "liquidity_rank_20d",
+      "b": "impact_tod_tail_1m"
+    },
+    {
+      "id": 305,
+      "a": "liquidity_rank_20d",
+      "b": "dollar_per_trade_tod_tail_1m"
+    }
+  ],
+  "tail_features": [
+    "resid_tod_tail_1m",
+    "factor_resid_tod_tail_1m",
+    "resid_prevol_norm_1m",
+    "shock_excess_1pct",
+    "peer_gap_1m",
+    "peer_lead_pred_1m"
+  ],
+  "tail_fractions": [
+    0.001,
+    0.0025,
+    0.005,
+    0.01,
+    0.02,
+    0.05
+  ],
+  "tail_bins": [
+    5,
+    10
+  ]
+}

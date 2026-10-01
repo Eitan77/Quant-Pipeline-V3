@@ -2,7 +2,13 @@
 
 ## Active run
 
-The active canonical run is `v3_comprehensive_20260923` under `D:\AlgoResearch\Quant-Pipeline-V3\runs`. Its governed request is `configs\research\v3_comprehensive_20260923.yaml` and its machine profile is `configs\machines\local.yaml`.
+The active feature-pack scan is `hf_intraday_run_all_20261001_coveragefix`; use
+`configs/machines/hf_local.yaml` and the commands in
+[HF_INTRADAY_RUN_ALL.md](HF_INTRADAY_RUN_ALL.md). It resumes completed feature
+builds and scans exactly the requested pairs through shared production CUDA.
+Do not add features, targets, pairs, or another engine during scan recovery.
+
+The completed canonical run is `v3_comprehensive_20260923` under `D:\AlgoResearch\Quant-Pipeline-V3\runs`. Its governed request is `configs\research\v3_comprehensive_20260923.yaml` and its machine profile is `configs\machines\local.yaml`.
 
 The request covers the one-year discovery window from 2025-05-01 through 2026-04-30. Replication and final holdout access are sealed and disabled.
 

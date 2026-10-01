@@ -356,8 +356,8 @@ class FeatureBuilder:
             mean = price.groupby(group).rolling(n, min_periods=min(n, 2)).mean().reset_index(level=0, drop=True)
             return price / mean - 1 if concept == "price_to_sma" else (price - mean) / price.groupby(group).rolling(n, min_periods=min(n, 2)).std().reset_index(level=0, drop=True)
         if concept == "ema_distance":
-            ema = price.groupby(group, group_keys=False).apply(lambda s: s.ewm(span=n, adjust=False, min_periods=min(n, 2)).mean(), include_groups=False)
-            return price / ema.reset_index(level=0, drop=True) - 1
+            ema = price.groupby(group, sort=False).transform(lambda s: s.ewm(span=n, adjust=False, min_periods=min(n, 2)).mean())
+            return price / ema - 1
         if concept == "amihud_illiquidity":
             dollar = self.frame.volume * ((self.frame.high + self.frame.low + self.frame.close) / 3)
             ratio = returns.abs() / dollar.replace(0, np.nan)

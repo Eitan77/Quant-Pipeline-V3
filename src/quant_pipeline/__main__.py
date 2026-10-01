@@ -9,12 +9,16 @@ def parser():
     from quant_pipeline.production.research_cli import add_parser
     add_parser(s)
     for cmd in ("run",): q=s.add_parser(cmd); q.add_argument("--request",type=Path,required=True); q.add_argument("--machine",type=Path,required=True)
+    q=s.add_parser('hf-preflight'); q.add_argument('--request',type=Path,required=True); q.add_argument('--machine',type=Path,required=True)
     for cmd in ("resume","status"): q=s.add_parser(cmd); q.add_argument("--run-id",required=True); q.add_argument("--machine",type=Path,required=True)
     for cmd in ("replicate","export-sip"): q=s.add_parser(cmd); q.add_argument("--candidate-id",required=True); q.add_argument("--machine",type=Path,required=True)
     return p
 def main():
     from quant_pipeline.production.research_cli import main as research_main
     a=parser().parse_args(); m=load_machine_config(a.machine)
+    if a.command=='hf-preflight':
+        from quant_pipeline.hf_intraday.runner import preflight
+        print(json.dumps(preflight(load_research_config(a.request)),indent=2)); return 0
     if a.command=="research": print(json.dumps(research_main(a),indent=2,default=str)); return 0
     if a.command=="run":
         run_id=run_pipeline(research=load_research_config(a.request),machine=m)

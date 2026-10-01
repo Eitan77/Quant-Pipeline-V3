@@ -62,7 +62,11 @@ def run_pipeline(*,research,machine,resume=False):
         from quant_pipeline.production.research_jobs import worker_lock
         try:
             with worker_lock(Path(machine["run_root"])/"numerical_owner.lock"):
-                result=V3ProductionRunner(research=research,machine=machine,repo_root=Path(__file__).resolve().parents[2],telemetry=telemetry).run()
+                if 'hf_intraday' in research:
+                    from quant_pipeline.hf_intraday.runner import run_hf
+                    result=run_hf(research,machine,Path(__file__).resolve().parents[2],telemetry)
+                else:
+                    result=V3ProductionRunner(research=research,machine=machine,repo_root=Path(__file__).resolve().parents[2],telemetry=telemetry).run()
         except Exception as error:
             telemetry.status.update({"stage":"failed","last_error":f"{type(error).__name__}: {error}",
                                      "elapsed_seconds":time.perf_counter()-start})

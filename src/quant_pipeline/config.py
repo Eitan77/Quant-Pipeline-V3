@@ -19,6 +19,12 @@ def load_research_config(path: Path) -> dict:
     if c.get("allow_replication_access") or c.get("allow_final_holdout_access"): raise ConfigurationError("Normal discovery config may not authorize sealed access")
     if c.get("resolutions") != [3,5,10]: raise ConfigurationError("V3 requires independent r3/r5/r10")
     if c.get("discovery",{}).get("single_parent_gate",True): raise ConfigurationError("Singles may not gate canonical duals")
+    if 'hf_intraday' in c:
+        from quant_pipeline.hf_intraday.spec import validate_pack
+        try: validate_pack(c['hf_intraday'])
+        except (TypeError,ValueError) as error: raise ConfigurationError(str(error)) from error
+        if c.get('fixture') is not None or c.get('feature_selection') or c.get('target_selection'):
+            raise ConfigurationError('HF run-all cannot use a fixture or subset selection')
     for selector_name in ("feature_selection","target_selection"):
         if selector_name in c:
             selector=c[selector_name]

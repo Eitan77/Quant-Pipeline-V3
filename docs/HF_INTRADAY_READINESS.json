@@ -1,0 +1,194 @@
+{
+  "features": 117,
+  "targets": 31,
+  "exact_pairs": 305,
+  "surface_tasks": 6210,
+  "cell_targets": 2467228,
+  "fingerprint": "9f73eaae0e990cb6310ef7251ca503a262deec673df895eec4f363da15c8a5de",
+  "settings": {
+    "model_sessions": 20,
+    "tod_sessions": 60,
+    "tod_min_sessions": 60,
+    "model_min_rows": 1000,
+    "pca_components": 5,
+    "peer_count": 10,
+    "ridge": 0.001,
+    "factor_common_cap": 10.0,
+    "eps": 1e-12,
+    "resolutions": [
+      3,
+      5,
+      10
+    ],
+    "empirical_bins": "same_clock_prior60",
+    "tail_first_leg": "listed_orientation",
+    "episode_gap_minutes": 1
+  },
+  "production_launched": true,
+  "status": "REBUILD_RUNNING",
+  "validation": {
+    "pack_tests": "19 pack tests passed (18 together plus focused runner rerun after updating its mock for disk history).",
+    "regression_check": "6 passed, 1 skipped",
+    "cuda_moments_parity": "passed",
+    "all_planned_state_definitions": "6210 passed against independent SQL",
+    "bounded_runner_output_resume_repair": "passed with fixture inputs and representative surfaces",
+    "source_spec_exact_ids_definitions_pairs_sha256": "passed",
+    "future_perturbation": "all 117 features and feature percentiles unchanged before changed future bars",
+    "second_formula_review": "All listed formulas compared to source; four corrections applied and focused regressions passed.",
+    "factor_projection": "Independent orthogonality and masked-input checks passed.",
+    "all_31_label_definitions": "Raw, beta and PCA cumulative horizons and raw/PCA incremental offsets checked.",
+    "independent_formula_reference": "All 117 feature definitions and all 31 labels matched scalar/sliced references on controlled prior state.",
+    "independent_model_reference": "Beta OLS, PCA eigenvectors, peer choices/weights and minute+1/+2 ridge responses matched independent references.",
+    "eligibility_timing": "Removing all current-day bars leaves daily eligibility unchanged; universe uses PIT membership and prior-session metrics.",
+    "session_boundaries": "Calendar early-close filtering and exact scheduled prior-close minute passed.",
+    "final_configuration_preflight": "Passed: 117 features, 31 targets, 305 pairs, 6210 surfaces; no launch.",
+    "disk_history": "All feature values, 31 labels, and empirical ranks exactly match RAM state across 62 sessions, including eviction and cleanup.",
+    "ticker_alias_repair": "2 focused tests passed: prior-only eligibility unifies stable IDs across aliases; runner emits actual dated ticker and resumes outputs."
+  },
+  "limitations": [
+    "Production discovery is running; full-period runtime, storage and data/model coverage remain unmeasured.",
+    "Underspecified modeling choices are frozen and documented in docs/HF_INTRADAY_RUN_ALL.md."
+  ],
+  "request": "configs/research/hf_intraday_coveragefix.yaml",
+  "second_review_corrections": [
+    "Prior20 liquidity median pools minute observations, not session medians.",
+    "Range5/30 uses high-minus-low bar widths.",
+    "Peer HHI normalizes positive contribution totals; zero totals remain NA.",
+    "Unknown shock minutes invalidate event age/recovery until state is known again."
+  ],
+  "third_review_corrections": [
+    "Daily model universe no longer depends on current-day bar presence.",
+    "Unmodeled names retain NA outgoing strength.",
+    "Nonfinite peer correlations excluded; valid basket weights normalize exactly."
+  ],
+  "last_review_date": "2026-10-01",
+  "fourth_review_corrections": [
+    "Apply exchange-calendar open/close bounds within the HF pack.",
+    "Use the exact scheduled closing minute for prior close; never substitute an earlier benchmark print.",
+    "Reject zero-observation runs before publishing completed evidence."
+  ],
+  "machine": "configs/machines/hf_local.yaml",
+  "launch_resource_settings": {
+    "history": "60 session float64 disk-backed ring",
+    "duckdb_memory_limit_gb": 6
+  },
+  "launch_verified": {
+    "checked_at_utc": "2026-10-01T07:57:02.1301150Z",
+    "run_id": "hf_intraday_run_all_20260930",
+    "pid": 36712,
+    "process_alive": true,
+    "stage": "hf:warmup",
+    "session": "2024-04-09",
+    "completed": 7,
+    "expected": 523,
+    "status_heartbeat": "2026-10-01T00:56:56.895805-07:00",
+    "cpu_ticks": 7093906250,
+    "read_bytes": 13343544840,
+    "write_bytes": 4151156968,
+    "available_ram_gb": 19.21,
+    "disk_free_gb": 181.94,
+    "last_error": null,
+    "stderr": "D:\\AlgoResearch\\Quant-Pipeline-V3\\launch_logs\\hf_intraday_run_all_20260930.resume_20261001_005452.stderr.log",
+    "no_progress_since_utc": null,
+    "recovery": "Alias repair passed 2 focused tests; actual reference keys verified; resumed unchanged prep and advancing warmup."
+  },
+  "monitor": {
+    "id": "hf-pipeline-monitor-15m",
+    "status": "ACTIVE",
+    "interval_minutes": 15,
+    "thread_id": "01a0f808-f687-7cf2-9fe6-1faf2b39cfe5"
+  },
+  "repair_audit": "D:/AlgoResearch/Quant-Pipeline-V3/runs/hf_intraday_run_all_20260930/alias_repair_audit.json",
+  "execution_cleanup": {
+    "at_utc": "2026-10-01T15:24:41.953729+00:00",
+    "reason": "Remove duplicate runtime scanner; reuse verified completed builds; route HF contracts through existing production fused CUDA and resource policy.",
+    "old_fingerprint": "c277f5cfebdab8f40d66a9af8f2292e539f4189f1d7dec4da5de6e1429a46bbd",
+    "new_fingerprint": "ba0fc6f9760e598a1350ed8eb94398859f457d99e52ebc347370c71fd5b5abc2",
+    "source_manifest_hash": "a028fb0826cff88ad18b233e0c2aaef3124dfc415504caf700ae9dc3f1a23727",
+    "unchanged_feature_code": {
+      "src\\quant_pipeline\\hf_intraday\\engine.py": "02c1ccb865ef67e92c65846a828fb189329a75b791a8e479746c728b7a7007a8",
+      "src\\quant_pipeline\\hf_intraday\\math.py": "3e047fe4d4eb3ba2578a2406397df332a25c2559c473331e8794b24ff7a7fb25",
+      "src\\quant_pipeline\\hf_intraday\\spec.py": "60247fab78c59d418cf531c3ff615e2947daa3f262e164ebc9f4b65a744aff41",
+      "src\\quant_pipeline\\hf_intraday\\spec.json": "155a0ce61e1b94da6f2497f52dc88c268797518e287a676df031cc3f1ca2c37e"
+    },
+    "request_unchanged": true,
+    "features_rebuilt": false,
+    "preserved_sessions": 251,
+    "preserved_observations": 45404726,
+    "preserved_surface_checkpoints": 97,
+    "prepared_input_signature_verified": true,
+    "validation": "13 focused tests passed: CPU/CUDA scan parity, shared CUDA regression, exact pack, complete-build reuse and missing-output repair; modified artifacts rejected.",
+    "empty_feature_columns": 22,
+    "empty_pca_target_columns": 12,
+    "replication_accessed": false,
+    "final_holdout_accessed": false
+  },
+  "run_id": "hf_intraday_run_all_20261001_coveragefix",
+  "coverage_repair": {
+    "at_utc": "2026-10-01T15:56:25.717537+00:00",
+    "supersedes_run": "hf_intraday_run_all_20260930",
+    "reason": "Repair globally complete-case PCA covariance and impossible 60-event-session recovery bin admission.",
+    "source_manifest_hash": "a028fb0826cff88ad18b233e0c2aaef3124dfc415504caf700ae9dc3f1a23727",
+    "request_difference": {
+      "run_name": "hf_intraday_run_all_20261001_coveragefix"
+    },
+    "prep_semantics_hash": "434e7fcfdbf10cfdcd7cdd838d005d8077f5886c7600700e0e5dcd998f7d49b7",
+    "unchanged_prep_implementation_hash": "50de51e100aca4e682431ff487375f153d13c894076558bc78fcb9ab7711ed50",
+    "reused_preparation": [
+      {
+        "path": "snapshot/source_reference.json",
+        "size": 297,
+        "mtime": 1790839688704419900
+      },
+      {
+        "path": "cache/calculation_panels/intraday_1m.parquet",
+        "size": 4825552779,
+        "mtime": 1790840300319516300
+      }
+    ],
+    "feature_target_rebuild_required": true,
+    "prior_evidence_preserved": true,
+    "fingerprint": "9f73eaae0e990cb6310ef7251ca503a262deec673df895eec4f363da15c8a5de",
+    "replication_accessed": false,
+    "final_holdout_accessed": false,
+    "validation": "10 focused tests passed: observed-pair CPU/CUDA covariance and correlation, missing-minute PCA/peer models, sparse event bins, independent 117-feature/31-target formulas, dense model/lead offset parity, PIT eligibility and future perturbation.",
+    "real_model_probe": {
+      "probe_date": "2025-05-01",
+      "prior_sessions": 20,
+      "eligible": 503,
+      "beta": 500,
+      "pca": 489,
+      "peer_lead1": 443,
+      "peer_lead2": 387,
+      "elapsed_seconds": 2.62823090000893
+    },
+    "zero_coverage_scan_guard_verified": true
+  },
+  "real_model_probe": {
+    "probe_date": "2025-05-01",
+    "prior_sessions": 20,
+    "eligible": 503,
+    "beta": 500,
+    "pca": 489,
+    "peer_lead1": 443,
+    "peer_lead2": 387,
+    "elapsed_seconds": 2.62823090000893
+  },
+  "live_execution": {
+    "checked_at_utc": "2026-10-01T15:59:55.646345+00:00",
+    "run_id": "hf_intraday_run_all_20261001_coveragefix",
+    "pid": 50496,
+    "stage": "hf:warmup",
+    "completed": 4,
+    "expected": 523,
+    "session": "2024-04-04",
+    "build_checkpoints": 0,
+    "scan_checkpoints": 0,
+    "available_ram_gb": 21.232868194580078,
+    "disk_free_gb": 142.09380722045898,
+    "stderr_path": "C:\\Users\\decla\\Desktop\\AlgoResearch\\Quant-Pipeline-V3\\logs\\hf_coveragefix_20261001_085812.stderr.log",
+    "stdout_path": "C:\\Users\\decla\\Desktop\\AlgoResearch\\Quant-Pipeline-V3\\logs\\hf_coveragefix_20261001_085812.stdout.log",
+    "replication_accessed": false,
+    "final_holdout_accessed": false
+  }
+}
