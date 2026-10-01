@@ -76,7 +76,7 @@ class FusedSegmentedBatch:
         self.live = live  # Keep all output allocations alive through launch.
         self.device = live[0][1].device
         self.families = sorted({task["grouping_id"] for task, _ in live})
-        self.pair_tile = _PAIR_TILE
+        self.pair_tile = 1 if live[0][1].shape[1] < _PAIR_TILE else _PAIR_TILE
         self.kernel = _kernel(self.pair_tile, 0 if joint_codes is None else len(joint_codes))
         code_map = np.full(256, -1, np.int64)
         if joint_codes is not None:

@@ -182,3 +182,20 @@ features or pairs are added. `targeted_repair_audit.json` records provenance.
 ```powershell
 .\.venv\Scripts\python -m quant_pipeline resume --run-id hf_intraday_run_all_20261001_targetedfix --machine configs\machines\hf_local.yaml
 ```
+
+Execution batching repair (2026-10-01) preserves all completed builds, prepared
+inputs and 169 committed surfaces through `execution_batching_upgrade_audit.json`.
+It uses the existing production fused kernel with a one-pair tile for small
+batches, admits a partial FP64 target cache when all 31 targets do not fit VRAM,
+and double-buffers pinned host transfers without synchronizing each chunk.
+CPU target batches use the actual selected row count. Two shared episode-window
+lags encode per-target start masks without changing missing-label semantics.
+The shared scaler readmits sparse tails separately from dense surfaces with
+different query-memory budgets and the same host reserve.
+
+Nine focused CPU/CUDA/reference tests passed, including full, partial and absent
+GPU caches. Two real full-discovery surface comparisons matched committed
+evidence: 65.71 to 56.31 seconds and 16.68 to 13.80 seconds, excluding 31.40 seconds
+of reusable target staging. These are component measurements, not a whole-run
+ETA. Exact medians and episodes remain CPU work; GPU residency does not imply
+continuous GPU compute saturation.

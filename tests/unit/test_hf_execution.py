@@ -37,6 +37,15 @@ def test_shared_execution_matches_exact_reference(tmp_path,device,monkeypatch):
         keys=['target','cell','grouping','group_value']
         expected=expected.sort_values(keys).reset_index(drop=True);actual=actual.sort_values(keys).reset_index(drop=True)
         pd.testing.assert_frame_equal(actual[expected.columns],expected,check_dtype=False,check_exact=False,atol=1e-8,rtol=1e-9)
+        if i==0 and device!='cpu':
+            saved_values=resident.values;saved_index=resident.cache_index
+            for cached_count in (8,0):
+                resident.values=saved_values[:,:cached_count].contiguous() if cached_count else None
+                resident.cache_index={key:j for j,key in enumerate(targets[:cached_count])}
+                streamed=scan_surface(database,metadata,task,machine,1,2,device,resident,4)
+                streamed=streamed.sort_values(keys).reset_index(drop=True)
+                pd.testing.assert_frame_equal(streamed[expected.columns],expected,check_dtype=False,check_exact=False,atol=1e-8,rtol=1e-9)
+            resident.values=saved_values;resident.cache_index=saved_index
         if i==0:
             from quant_pipeline.hf_intraday.engine import FACTOR_TARGETS
             from quant_pipeline.production import hf_execution
